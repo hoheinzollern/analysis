@@ -389,6 +389,23 @@ Qed.
 
 End discrete_distribution.
 
+Section markov_chebyshev.
+
+Variables (d : _) (T : measurableType d) (R : realType) (P : probability T R).
+
+Definition R' := {nonneg \bar R}.
+
+Lemma markov (X : {RV P >-> R}) (f : {mfun R' >-> R'}) (eps : _)
+  : (eps%:num > 0) -> ((f eps)%:num > 0) -> 
+      (P [set x | (eps%:num%:E <= `| (X x)%:E |)%E ] <= 'E (f `o abse `o X) / f eps)%E.
+Admitted.
+
+Lemma chebyshev (X : {RV P >-> R}) (eps : _)
+  : (P [set x | ((eps%:num%:E) <= `| (X x)%:E |)%E ] <= Num.sqrt eps * 'V X)%E.
+Admitted.
+
+End markov_chebyshev.
+
 Section cvg_random_variable.
 Variables (d : _) (T : measurableType d) (R : realType) (P : probability T R).
 
