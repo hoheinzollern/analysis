@@ -388,3 +388,11 @@ by rewrite integral_cst//= mul1e probability_distribution distribution_values mu
 Qed.
 
 End discrete_distribution.
+
+Section cvg_random_variable.
+Variables (d : _) (T : measurableType d) (R : realType) (P : probability T R).
+
+Definition probabilistic_cvg (X : {RV P >-> R}^nat) (Y : {RV P >-> R})
+  := forall a : {posnum R}, [sequence P [set x | a%:num <= `| X n x - Y x | ] ]_n --> 0%E.
+
+End cvg_random_variable.
