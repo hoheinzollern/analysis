@@ -120,6 +120,14 @@ Qed.
 HB.instance Definition _ m := subr_mfun_subproof m.
 Definition subr_mfun m := [the {mfun _ >-> R} of subr m].
 
+Definition mabs : R -> R := fun x => `| x |.
+
+Lemma measurable_fun_mabs : measurable_fun setT (mabs).
+Proof. exact: measurable_fun_normr. Qed.
+
+HB.instance Definition _ := @IsMeasurableFun.Build _ _ R
+  (mabs) (measurable_fun_mabs).
+
 End mfun.
 
 Section comp_mfun.
@@ -393,15 +401,13 @@ Section markov_chebyshev.
 
 Variables (d : _) (T : measurableType d) (R : realType) (P : probability T R).
 
-Definition R' := {nonneg \bar R}.
-
-Lemma markov (X : {RV P >-> R}) (f : {mfun R' >-> R'}) (eps : _)
-  : (eps%:num > 0) -> ((f eps)%:num > 0) -> 
-      (P [set x | (eps%:num%:E <= `| (X x)%:E |)%E ] <= 'E (f `o abse `o X) / f eps)%E.
+Lemma markov (X : {RV P >-> R}) (f : {mfun R >-> R}) (eps : R)
+  : (eps > 0) -> {homo f : x y / x < y } ->
+    (P [set x | (eps%:E <= `| (X x)%:E |)%E ] <= 'E (([the {mfun R >-> R} of f \o @mabs R]) `o X) * (f eps)^-1%:E)%E.
 Admitted.
 
-Lemma chebyshev (X : {RV P >-> R}) (eps : _)
-  : (P [set x | ((eps%:num%:E) <= `| (X x)%:E |)%E ] <= Num.sqrt eps * 'V X)%E.
+Lemma chebyshev (X : {RV P >-> R}) (eps : R)
+  : (P [set x | (eps <= `| X x |)%R ] <= (Num.sqrt eps)%:E * 'V X)%E.
 Admitted.
 
 End markov_chebyshev.
