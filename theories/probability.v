@@ -75,6 +75,9 @@ apply/set0P/negP => /eqP setT0; have := probability0.
 by rewrite -setT0 probability_setT; apply/eqP; rewrite oner_neq0.
 Qed.
 
+Lemma probability_ge0 (A : set T) : (0 <= P A)%E.
+Proof. exact: measure_ge0. Qed.
+
 Lemma probability_le1 (A : set T) : measurable A -> (P A <= 1)%E.
 Proof.
 move=> mA; rewrite -(@probability_setT _ _ _ P).
@@ -223,6 +226,13 @@ by move=> ?; rewrite /expectation integral_ge0// => x _; rewrite lee_fin.
 Qed.
 
 Variables (Y : {RV P >-> R}) (iY : P.-integrable setT (EFin \o Y)).
+
+Lemma expectation_le : (forall x, (0 <= X x)%R) -> (forall x, (0 <= Y x)%R) -> (forall x, (X x)%:E <= (Y x)%:E) -> ('E X <= 'E Y)%E.
+Proof.
+  move => hXpos hYpos hXleY.
+  rewrite /expectation ge0_le_integral => //; [move => ? _; apply hXpos|admit|move => ? _; apply hYpos|admit].
+Admitted.
+
 
 Lemma expectationD : 'E (X `+ Y) = 'E X + 'E Y.
 Proof. by rewrite /expectation integralD_EFin. Qed.
@@ -402,9 +412,15 @@ Section markov_chebyshev.
 Variables (d : _) (T : measurableType d) (R : realType) (P : probability T R).
 
 Lemma markov (X : {RV P >-> R}) (f : {mfun R >-> R}) (eps : R)
-  : (eps > 0) -> {homo f : x y / x < y } ->
-    (P [set x | (eps%:E <= `| (X x)%:E |)%E ] <= 'E (([the {mfun R >-> R} of f \o @mabs R]) `o X) * (f eps)^-1%:E)%E.
-Admitted.
+  : (0 < eps) -> (0 < f eps) -> {homo f : x y / x < y } ->
+    ((f eps)%:E * P [set x | (eps%:E <= `| (X x)%:E |)%E ] <= 'E (([the {mfun R >-> R} of f \o @mabs R]) `o X))%E.
+Proof.
+  move => heps hfeps hfmono.
+  rewrite -expectation_indic; [|move => h]. admit.
+  apply: le_trans.
+    rewrite -expectationM; [apply le_refl|]. admit.
+  apply: le_trans.
+    apply expectation_le. admit. admit. admit. admit. admit.
 
 Lemma chebyshev (X : {RV P >-> R}) (eps : R)
   : (P [set x | (eps <= `| X x |)%R ] <= (Num.sqrt eps)%:E * 'V X)%E.
