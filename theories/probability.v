@@ -227,12 +227,18 @@ Qed.
 
 Variables (Y : {RV P >-> R}) (iY : P.-integrable setT (EFin \o Y)).
 
-Lemma expectation_le : (forall x, (0 <= X x)%R) -> (forall x, (0 <= Y x)%R) -> (forall x, (X x)%:E <= (Y x)%:E) -> ('E X <= 'E Y)%E.
+Lemma expectation_le :
+  (forall x, (0 <= X x)%R) ->
+    (forall x, (X x <= Y x)%R) -> ('E X <= 'E Y).
 Proof.
-  move => hXpos hYpos hXleY.
-  rewrite /expectation ge0_le_integral => //; [move => ? _; apply hXpos|admit|move => ? _; apply hYpos|admit].
-Admitted.
-
+  move => hXpos hXleY.
+  rewrite /expectation ge0_le_integral => //.
+    move => ? _; apply: hXpos.
+    apply EFin_measurable_fun => //.
+    move => x ?; apply: (le_trans (y:=X x)) => //; apply: hXleY.
+    apply EFin_measurable_fun => //.
+    move => x ?; apply: lee_tofin => //.
+Qed.
 
 Lemma expectationD : 'E (X `+ Y) = 'E X + 'E Y.
 Proof. by rewrite /expectation integralD_EFin. Qed.
@@ -420,7 +426,8 @@ Proof.
   apply: le_trans.
     rewrite -expectationM; [apply le_refl|]. admit.
   apply: le_trans.
-    apply expectation_le. admit. admit. admit. admit. admit.
+    apply expectation_le. admit. admit. admit.
+Admitted.
 
 Lemma chebyshev (X : {RV P >-> R}) (eps : R)
   : (P [set x | (eps <= `| X x |)%R ] <= (Num.sqrt eps)%:E * 'V X)%E.
