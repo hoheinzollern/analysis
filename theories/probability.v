@@ -34,6 +34,7 @@ Reserved Notation "f `o X" (at level 50, format "f  `o '/ '  X").
 Reserved Notation "X '`^+' n" (at level 11).
 Reserved Notation "X `+ Y" (at level 50).
 Reserved Notation "X `- Y" (at level 50).
+Reserved Notation "X `* Y" (at level 49).
 Reserved Notation "k `\o* X" (at level 49).
 Reserved Notation "''E' X" (format "''E'  X", at level 5).
 Reserved Notation "''V' X" (format "''V'  X", at level 5).
@@ -184,6 +185,7 @@ Notation "f `o X" := (comp_RV f X).
 Notation "X '`^+' n" := (exp_RV X n).
 Notation "X `+ Y" := (add_RV X Y).
 Notation "X `- Y" := (sub_RV X Y).
+Notation "X `* Y" := (mul_RV X Y).
 Notation "k `\o* X" := (scale_RV k X).
 
 Section expectation.
@@ -426,21 +428,41 @@ Section markov_chebyshev.
 
 Variables (d : _) (T : measurableType d) (R : realType) (P : probability T R).
 
+Lemma mul_cst (k : R) (X : {RV P >-> R})
+  : k `\o* X = (cst_mfun k) `* X.
+Proof.
+  rewrite /scale_RV /mul_RV.
+  apply /mfuneqP => x /=.
+  exact: mulrC.
+Qed.
+
 Lemma markov (X : {RV P >-> R}) (f : {mfun _ >-> R}) (eps : R)
   : (0 < eps) -> (0 < f eps) -> {homo f : x y / x < y } ->
     ((f eps)%:E * P [set x | (eps%:E <= `| (X x)%:E |)%E ] <= 'E (([the {mfun _ >-> R} of f \o @mabs R]) `o X))%E.
 Proof.
   move => heps hfeps hfmono.
-  rewrite -expectation_indic; [|move => h].
+  rewrite -expectation_indic; [|move => hdmesX].
   rewrite -(setTI [set x | _]).
   apply: emeasurable_fun_c_infty => //;
     apply: measurable_fun_comp => //;
     apply: measurable_fun_comp => //.
   rewrite -expectationM; last first. admit.
   rewrite /scale_RV.
-  apply: le_trans.
+  apply (@le_trans _ _ ('E ([the {mfun T >-> R} of (f \o mabs (R:=R) \o X) \* indic_mfun [set x | (eps%:E <= `|(X x)%:E|)%E ] hdmesX]: {RV P >-> R}))).
     apply: expectation_le => x.
-      apply: mulr_ge0 => //. auto.
+      apply: mulr_ge0 => // /=. auto.
+      simpl. rewrite mulrC.
+      rewrite /mindic /indic.
+      case: (x \in [set x | (eps%:E <= `|(X x)%:E|)%E ]).
+        admit.
+        rewrite !mulr0; exact: le_refl.
+  apply: expectation_le => x /=.
+    apply: mulr_ge0.
+      admit.
+      auto.
+    apply ler_pimulr.
+      admit.
+      rewrite /mindic /indic /mem; case: in_mem => //; exact: ler01.
 Admitted.
 
 Lemma chebyshev (X : {RV P >-> R}) (eps : R)
