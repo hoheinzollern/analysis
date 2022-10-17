@@ -437,32 +437,40 @@ Proof.
 Qed.
 
 Lemma markov (X : {RV P >-> R}) (f : {mfun _ >-> R}) (eps : R)
-  : (0 < eps) -> (0 < f eps) -> {homo f : x y / x < y } ->
+  : (0 < eps) -> (0 < f eps) -> {mono f : x y / x < y } ->
     ((f eps)%:E * P [set x | (eps%:E <= `| (X x)%:E |)%E ] <= 'E (([the {mfun _ >-> R} of f \o @mabs R]) `o X))%E.
 Proof.
   move => heps hfeps hfmono.
+  have : 0 <= f eps by [auto] => hfepsge0.
   rewrite -expectation_indic; [|move => hdmesX].
   rewrite -(setTI [set x | _]).
   apply: emeasurable_fun_c_infty => //;
     apply: measurable_fun_comp => //;
     apply: measurable_fun_comp => //.
-  rewrite -expectationM; last first. admit.
+  rewrite -expectationM; last first. split.
+    apply measurable_fun_comp.
+    admit.
+    apply measurable_fun_indic; exact hdmesX.
+    admit.
   rewrite /scale_RV.
   apply (@le_trans _ _ ('E ([the {mfun T >-> R} of (f \o mabs (R:=R) \o X) \* indic_mfun [set x | (eps%:E <= `|(X x)%:E|)%E ] hdmesX]: {RV P >-> R}))).
-    apply: expectation_le => x.
-      apply: mulr_ge0 => // /=. auto.
-      simpl. rewrite mulrC.
+    apply: expectation_le => x /=.
+      apply: mulr_ge0 => //.
+      rewrite mulrC.
       rewrite /mindic /indic.
-      case: (x \in [set x | (eps%:E <= `|(X x)%:E|)%E ]).
+      case: (boolP (x \in [set x | (eps%:E <= `|(X x)%:E|)%E ])) => hmem /=.
+        rewrite !mulr1.
         admit.
         rewrite !mulr0; exact: le_refl.
   apply: expectation_le => x /=.
-    apply: mulr_ge0.
-      admit.
-      auto.
-    apply ler_pimulr.
-      admit.
-      rewrite /mindic /indic /mem; case: in_mem => //; exact: ler01.
+    rewrite /mindic /indic.
+    case: (boolP (x \in [set x | (eps%:E <= `|(X x)%:E|)%E ])) => hmem /=.
+      rewrite mulr1; apply (@le_trans _ _ (f eps)) => //. admit.
+      rewrite mulr0; apply le_refl.
+    rewrite /mindic /indic.
+    case: (boolP (x \in [set x | (eps%:E <= `|(X x)%:E|)%E ])) => hmem /=.
+      rewrite mulr1; apply le_refl.
+      rewrite mulr0; apply (@le_trans _ _ (f eps)) => //. admit.
 Admitted.
 
 Lemma chebyshev (X : {RV P >-> R}) (eps : R)
