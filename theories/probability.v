@@ -131,6 +131,13 @@ Proof. exact: measurable_fun_normr. Qed.
 HB.instance Definition _ := @IsMeasurableFun.Build _ _ R
   (mabs) (measurable_fun_mabs).
 
+Let measurable_fun_mmul d (T : measurableType d) (f g : {mfun T >-> R}) :
+  measurable_fun setT (f \* g).
+Proof. exact/measurable_funM. Qed.
+
+HB.instance Definition _ d (T : measurableType d) (f g : {mfun T >-> R}) :=
+  @IsMeasurableFun.Build _ _ R (f \* g) (measurable_fun_mmul f g).
+
 End mfun.
 
 Section comp_mfun.
@@ -169,9 +176,8 @@ Definition sub_RV (X Y : {RV P >-> R}) : {RV P >-> R} :=
 Definition scale_RV k (X : {RV P >-> R}) : {RV P >-> R} :=
   [the {mfun _ >-> _} of k \o* X].
 
-(* FIXME: need to define this 
 Definition mul_RV (X Y : {RV P >-> R}) : {RV P >-> R} :=
-  [the {mfun _ >-> _} of (fun x => X x * Y x)]. *)
+  [the {mfun _ >-> _} of (X \* Y)].
 
 End random_variables.
 Notation "f `o X" := (comp_RV f X).
@@ -231,9 +237,8 @@ Qed.
 
 Variables (Y : {RV P >-> R}) (iY : P.-integrable setT (EFin \o Y)).
 
-Lemma expectation_le :
-  (forall x, (0 <= X x)%R) ->
-    (forall x, (X x <= Y x)%R) -> ('E X <= 'E Y).
+Lemma expectation_le : (forall x, 0 <= X x)%R ->
+  (forall x, X x <= Y x)%R -> ('E X <= 'E Y).
 Proof.
   move => hXpos hXleY.
   rewrite /expectation ge0_le_integral => //.
@@ -421,9 +426,9 @@ Section markov_chebyshev.
 
 Variables (d : _) (T : measurableType d) (R : realType) (P : probability T R).
 
-Lemma markov (X : {RV P >-> R}) (f : {mfun R >-> R}) (eps : R)
+Lemma markov (X : {RV P >-> R}) (f : {mfun _ >-> R}) (eps : R)
   : (0 < eps) -> (0 < f eps) -> {homo f : x y / x < y } ->
-    ((f eps)%:E * P [set x | (eps%:E <= `| (X x)%:E |)%E ] <= 'E (([the {mfun R >-> R} of f \o @mabs R]) `o X))%E.
+    ((f eps)%:E * P [set x | (eps%:E <= `| (X x)%:E |)%E ] <= 'E (([the {mfun _ >-> R} of f \o @mabs R]) `o X))%E.
 Proof.
   move => heps hfeps hfmono.
   rewrite -expectation_indic; [|move => h].
