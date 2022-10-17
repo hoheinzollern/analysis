@@ -169,6 +169,10 @@ Definition sub_RV (X Y : {RV P >-> R}) : {RV P >-> R} :=
 Definition scale_RV k (X : {RV P >-> R}) : {RV P >-> R} :=
   [the {mfun _ >-> _} of k \o* X].
 
+(* FIXME: need to define this 
+Definition mul_RV (X Y : {RV P >-> R}) : {RV P >-> R} :=
+  [the {mfun _ >-> _} of (fun x => X x * Y x)]. *)
+
 End random_variables.
 Notation "f `o X" := (comp_RV f X).
 Notation "X '`^+' n" := (exp_RV X n).
@@ -422,11 +426,16 @@ Lemma markov (X : {RV P >-> R}) (f : {mfun R >-> R}) (eps : R)
     ((f eps)%:E * P [set x | (eps%:E <= `| (X x)%:E |)%E ] <= 'E (([the {mfun R >-> R} of f \o @mabs R]) `o X))%E.
 Proof.
   move => heps hfeps hfmono.
-  rewrite -expectation_indic; [|move => h]. admit.
+  rewrite -expectation_indic; [|move => h].
+  rewrite -(setTI [set x | _]).
+  apply: emeasurable_fun_c_infty => //;
+    apply: measurable_fun_comp => //;
+    apply: measurable_fun_comp => //.
+  rewrite -expectationM; last first. admit.
+  rewrite /scale_RV.
   apply: le_trans.
-    rewrite -expectationM; [apply le_refl|]. admit.
-  apply: le_trans.
-    apply expectation_le. admit. admit. admit.
+    apply: expectation_le => x.
+      apply: mulr_ge0 => //. auto.
 Admitted.
 
 Lemma chebyshev (X : {RV P >-> R}) (eps : R)
