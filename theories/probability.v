@@ -424,6 +424,54 @@ Qed.
 
 End discrete_distribution.
 
+Section tmp.
+Variables (d : _) (T : measurableType d) (R : realType).
+Variable mu : {measure set T -> \bar R}.
+Local Open Scope ereal_scope.
+
+Lemma integral_cst_ninfty (D : set T) : measurable D ->
+  mu D != 0 -> \int[mu]_(x in D) (cst -oo) x = -oo.
+Proof.
+move=> mD D0.
+by rewrite (eq_integral (\- cst +oo))// integral_ge0N//= ?integral_cst_pinfty.
+Qed.
+
+Lemma integral_ecst  (D : set T) : d.-measurable D ->
+  forall r, \int[mu]_(x in D) (cst r) x = r * mu D.
+Proof.
+move=> mD.
+have [D0 r|D0 [r| |]] := eqVneq (mu D) 0.
+  rewrite (@ae_eq_integral(*TODO: fix implicits*) _ _ _ _ _ _ (cst 0))//.
+  - by rewrite integral0 D0 mule0.
+  - exact: measurable_fun_cst.
+  - exact: measurable_fun_cst.
+  - by exists D; split => // x/= /not_implyP[].
+- by rewrite integral_cst.
+- by rewrite integral_cst_pinfty// gt0_mulye// lt_neqAle eq_sym D0/=.
+- by rewrite integral_cst_ninfty// gt0_mulNye// lt_neqAle eq_sym D0/=.
+Qed.
+
+Lemma le_integral_abse (D : set T) (mD : measurable D) (g : T -> \bar R) a
+    (f : \bar R -> \bar R) (mf : measurable_fun setT f)
+    (f0 : forall r, 0 <= f r) (f_nd : {homo f : x y / x <= y}) :
+  measurable_fun D g -> (0 < a)%R ->
+  (f a%:E) * mu (D `&` [set x | (`|g x| >= a%:E)%E]) <= \int[mu]_(x in D) f `|g x|.
+Proof.
+move=> mg a0; have ? : measurable (D `&` [set x | (a%:E <= `|g x|)%E]).
+  by apply: emeasurable_fun_c_infty => //; exact: measurable_fun_comp.
+apply: (@le_trans _ _ (\int[mu]_(x in D `&` [set x | `|g x| >= a%:E]) f `|g x|)).
+  rewrite -integral_ecst//; apply: ge0_le_integral => //.
+  - by move=> x _ /=.
+  - exact/measurable_fun_cst.
+  - apply: measurable_fun_comp => //; apply: measurable_fun_comp => //.
+    exact: measurable_funS mg.
+  - by move=> x /= [] Dx; exact/f_nd.
+apply: subset_integral => //.
+by apply: measurable_fun_comp => //; exact: measurable_fun_comp.
+Qed.
+
+End tmp.
+
 Section markov_chebyshev.
 
 Variables (d : _) (T : measurableType d) (R : realType) (P : probability T R).
@@ -436,40 +484,56 @@ Proof.
   exact: mulrC.
 Qed.
 
-Lemma markov (X : {RV P >-> R}) (f : {mfun _ >-> R}) (eps : R)
-  : (0 < eps) -> (0 < f eps) -> {mono f : x y / x < y } ->
-    ((f eps)%:E * P [set x | (eps%:E <= `| (X x)%:E |)%E ] <= 'E (([the {mfun _ >-> R} of f \o @mabs R]) `o X))%E.
+Lemma markov (X : {RV P >-> R}) (f : {mfun _ >-> R}) (eps : R) :
+  0 < eps -> (forall r : R, 0 <= f r) -> {homo f : x y / x <= y} ->
+ ((f eps)%:E * P [set x | eps%:E <= `| (X x)%:E | ]%E <=
+  'E ([the {mfun _ >-> R} of f \o @mabs R] `o X))%E.
 Proof.
-move=> heps hfeps hfmono.
-have hfepsge0 : 0 <= f eps by auto.
-rewrite -expectation_indic => [|hdmesX].
+move=> e0 f0 f_nd.
+rewrite -(setTI [set _ | _]).
+apply: (le_trans (@le_integral_abse d T R P setT measurableT (EFin \o X) eps
+  (fun x => (f (fine x))%:E) _ _ _ _ e0)) => //=.
+- apply/EFin_measurable_fun => /=.
+  apply/measurable_fun_comp => //=.
+  exact: measurable_fun_fine.
+- by move=> r/=; rewrite lee_fin.
+- move=> [x| |] [y| |]//=.
+  + by rewrite !lee_fin => /f_nd.
+Abort.
+
+Lemma markov (X : {RV P >-> R}) (f : {mfun _ >-> R}) (eps : R) :
+  0 < eps -> (forall r : R, 0 <= f r) -> {mono f : x y / x <= y } ->
+ ((f eps)%:E * P [set x | eps%:E <= `| (X x)%:E | ]%E <=
+  'E ([the {mfun _ >-> R} of f \o @mabs R] `o X))%E.
+Proof.
+move=> e0 f0 f_nd.
+rewrite -expectation_indic => [|meXx].
   rewrite -(setTI [set x | _]); apply: emeasurable_fun_c_infty => //.
   by apply: measurable_fun_comp => //; exact: measurable_fun_comp.
 rewrite -expectationM; last first.
   split; first exact: measurable_fun_comp.
-  rewrite (_  : (fun x => `| _ |%:E) = (fun x => (mindic R hdmesX x)%:E)).
+  rewrite (_  : (fun x => `| _ |%:E) = (fun x => (mindic R meXx x)%:E)).
     by rewrite integral_indic// setIT (le_lt_trans (probability_le1 _ _))// ltey.
   by apply/funext => t /=; rewrite ger0_norm.
 rewrite /scale_RV.
-apply (@le_trans _ _ ('E ([the {mfun T >-> R} of (f \o mabs (R:=R) \o X) \* indic_mfun [set x | (eps%:E <= `|(X x)%:E|)%E ] hdmesX]: {RV P >-> R}))).
-  apply: expectation_le => x /=; first exact: mulr_ge0.
-  rewrite mulrC.
-  rewrite /mindic /indic.
-  case: (boolP (x \in [set x | (eps%:E <= `|(X x)%:E|)%E ])) => hmem /=.
-    rewrite !mulr1.
-    admit.
-  rewrite !mulr0; exact: le_refl.
+apply (@le_trans _ _ ('E ([the {mfun T >-> R} of
+    (f \o @mabs R \o X) \*
+    indic_mfun [set x | (eps%:E <= `|(X x)%:E|)%E ] meXx] : {RV P >-> R}))).
+  apply: expectation_le => x /=; first by rewrite mulr_ge0// ltW.
+  rewrite mindicE.
+  have [|eXx] := boolP (x \in [set x | eps%:E <= `|(X x)%:E| ]%E).
+    by rewrite mul1r mulr1 inE/= lee_fin=> ?; rewrite f_nd.
+  by rewrite mul0r mulr0.
 apply: expectation_le => x /=.
-  rewrite /mindic /indic.
-  case: (boolP (x \in [set x | (eps%:E <= `|(X x)%:E|)%E ])) => hmem /=.
-    rewrite mulr1; apply (@le_trans _ _ (f eps)) => //. admit.
+  rewrite mindicE.
+  have [/= /[!inE] /= eXx|] := boolP (x \in [set x | eps%:E <= `|(X x)%:E|])%E.
+    by rewrite mulr1.
   by rewrite mulr0.
-rewrite /mindic /indic.
-case: (boolP (x \in [set x | (eps%:E <= `|(X x)%:E|)%E ])) => hmem /=.
+rewrite mindicE.
+have [|_] := boolP (x \in [set x | eps%:E <= `|(X x)%:E| ]%E).
   by rewrite mulr1.
-rewrite mulr0 (@le_trans _ _ (f eps)) //.
-admit.
-Admitted.
+by rewrite mulr0.
+Qed.
 
 Lemma chebyshev (X : {RV P >-> R}) (eps : R)
   : (P [set x | (eps <= `| X x |)%R ] <= (Num.sqrt eps)%:E * 'V X)%E.

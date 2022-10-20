@@ -2750,11 +2750,11 @@ rewrite ih ?big_ord_recr//.
 Qed.
 
 Lemma le_integral_abse (D : set T) (mD : measurable D) (g : T -> \bar R) a :
-  measurable_fun D g -> (0 < a)%R ->
-  a%:E * mu (D `&` [set x | (`|g x| >= a%:E)%E]) <= \int[mu]_(x in D) `|g x|.
+   measurable_fun D g -> (0 < a)%R ->
+   a%:E * mu (D `&` [set x | (`|g x| >= a%:E)%E]) <= \int[mu]_(x in D) `|g x|.
 Proof.
 move=> mg a0; have ? : measurable (D `&` [set x | (a%:E <= `|g x|)%E]).
-  by apply: emeasurable_fun_c_infty => //; exact: measurable_fun_comp.
+ by apply: emeasurable_fun_c_infty => //; exact: measurable_fun_comp.
 apply: (@le_trans _ _ (\int[mu]_(x in D `&` [set x | `|g x| >= a%:E]) `|g x|)).
   rewrite -integral_cst//; apply: ge0_le_integral => //.
   - by move=> x _ /=; rewrite ltW.
