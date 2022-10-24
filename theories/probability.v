@@ -536,7 +536,11 @@ by rewrite mulr0.
 Qed.
 
 Lemma chebyshev (X : {RV P >-> R}) (eps : R)
-  : (P [set x | (eps <= `| X x |)%R ] <= (Num.sqrt eps)%:E * 'V X)%E.
+  : 0 < eps -> (P [set x | (eps <= `| X x |)%R ] <= (Num.sqrt eps)%:E * 'V X)%E.
+Proof.
+move => heps.
+have [hv|hv] := eqVneq ('V X)%E (+oo)%E.
+  by rewrite hv mulr_infty gtr0_sg; [rewrite mul1e; apply: leey | rewrite sqrtr_gt0].
 Admitted.
 
 End markov_chebyshev.
