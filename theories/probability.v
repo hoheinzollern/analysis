@@ -484,6 +484,7 @@ Proof.
   exact: mulrC.
 Qed.
 
+(* NB: do not rm, we should prove it this way *)
 Lemma markov (X : {RV P >-> R}) (f : {mfun _ >-> R}) (eps : R) :
   0 < eps -> (forall r : R, 0 <= f r) -> {homo f : x y / x <= y} ->
  ((f eps)%:E * P [set x | eps%:E <= `| (X x)%:E | ]%E <=
@@ -502,7 +503,7 @@ apply: (le_trans (@le_integral_abse d T R P setT measurableT (EFin \o X) eps
 Abort.
 
 Lemma markov (X : {RV P >-> R}) (f : {mfun _ >-> R}) (eps : R) :
-  0 < eps -> (forall r : R, 0 <= f r) -> {mono f : x y / x <= y } ->
+  0 < eps -> (forall r : R, 0 <= f r) -> {in `[0, +oo[%classic &, {mono f : x y / x <= y }} ->
  ((f eps)%:E * P [set x | eps%:E <= `| (X x)%:E | ]%E <=
   'E ([the {mfun _ >-> R} of f \o @mabs R] `o X))%E.
 Proof.
@@ -522,7 +523,9 @@ apply (@le_trans _ _ ('E ([the {mfun T >-> R} of
   apply: expectation_le => x /=; first by rewrite mulr_ge0// ltW.
   rewrite mindicE.
   have [|eXx] := boolP (x \in [set x | eps%:E <= `|(X x)%:E| ]%E).
-    by rewrite mul1r mulr1 inE/= lee_fin=> ?; rewrite f_nd.
+    rewrite mul1r mulr1 inE/= lee_fin=> ?; rewrite f_nd//.
+    by rewrite inE mksetE in_itv/= (ltW e0).
+    by rewrite inE mksetE in_itv/= andbT /mabs.
   by rewrite mul0r mulr0.
 apply: expectation_le => x /=.
   rewrite mindicE.
@@ -535,16 +538,25 @@ have [|_] := boolP (x \in [set x | eps%:E <= `|(X x)%:E| ]%E).
 by rewrite mulr0.
 Qed.
 
-Lemma chebyshev (X : {RV P >-> R}) (eps : R)
-  : 0 < eps -> (P [set x | (eps <= `| X x |)%R ] <= (Num.sqrt eps)%:E * 'V X)%E.
+Lemma chebyshev (X : {RV P >-> R}) (eps : R) : 0 < eps ->
+  (P [set x | (eps <= `| X x - fine ('E X)|)%R ] <= (eps ^- 2)%:E * 'V X)%E.
 Proof.
 move => heps.
 have [hv|hv] := eqVneq ('V X)%E (+oo)%E.
-  by rewrite hv mulr_infty gtr0_sg; [rewrite mul1e; apply: leey | rewrite sqrtr_gt0].
-have hm : ((mexp 2 eps)%:E * P [set x | (eps <= `|X x|)%R] <=
-                  'E ([the {mfun _ >-> R} of mexp 2 \o @mabs R] `o X))%E.
-  apply markov; [ rewrite // | rewrite /mexp; apply sqr_ge0 |  ]. admit. 
-Admitted.
+  by rewrite hv mulr_infty gtr0_sg; [rewrite mul1e; apply: leey |rewrite invr_gt0// exprn_gt0].
+have h (Y : {RV P >-> R}) : (P [set x | (eps <= `|Y x|)%R] <= (eps ^- 2)%:E * 'E (Y `^+ 2))%E.
+  rewrite -lee_pdivr_mull; last by rewrite invr_gt0// exprn_gt0.
+  rewrite exprnN expfV exprz_inv opprK -exprnP.
+  have : {in `[0, +oo[%classic &, {mono mexp 2 : x y / x <= y :> R}}.
+    by move=> x y; rewrite !inE !mksetE !in_itv/= !andbT => x0 y0; rewrite /mexp ler_sqr.
+  move=> /(@markov Y [the {mfun _ >-> R} of @mexp R 2] _ heps (@sqr_ge0 _)) /=.
+  move=> /le_trans; apply => /=.
+  apply: expectation_le => //=.
+  - by move=> x; rewrite /mexp /mabs sqr_ge0.
+  - by move=> x; rewrite /mexp /mexp /mabs real_normK// num_real.
+have := h [the {RV P >-> R} of X `- cst_mfun (fine ('E X))].
+by move=> /le_trans; apply; rewrite lee_pmul2l// lte_fin invr_gt0 exprn_gt0.
+Qed.
 
 End markov_chebyshev.
 
