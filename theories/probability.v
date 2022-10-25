@@ -541,6 +541,9 @@ Proof.
 move => heps.
 have [hv|hv] := eqVneq ('V X)%E (+oo)%E.
   by rewrite hv mulr_infty gtr0_sg; [rewrite mul1e; apply: leey | rewrite sqrtr_gt0].
+have hm : ((mexp 2 eps)%:E * P [set x | (eps <= `|X x|)%R] <=
+                  'E ([the {mfun _ >-> R} of mexp 2 \o @mabs R] `o X))%E.
+  apply markov; [ rewrite // | rewrite /mexp; apply sqr_ge0 |  ]. admit. 
 Admitted.
 
 End markov_chebyshev.
