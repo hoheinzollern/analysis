@@ -9,8 +9,23 @@
   + canonicals `ereal_blatticeType`, `ereal_tblatticeType`
 - in `lebesgue_measure.v`:
   + lemma `emeasurable_itv`
+- in `exp.v`:
+  + new lemma `power_pos_ge0`
 
 ### Changed
+
+- in `exp.v`:
+  + generalize `exp_fun` and rename to `power_pos`
+  + `exp_fun_gt0` has now a condition and is renamed to `power_pos_gt0`
+  + weaken condition of `exp_funr1` and rename to `power_posr1`
+  + weaken condition of `exp_fun_inv` and rename to `power_pos_inv`
+  + `exp_funr0` -> `power_posr0`
+  + `exp_fun1` -> `power_pos1`
+  + `ler_exp_fun` -> `ler_power_pos`
+  + `exp_funD` -> `power_posD`
+  + `exp_fun_mulrn` -> `power_pos_mulrn`
+  + the notation ``` `^ ``` has now scope `real_scope`
+  + weaken condition of `riemannR_gt0` and `dvg_riemannR`
 
 ### Renamed
 
