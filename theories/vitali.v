@@ -4,7 +4,7 @@ From mathcomp Require Import all_ssreflect ssralg ssrnum ssrint interval finmap.
 From mathcomp.classical Require Import boolp classical_sets functions.
 From mathcomp.classical Require Import cardinality fsbigop mathcomp_extra.
 Require Import signed reals ereal topology normedtype sequences esum measure.
-Require Import lebesgue_measure lebesgue_integral numfun derive exp.
+Require Import lebesgue_measure lebesgue_integral numfun derive exp trigo.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -174,7 +174,7 @@ Variables (R : realType).
 Let mu := @lebesgue_measure R.
 
 Lemma derive1_expR : (@expR R:R^o -> R^o)^`() = (@expR R).
-Proof. by apply/funext => y; rewrite derive1E derive_val. Qed.
+Proof. by apply/funext => x; rewrite derive1E derive_val. Qed.
 
 Lemma integral_exp (x : R) : \int[mu]_(z in `[0, x]) expR z = expR x - 1.
 Proof.
@@ -188,8 +188,25 @@ rewrite -expR0 -AC_integral_derive; last first.
   rewrite derive1_expR.
   apply continuous_expR.
 congr Rintegral.
-apply/funext => y.
 by rewrite derive1_expR.
+Qed.
+
+Lemma derive1_sin : (@sin R : R^o -> R^o)^`() = (@cos R).
+Proof. by apply/funext => x; rewrite derive1E derive_val. Qed.
+
+Lemma integral_cos (x : R) : \int[mu]_(z in `[0, x]) cos z = sin x.
+Proof.
+rewrite -[RHS]subr0 -[in RHS]sin0 -AC_integral_derive; last first.
+  apply C1_is_AC.
+  split.
+    move => z z0x.
+    apply/derivable1_diffP.
+    apply: derivable_sin.
+  apply: continuous_subspaceT.
+  rewrite derive1_sin.
+  apply continuous_cos.
+congr Rintegral.
+by rewrite derive1_sin.
 Qed.
 
 End examples.
