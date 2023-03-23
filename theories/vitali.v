@@ -59,18 +59,20 @@ Definition is_vitali_covering (E : set R) (V : I -> R * {posnum R}) :=
 Local Open Scope measure_scope.
 Theorem vitali_covering_theorem (E : set R) (V : I -> R * {posnum R}) :
   is_vitali_covering E V -> bounded E -> exists iot : nat -> I,
-    trivIset setT (fun j => Ball (V (iot j))) /\
-    mu^* (E `\` \bigcup_k (Ball (V (iot k)))) = 0%E /\
+    let D := Ball \o V \o iot in
+    trivIset setT D /\
+    mu^* (E `\` \bigcup_k (D k)) = 0%E /\
     (forall e : {posnum R}, exists N,
-      mu^* (E `\` \big[setU/set0]_(k < N) (Ball (V (iot k)))) < e%:num%:E)%E.
+      mu^* (E `\` \big[setU/set0]_(k < N) (D k)) < e%:num%:E)%E.
 Proof.
 Admitted.
 
 Corollary vitali_covering_theorem2 (E : set R) (V : I -> R * {posnum R}) :
   is_vitali_covering E V -> bounded E -> forall e : {posnum R},
     exists n (iot : 'I_n -> I),
-      (mu (\big[setU/set0]_(i < n) (Ball (V (iot i)))) < mu^* E + e%:num%:E /\
-       mu^* (E `&` \big[setU/set0]_(i < n) (Ball (V (iot i)))) > mu^* E + e%:num%:E)%E.
+    let D := Ball \o V \o iot in
+      (mu (\big[setU/set0]_(i < n) (D i)) < mu^* E + e%:num%:E /\
+       mu^* (E `&` \big[setU/set0]_(i < n) (D i)) > mu^* E + e%:num%:E)%E.
 Proof.
 Admitted.
 
@@ -84,20 +86,22 @@ Let mu := @lebesgue_measure R.
 Hypothesis f_nd : {in `[a, b], {homo f : x y / x <= y}}.
 
 Theorem Lebesgue_differentiation :
-  {ae mu, forall x, x \in `[a, b] -> derivable f x 1 /\ 0 <= derive f x 1 } /\
-  \int[mu]_(x in `[a, b]) derive f x 1 <= f b - f a.
+  {ae mu, forall x, x \in `[a, b] -> derivable f x 1 /\ 0 <= f^`() x } /\
+  \int[mu]_(x in `[a, b]) f^`() x <= f b - f a.
 Proof.
 Admitted.
 
 End lebesgue_differentiation.
 
 Section Lebesgue_differentiation_corollary.
-Variables (R : realType) (a b : R) (f : R -> R).
+Variables (R : realType) (a b : R) (f : R^o -> R^o).
 Let mu := @lebesgue_measure R.
 
 Corollary Lebesgue_differentiation_corollary :
   BV f a b ->
   {ae mu, forall x, x \in `[a, b] -> derivable f x 1} /\
-  mu.-integrable (derive f x 1)
+  mu.-integrable `[a, b] (EFin \o f^`()).
+Proof.
+Admitted.
 
 End Lebesgue_differentiation_corollary.
