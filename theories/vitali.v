@@ -18,14 +18,14 @@ Local Open Scope ring_scope.
 Section AC_BV.
 Variable R : realType.
 
-Definition AC (f : R -> R) (a b : R) := forall e : {posnum R},
+Definition AC (a b : R) (f : R -> R) := forall e : {posnum R},
   exists d : {posnum R}, forall n (ab : 'I_n -> R * R),
     (forall i, `[(ab i).1, (ab i).2]%classic `<=` `[a, b]%classic) /\
     trivIset setT (fun i => `[(ab i).1, (ab i).2]%classic) /\
     \sum_(k < n) maxr 0 ((ab k).2  - (ab k).1) < d%:num ->
     \sum_(k < n) maxr 0 (f (ab k).2  - f (ab k).1) < e%:num.
 
-Definition BV (f : R -> R) (a b : R) :=
+Definition BV (a b : R) (f : R -> R) :=
   exists g h : R -> R,
     {in `[a, b], {homo g : x y / x <= y}} /\
     {in `[a, b], {homo h : x y / x <= y}} /\
@@ -98,10 +98,62 @@ Variables (R : realType) (a b : R) (f : R^o -> R^o).
 Let mu := @lebesgue_measure R.
 
 Corollary Lebesgue_differentiation_corollary :
-  BV f a b ->
+  BV a b f ->
   {ae mu, forall x, x \in `[a, b] -> derivable f x 1} /\
   mu.-integrable `[a, b] (EFin \o f^`()).
 Proof.
 Admitted.
 
 End Lebesgue_differentiation_corollary.
+
+Section Integral_absolutely_continuous.
+Variables (R : realType).
+Let mu := @lebesgue_measure R.
+
+Definition L1 (a b : R) := [set f : R -> R | mu.-integrable `[a, b] (EFin \o f)].
+
+Lemma integral_AC (f : R -> R) (a b : R) :
+  f \in L1 a b ->
+  forall e : {posnum R}, exists d : {posnum R},
+    forall E, E `<=` `[a, b] -> measurable E -> (mu E < d%:num%:E)%E ->
+      (\int[mu]_(x in E) `| (f x)%:E | < e%:num%:E)%E.
+Proof.
+Admitted.
+
+Theorem L1_integral_AC (f : R -> R) (a b : R) :
+  f \in L1 a b -> AC a b (fun x => \int[mu]_(z in `[a, x]) f z).
+Proof.
+Admitted.
+
+Lemma L1_integral_0 (f : R -> R) (a b : R) :
+  f \in L1 a b -> (forall c, c \in `[a, b] -> \int[mu]_(x in `[a, c]) f x = 0) -> 
+    {ae mu, forall x, x \in `[a, b] -> f x = 0}.
+Proof.
+Admitted.
+
+Corollary L1_integral_eq (f g : R -> R) (a b : R) :
+  f \in L1 a b -> g \in L1 a b ->
+    (forall c, c \in `[a, b] -> \int[mu]_(x in `[a, c]) f x = \int[mu]_(x in `[a, c]) g x) ->
+      {ae mu, forall x, x \in `[a, b] -> f x = g x}.
+Proof.
+Admitted.
+
+Theorem L1_integral_derive (f : R -> R) (a b : R) :
+  {ae mu, forall x, x \in `[a, b] ->
+    let F (x : R^o) : R^o := \int[mu]_(z in `[a, x]) f z in
+    F^`() = f}.
+Proof.
+Admitted.
+
+Corollary AC_integral_derive (f : R^o -> R^o) (a b : R) :
+  AC a b f -> \int[mu]_(x in `[a, b]) f^`() x = f b - f a.
+Proof.
+Admitted.
+
+Theorem Lebesgue_density (E : set R) :
+  (0 < mu E)%E -> {ae mu, forall x, x \in E ->
+    (fun e => fine (mu (E `&` `[x-e, x+e])) / (fine (mu `[x-e, x+e]))) @ (0:R)^' --> (1:R)}.
+Proof.
+Admitted.
+
+End Integral_absolutely_continuous.
