@@ -4,7 +4,7 @@ From mathcomp Require Import all_ssreflect ssralg ssrnum ssrint interval finmap.
 From mathcomp.classical Require Import boolp classical_sets functions.
 From mathcomp.classical Require Import cardinality fsbigop mathcomp_extra.
 Require Import signed reals ereal topology normedtype sequences esum measure.
-Require Import lebesgue_measure lebesgue_integral numfun derive.
+Require Import lebesgue_measure lebesgue_integral numfun derive exp.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -15,8 +15,14 @@ Import numFieldTopology.Exports.
 Local Open Scope classical_set_scope.
 Local Open Scope ring_scope.
 
+(* Inspired by https://math-wiki.com/images/2/2f/88341leb_fund_thm.pdf *)
+
 Section AC_BV.
 Variable R : realType.
+
+Definition C1 (a b : R) (f : R^o -> R^o) :=
+  (forall x, x \in `[a, b] -> differentiable f x) /\
+  {within `[a, b], continuous f^`()}.
 
 Definition AC (a b : R) (f : R -> R) := forall e : {posnum R},
   exists d : {posnum R}, forall n (ab : 'I_n -> R * R),
@@ -24,6 +30,11 @@ Definition AC (a b : R) (f : R -> R) := forall e : {posnum R},
     trivIset setT (fun i => `[(ab i).1, (ab i).2]%classic) /\
     \sum_(k < n) maxr 0 ((ab k).2  - (ab k).1) < d%:num ->
     \sum_(k < n) maxr 0 (f (ab k).2  - f (ab k).1) < e%:num.
+
+Lemma C1_is_AC (a b : R) (f : R -> R) :
+  C1 a b f -> AC a b f.
+Proof.
+Admitted.
 
 Definition BV (a b : R) (f : R -> R) :=
   exists g h : R -> R,
@@ -157,3 +168,28 @@ Proof.
 Admitted.
 
 End Integral_absolutely_continuous.
+
+Section examples.
+Variables (R : realType).
+Let mu := @lebesgue_measure R.
+
+Lemma derive1_expR : (@expR R:R^o -> R^o)^`() = (@expR R).
+Proof. by apply/funext => y; rewrite derive1E derive_val. Qed.
+
+Lemma integral_exp (x : R) : \int[mu]_(z in `[0, x]) expR z = expR x - 1.
+Proof.
+rewrite -expR0 -AC_integral_derive; last first.
+  apply C1_is_AC.
+  split.
+    move => z z0x.
+    apply/derivable1_diffP.
+    apply: derivable_expR.
+  apply: continuous_subspaceT.
+  rewrite derive1_expR.
+  apply continuous_expR.
+congr Rintegral.
+apply/funext => y.
+by rewrite derive1_expR.
+Qed.
+
+End examples.
