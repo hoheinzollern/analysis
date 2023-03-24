@@ -209,4 +209,26 @@ congr Rintegral.
 by rewrite derive1_sin.
 Qed.
 
+Lemma derive1_cos : (@cos R : R^o -> R^o)^`() = -(@sin R).
+Proof. by apply/funext => x; rewrite derive1E derive_val. Qed.
+
+Lemma integral_sin (x : R) : \int[mu]_(z in `[0, x]) sin z = -cos x + 1.
+Proof.
+  Require Import nsatz_realtype.
+rewrite -[in RHS]cos0 [RHS](_ : _ = - cos x - - cos 0); last by nsatz.
+rewrite -AC_integral_derive; last first.
+  apply C1_is_AC.
+  split.
+    move => z z0x.
+    apply/derivable1_diffP.
+    apply derivableN.
+    apply: derivable_id.
+  apply: continuous_subspaceT.
+  admit.
+  (* rewrite derive1_cos.
+  apply continuous_sin. *)
+congr Rintegral.
+by rewrite derive1_sin.
+Qed.
+
 End examples.
