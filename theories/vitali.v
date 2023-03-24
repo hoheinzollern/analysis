@@ -340,20 +340,65 @@ Qed.
 
 End transfer.
 
-(* https://healy.econ.ohio-state.edu/kcb/Ma103/Notes/Integration.pdf *)
+(* statement from Burkill *)
+(* NB: other reference
+   https://healy.econ.ohio-state.edu/kcb/Ma103/Notes/Integration.pdf *)
 Section change.
-Variables (R : realType) (g : R^o -> R^o).
-Variable (I : set R) (Ii : is_interval I) (Io : open I).
-Hypothesis gC1 : C1 I g.
+Variables (R : realType) (g : R^o -> R^o) (a b : R).
+Hypothesis ACg : AC a b g.
+Hypothesis ndg : {in `[a, b], {homo g : x y / x <= y}}.
 Variable (f : R -> R).
-Hypothesis cf : {in range g, continuous f}.
 Let mu := @lebesgue_measure R.
+Hypothesis fi : mu.-integrable `[a, b] (EFin \o f).
 
-Lemma change x a : x \in I -> a \in I ->
-  \int[mu]_(t in `[a, x]) (f (g t) * g^`() t) =
-  \int[mu]_(u in `[g a, g x]) f u.
+Lemma burkill521 (F : R -> R) (X : R -> R) :
+  AC a b F -> AC a b X -> {homo X : x y / x <= y} ->
+  AC a b (F \o X).
 Proof.
-move=> xI aI.
+Admitted.
 
+Lemma burkill522 (X : set R) : measurable X -> X `<=` range g ->
+  mu X = 0%E ->
+  let T := g @^-1` X in
+  {ae mu, forall t, t \in T -> g^`() t = 0}.
+Proof.
+move=> mX Xg muX0 T.
+have H1 := @AC_integral_derive R g a b ACg.
+set Ox := `](g b), (g a)[%classic.
+set Ot := `]b, a[%classic.
+have H2 : \int[mu]_(x in Ot) g^`() x = fine (mu Ox).
+  admit.
+have [Ox_ [oOx XOx_ dOx_ muOx_0]] : exists (Ox_ : (set R)^nat),
+  [/\ (forall n, open (Ox_ n)), (forall n, X `<=` Ox_ n),
+      {homo mu \o Ox_ : x y / (x <= y)%N >-> (x > y)%E} &
+      mu \o Ox_ --> 0%E].
+  admit.
+pose Ot_ k := g @^-1` (Ox_ k).
+pose T0 := \bigcap_i (Ot_ i).
+have H3 : T `<=` T0.
+  apply: sub_bigcap => i _.
+  rewrite /T /Ot_.
+  apply: preimage_subset.
+  exact: XOx_.
+have H4 (e : {posnum R}) :
+    \forall n \near \oo, \int[mu]_(t in T0) g^`() t <=
+                         \int[mu]_(t in Ox_ n) g^`() t < e%:num.
+  (* NB: use \int[mu]_(t in Ox_ n) g^`() t = mu (Ox n) *)
+  admit.
+have H5 : \int[mu]_(t in T0) g^`() t = 0.
+  admit.
+have H6 : forall t, g^`() t >= 0.
+  admit.
+have : {ae mu, forall t, t \in T0 -> g^`() t = 0}.
+  admit.
+by apply/ae_imply => /= x /[swap] /[!inE] /H3 /[swap] /[apply].
+Admitted.
+
+Lemma change :
+  \int[mu]_(t in `[a, b]) (f (g t) * g^`() t) =
+  \int[mu]_(u in `[g a, g b]) f u.
+Proof.
+(* use burkill521 and burkill522 *)
+Admitted.
 
 Section change.
