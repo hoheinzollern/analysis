@@ -20,9 +20,9 @@ Local Open Scope ring_scope.
 Section AC_BV.
 Variable R : realType.
 
-Definition C1 (a b : R) (f : R^o -> R^o) :=
-  (forall x, x \in `[a, b] -> differentiable f x) /\
-  {within `[a, b], continuous f^`()}.
+Definition C1 (I : set R) (f : R^o -> R^o) :=
+  (forall x, x \in I -> differentiable f x) /\
+  {within I, continuous f^`()}.
 
 Definition AC (a b : R) (f : R -> R) := forall e : {posnum R},
   exists d : {posnum R}, forall n (ab : 'I_n -> R * R),
@@ -32,7 +32,7 @@ Definition AC (a b : R) (f : R -> R) := forall e : {posnum R},
     \sum_(k < n) maxr 0 (f (ab k).2  - f (ab k).1) < e%:num.
 
 Lemma C1_is_AC (a b : R) (f : R -> R) :
-  C1 a b f -> AC a b f.
+  C1 `[a, b] f -> AC a b f.
 Proof.
 Admitted.
 
@@ -212,23 +212,148 @@ Qed.
 Lemma derive1_cos : (@cos R : R^o -> R^o)^`() = -(@sin R).
 Proof. by apply/funext => x; rewrite derive1E derive_val. Qed.
 
+Require Import nsatz_realtype.
+
 Lemma integral_sin (x : R) : \int[mu]_(z in `[0, x]) sin z = -cos x + 1.
 Proof.
-  Require Import nsatz_realtype.
 rewrite -[in RHS]cos0 [RHS](_ : _ = - cos x - - cos 0); last by nsatz.
-rewrite -AC_integral_derive; last first.
+rewrite -(@AC_integral_derive _ (fun x => - cos x)); last first.
   apply C1_is_AC.
   split.
     move => z z0x.
     apply/derivable1_diffP.
     apply derivableN.
-    apply: derivable_id.
+    apply: derivable_cos.
   apply: continuous_subspaceT.
-  admit.
-  (* rewrite derive1_cos.
-  apply continuous_sin. *)
-congr Rintegral.
-by rewrite derive1_sin.
+  rewrite (_ : _^`() = (fun x => sin x : R^o)); last first.
+    apply/funext => y /=.
+    by rewrite derive1E deriveN// -derive1E derive1_cos opprK.
+  exact: continuous_sin.
+congr Rintegral => //=.
+apply/funext => y.
+by rewrite derive1E deriveN// -derive1E derive1_cos opprK.
 Qed.
 
 End examples.
+
+Section pushforward_measure.
+Local Open Scope ereal_scope.
+Context d d' (T1 : measurableType d) (T2 : measurableType d') (f : T1 -> T2).
+Variables (R : realFieldType) (m : {measure set T1 -> \bar R}).
+Variables (D : set T1) (mD : measurable D).
+
+Definition pushforward (mf : measurable_fun D f) A := m (D `&` f @^-1` A).
+
+Hypothesis mf : measurable_fun D f.
+
+Let pushforward0 : pushforward mf set0 = 0.
+Proof. by rewrite /pushforward preimage_set0 setI0 measure0. Qed.
+
+Let pushforward_ge0 A : 0 <= pushforward mf A.
+Proof. exact: measure_ge0. Qed.
+
+Let pushforward_sigma_additive : semi_sigma_additive (pushforward mf).
+Proof.
+move=> F mF tF mUF; rewrite /pushforward preimage_bigcup setI_bigcupr.
+apply: measure_semi_sigma_additive.
+- by move=> n; exact: mf.
+- apply: trivIset_setIl => //.
+  apply/trivIsetP => /= i j _ _ ij; rewrite -preimage_setI.
+  by move/trivIsetP : tF => /(_ _ _ _ _ ij) ->//; rewrite preimage_set0.
+- by rewrite -setI_bigcupr -preimage_bigcup; exact: mf.
+Qed.
+
+HB.instance Definition _ := isMeasure.Build _ _ _
+  (pushforward mf) pushforward0 pushforward_ge0 pushforward_sigma_additive.
+
+End pushforward_measure.
+
+Section transfer.
+Local Open Scope ereal_scope.
+Context d1 d2 (X : measurableType d1) (Y : measurableType d2) (R : realType).
+Variables (D : set X) (mD : measurable D).
+Variables (phi : X -> Y) (mphi : measurable_fun D phi)
+  (phiD : d2.-measurable (phi @` D)).
+Variables (mu : {measure set X -> \bar R}).
+
+Lemma integral_pushforward (f : Y -> \bar R) :
+  measurable_fun setT f -> (forall y, 0 <= f y) ->
+  \int[pushforward mu mphi]_(y in phi @` D) f y = \int[mu]_(x in D) (f \o phi) x.
+Proof.
+move=> mf f0.
+have [f_ [ndf_ f_f]] := approximation measurableT mf (fun t _ => f0 t).
+transitivity (lim (fun n => \int[pushforward mu mphi]_(x in phi @` D) (f_ n x)%:E)).
+  rewrite -monotone_convergence//.
+  - by apply: eq_integral => y _; apply/esym/cvg_lim => //; exact: f_f.
+  - move=> n; apply/EFin_measurable_fun.
+    exact: (@measurable_funS _ _ _ _ setT).
+  - by move=> n y phi_y; rewrite lee_fin.
+  - by move=> y phi_y m n mn; rewrite lee_fin; apply/lefP/ndf_.
+rewrite (_ : (fun _ => _) = (fun n => \int[mu]_(x in D) (EFin \o f_ n \o phi) x)).
+  rewrite -monotone_convergence//; last 3 first.
+    - move=> n /=; apply: measurable_funT_comp; first exact: measurable_fun_EFin.
+      by apply: measurable_funT_comp => //.
+    - by move=> n x _ /=; rewrite lee_fin.
+    - by move=> x _ m n mn; rewrite lee_fin; exact/lefP/ndf_.
+  by apply: eq_integral => x _ /=; apply/cvg_lim => //; exact: f_f.
+apply/funext => n.
+have mfnphi r : measurable (D `&` (f_ n @^-1` [set r] \o phi)).
+  exact/mphi.
+transitivity (\sum_(k \in range (f_ n))
+    \int[mu]_(x in D) (k * \1_(D `&` ((f_ n @^-1` [set k]) \o phi)) x)%:E).
+  under eq_integral do rewrite fimfunE -fsumEFin//.
+  rewrite ge0_integral_fsum//; last 2 first.
+    - move=> y; apply/EFin_measurable_fun; apply: measurable_funM.
+        exact: measurable_fun_cst.
+      rewrite (_ : \1_ _ = mindic R (measurable_sfunP (f_ n) (measurable_set1 y)))//.
+      exact: (@measurable_funS _ _ _ _ setT).
+    - by move=> y x _; rewrite nnfun_muleindic_ge0.
+  apply: eq_fsbigr => r ?; rewrite integralM_indic_nnsfun// integral_indic//=.
+  rewrite (integralM_indic _ (fun r => D `&` (f_ n @^-1` [set r] \o phi)))//.
+    congr (_ * _); rewrite [RHS](@integral_indic)//.
+    rewrite /pushforward/=.
+    congr (mu _).
+    apply/seteqP; split => [x [Dx [/= fphir [x0 Dx0 x0x]]]|].
+      by split => //.
+    move=> x [[Dx /= phixr] _]; split => //; split => //.
+    by exists x.
+  by move=> r0; rewrite preimage_nnfun0//= setI0.
+rewrite -ge0_integral_fsum//; last 2 first.
+  - move=> r; apply/EFin_measurable_fun; apply: measurable_funM.
+      exact: measurable_fun_cst.
+    rewrite (_ : \1_ _ = mindic R (mfnphi r))//.
+    by apply: (@measurable_funS _ _ _ _ setT).
+  - move=> r x Dx.
+    rewrite EFinM.
+    rewrite indicE.
+    rewrite in_setI (mem_set Dx) /=.
+    by rewrite nnfun_muleindic_ge0.
+apply: eq_integral => x xD.
+rewrite /=.
+rewrite fsumEFin//=.
+transitivity ((\sum_(i \in range (f_ n)) (i * \1_((f_ n @^-1` [set i] \o phi)) x))%:E).
+  congr EFin.
+  apply: eq_fsbigr => y yfn.
+  by rewrite indicE in_setI xD/=.
+by rewrite -fimfunE.
+Qed.
+
+End transfer.
+
+(* https://healy.econ.ohio-state.edu/kcb/Ma103/Notes/Integration.pdf *)
+Section change.
+Variables (R : realType) (g : R^o -> R^o).
+Variable (I : set R) (Ii : is_interval I) (Io : open I).
+Hypothesis gC1 : C1 I g.
+Variable (f : R -> R).
+Hypothesis cf : {in range g, continuous f}.
+Let mu := @lebesgue_measure R.
+
+Lemma change x a : x \in I -> a \in I ->
+  \int[mu]_(t in `[a, x]) (f (g t) * g^`() t) =
+  \int[mu]_(u in `[g a, g x]) f u.
+Proof.
+move=> xI aI.
+
+
+Section change.
