@@ -31,9 +31,20 @@ Definition AC (a b : R) (f : R -> R) := forall e : {posnum R},
     \sum_(k < n) maxr 0 ((ab k).2  - (ab k).1) < d%:num ->
     \sum_(k < n) maxr 0 (f (ab k).2  - f (ab k).1) < e%:num.
 
+Open Scope ring_scope.
+
 Lemma C1_is_AC (a b : R) (f : R -> R) :
   C1 `[a, b] f -> AC a b f.
 Proof.
+move=> [df cdf] e.
+(* pose M := maxr 0 [set x : R| exists y, y \in `[a, b]%classic /\ x = `|f^`() y|]. *)
+(* pose d := e / M)*)
+(* forall n and ab,
+ * \sum_(k < n) maxr 0 (f (ab k).2 - f (ab k).1)
+ *    <= M * \sum_(k < n) maxr 0 ((ab k).2 - (ab k).1)
+ *    <  M * d
+ *    =  e
+ *)
 Admitted.
 
 Definition BV (a b : R) (f : R -> R) :=
@@ -456,3 +467,69 @@ Proof.
 Admitted.
 
 Section change.
+
+Section gauss_integral.
+(* ref : https://mathlandscape.com/gauss-integral/#toc4 *)
+Let dx := @lebesgue_measure R.
+Let Gaussian := fun (x : R) => expR (- (x ^+ 2)).
+
+(*
+Lemma integral_M_integral (f g: R -> R) : \int[dx]_x f x * \int[dx]_x g x =
+\int[dx \* dx]_z (f z.1) * (g z.2).
+*)
+Print tan.
+Check (tan\^-1) a.
+Check ((tan : R^o -> R^o)^`()).
+
+Lemma derive1_comp (f1 f2: R^o -> R^o) : (f1 \o f2)^`() = f2^`() \* (f1^`() \o f2).
+Proof.
+Admitted.
+
+Lemma derive1_expR2 : ((fun (x : R) => expR (- (x^+ 2))): R^o -> R^o)^`() = (fun x => -x * expR(- (x ^+ 2))).
+Proof.
+(* apply: derive1_comp. *)
+Admitted.
+Lemma deriveM (f1 f2: R^o -> R^o) : (f1 \* f2)^`() =
+(f1^`() \* f2) \+ (f1 \* f2^`()).
+Proof.
+Admitted.
+
+Lemma derive1_arctan : (tan\^-1 : R^o -> R^o)^`() = (fun t => 1 / (1 + t ^+ 2)).
+Proof.
+have tan_inv (x : R): tan\^-1=(fun x => cos x) \* (fun x => 1/sin x).
+  rewrite /tan/inv_fun.
+  under eq_fun do rewrite invf_div.
+  rewrite /mul_fun.
+  apply/funext => z.
+  by rewrite mulrA mulr1.
+rewrite tan_inv.
+apply /funext => x.
+apply deriveM.
+rewrite derive1E.
+apply deriveM.
+rewrite derive_val.
+Admitted.
+
+Lemma integral_arctan (x : R) : \int[mu]_(z in `[0, x]) tan\^-1 z = x ^+ 2 + 1.
+Proof.
+Admitted.
+
+Check Fubini.
+
+Lemma
+
+Lemma integral_ : \int[dx]_(x in `[0, +oo]) (fun t => 1 / (2 * (1 + t ^+ 2)) x = .
+
+Lemma gauss_integral (mu : `{measure R -> \bar R}) : \int[dx]_x Gaussian x = Num.sqrt pi.
+Proof.
+rewrite -[LHS]ger0_norm; last first.
+  admit.
+rewrite -[LHS]sqrtr_sqr.
+apply f_equal.
+rewrite expr2.
+rewrite [LHS](_:_ = \int[mu \x^ mu]_z
+     Gaussian z.1 *
+     Gaussian z.2).
+Abort.
+
+End gauss_integral.
