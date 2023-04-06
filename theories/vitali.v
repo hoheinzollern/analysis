@@ -98,7 +98,7 @@ Hypothesis f_nd : {in `[a, b], {homo f : x y / x <= y}}.
 
 Theorem Lebesgue_differentiation :
   {ae mu, forall x, x \in `[a, b] -> derivable f x 1 /\ 0 <= f^`() x } /\
-  \int[mu]_(x in `[a, b]) f^`() x <= f b - f a.
+  \int[[the measure _ _ of mu]]_(x in `[a, b]) f^`() x <= f b - f a.
 Proof.
 Admitted.
 
@@ -127,37 +127,37 @@ Lemma integral_AC (f : R -> R) (a b : R) :
   f \in L1 a b ->
   forall e : {posnum R}, exists d : {posnum R},
     forall E, E `<=` `[a, b] -> measurable E -> (mu E < d%:num%:E)%E ->
-      (\int[mu]_(x in E) `| (f x)%:E | < e%:num%:E)%E.
+      (\int[[the measure _ _ of mu]]_(x in E) `| (f x)%:E | < e%:num%:E)%E.
 Proof.
 Admitted.
 
 Theorem L1_integral_AC (f : R -> R) (a b : R) :
-  f \in L1 a b -> AC a b (fun x => \int[mu]_(z in `[a, x]) f z).
+  f \in L1 a b -> AC a b (fun x => \int[[the measure _ _ of mu]]_(z in `[a, x]) f z).
 Proof.
 Admitted.
 
 Lemma L1_integral_0 (f : R -> R) (a b : R) :
-  f \in L1 a b -> (forall c, c \in `[a, b] -> \int[mu]_(x in `[a, c]) f x = 0) -> 
+  f \in L1 a b -> (forall c, c \in `[a, b] -> \int[[the measure _ _ of mu]]_(x in `[a, c]) f x = 0) ->
     {ae mu, forall x, x \in `[a, b] -> f x = 0}.
 Proof.
 Admitted.
 
 Corollary L1_integral_eq (f g : R -> R) (a b : R) :
   f \in L1 a b -> g \in L1 a b ->
-    (forall c, c \in `[a, b] -> \int[mu]_(x in `[a, c]) f x = \int[mu]_(x in `[a, c]) g x) ->
+    (forall c, c \in `[a, b] -> \int[[the measure _ _ of mu]]_(x in `[a, c]) f x = \int[[the measure _ _ of mu]]_(x in `[a, c]) g x) ->
       {ae mu, forall x, x \in `[a, b] -> f x = g x}.
 Proof.
 Admitted.
 
 Theorem L1_integral_derive (f : R -> R) (a b : R) :
   {ae mu, forall x, x \in `[a, b] ->
-    let F (x : R^o) : R^o := \int[mu]_(z in `[a, x]) f z in
+    let F (x : R^o) : R^o := \int[[the measure _ _ of mu]]_(z in `[a, x]) f z in
     F^`() = f}.
 Proof.
 Admitted.
 
 Corollary AC_integral_derive (f : R^o -> R^o) (a b : R) :
-  AC a b f -> \int[mu]_(x in `[a, b]) f^`() x = f b - f a.
+  AC a b f -> \int[[the measure _ _ of mu]]_(x in `[a, b]) f^`() x = f b - f a.
 Proof.
 Admitted.
 
@@ -168,6 +168,60 @@ Proof.
 Admitted.
 
 End Integral_absolutely_continuous.
+
+Section Partition.
+Context {R : realType}.
+Variables a b : R.
+Variable n : nat.
+
+Definition PartitionL i := a + i%:R * 2 ^- n * (b - a).
+
+Definition Partition i :=
+  `[PartitionL i, PartitionL i.+1[%classic.
+
+Lemma PartitionP : `[a, b[%classic =
+  \big[setU/set0]_(i < (2 ^ n).+1) Partition i.
+Proof.
+Admitted.
+
+End Partition.
+
+Section ftc_RN.
+Context {R : realType}.
+Variables a b : R.
+Variable f : R^o -> R^o. (* non decreasing *)
+Hypothesis f_AC : AC a b f.
+Variable lsf : {measure set [the measurableType (R.-ocitv.-measurable).-sigma of salgebraType (R.-ocitv.-measurable)] -> \bar R}. (* lebesgue stietljes measure of f *)
+
+Theorem FTC t : t \in `[a, b] ->
+  f t - f a = \int[[the measure _ _ of @lebesgue_measure R]]_(s in `[a, t] ) f^`() s.
+Proof.
+move=> tab.
+have [h hh] : exists h, forall A, measurable A ->
+    [the measure _ _ of @lebesgue_measure R].-integrable setT h /\
+    lsf A = (\int[[the measure _ _ of @lebesgue_measure R]]_s (h s))%E.
+  (* TODO: requires lsf `<< [the measure _ _ of @lebesgue_measure R] *)
+  admit.
+pose h_ n x := if x == b then 0 else
+  \sum_(i < (2 ^ n).+1) (fine (lsf (Partition a b n i)) /
+                         fine (lebesgue_measure (Partition a b n i)))
+                        * \1_(Partition a b n i) x.
+have h_h : {ae @lebesgue_measure R, forall x, (h_ n x)%:E @[n --> \oo] --> h x}.
+  admit.
+have f_diff : {ae @lebesgue_measure R, forall x, differentiable f x}.
+  admit.
+have f'_h : {ae @lebesgue_measure R, forall x, (f^`() x)%:E = h x}.
+  admit.
+rewrite /=.
+transitivity (fine (lsf (`[a, t]%classic))).
+  admit. (* lebesgue-stieltjes definition *)
+transitivity (fine (\int[[the measure _ _ of @lebesgue_measure R]]_(s in `[a, t]) h s)).
+  admit. (* by RN *)
+(* see ge0_ae_eq_integral or a related lemma *)
+admit.
+Abort.
+
+End ftc_RN.
 
 Section examples.
 Variables (R : realType).
