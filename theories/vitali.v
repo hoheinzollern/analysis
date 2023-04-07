@@ -11,6 +11,7 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 Import Order.TTheory GRing.Theory Num.Def Num.Theory.
 Import numFieldTopology.Exports.
+Import set_interval.
 
 Local Open Scope classical_set_scope.
 Local Open Scope ring_scope.
@@ -20,9 +21,13 @@ Local Open Scope ring_scope.
 Section AC_BV.
 Variable R : realType.
 
-Definition C1 (I : set R) (f : R^o -> R^o) :=
-  (forall x, x \in I -> differentiable f x) /\
-  {within I, continuous f^`()}.
+Definition C1 (a b : R) (f : R^o -> R^o) :=
+  (forall x, x \in `]a, b[ -> differentiable f x) /\
+  {within `[a, b], continuous f^`()}.
+
+(* Definition C1 (I : set R) (f : R^o -> R^o) := *)
+(*   (forall x, x \in I -> differentiable f x) /\ *)
+(*   {within I, continuous f^`()}. *)
 
 Definition AC (a b : R) (f : R -> R) := forall e : {posnum R},
   exists d : {posnum R}, forall n (ab : 'I_n -> R * R),
@@ -33,18 +38,182 @@ Definition AC (a b : R) (f : R -> R) := forall e : {posnum R},
 
 Open Scope ring_scope.
 
-Lemma C1_is_AC (a b : R) (f : R -> R) :
-  C1 `[a, b] f -> AC a b f.
+Lemma derivable_within_continuous (f : R^o -> R^o) (i : interval R) :
+  {in i, forall x, derivable f x (1:R^o)} -> {within [set` i], continuous f}.
+Proof. Admitted.
+
+
+Lemma EVT_maxabs (f : R -> R) (a b : R) : (* TODO : Filter not infered *)
+  a <= b -> {within `[a, b], continuous f} -> exists2 c, c \in `[a, b]%R &
+  forall t, t \in `[a, b]%R -> `|f t| <= `|f c|.
 Proof.
-move=> [df cdf] e.
-(* pose M := maxr 0 [set x : R| exists y, y \in `[a, b]%classic /\ x = `|f^`() y|]. *)
-(* pose d := e / M)*)
-(* forall n and ab,
- * \sum_(k < n) maxr 0 (f (ab k).2 - f (ab k).1)
- *    <= M * \sum_(k < n) maxr 0 ((ab k).2 - (ab k).1)
- *    <  M * d
- *    =  e
- *)
+move=> leab fcont; set imf := (fun x=> `|f x|) @` `[a, b].
+have imf_sup : has_sup imf.
+  split; first exists (`|f a|).
+   apply/imageP; rewrite set_interval.set_itvE /=; apply/andP; by split.
+  have [M [Mreal imfltM]] : bounded_set ((f:R^o->R^o) @` `[a, b]).
+    by apply/compact_bounded/continuous_compact => //; exact: segment_compact.
+  exists (M + 1) => y.
+  admit. (* move=> /imfltM yleM.*)
+(*   by rewrite (le_trans _ (yleM _ _)) ?ler_norm ?ltr_addl. *)
+(* have [|imf_ltsup] := pselect (exists2 c, c \in `[a, b]%R & f c = sup imf). *)
+(*   move=> [c cab fceqsup]; exists c => // t tab; rewrite fceqsup. *)
+(*   apply: (le_trans _ (ler_norm (sup imf))). *)
+(*   apply/sup_upper_bound => //. ; exact/imageP. *)
+(* have {}imf_ltsup t : t \in `[a, b]%R -> f t < sup imf. *)
+(*   move=> tab; case: (ltrP (f t) (sup imf)) => // supleft. *)
+(*   rewrite falseE; apply: imf_ltsup; exists t => //; apply/eqP. *)
+(*   by rewrite eq_le supleft andbT sup_upper_bound//; exact/imageP. *)
+(* pose g t : R := (sup imf - f t)^-1. *)
+(* have invf_continuous : {within `[a, b], continuous g}. *)
+(*   rewrite continuous_subspace_in => t tab; apply: cvgV => //=. *)
+(*     by rewrite subr_eq0 gt_eqF // imf_ltsup //; rewrite inE in tab. *)
+(*   (*apply cvgD;[exact: cst_continuous | apply: cvgN; exact: (fcont t)].*) *)
+(*   admit. *)
+(* have /ex_strict_bound_gt0 [k k_gt0 /= imVfltk] : bounded_set ((g:R^o->R^o) @` `[a, b]). *)
+(*   apply/compact_bounded/continuous_compact; last exact: segment_compact. *)
+(*   exact: invf_continuous. *)
+(* have [_ [t tab <-]] : exists2 y, imf y & sup imf - k^-1 < y. *)
+(*   by apply: sup_adherent => //; rewrite invr_gt0. *)
+(* rewrite ltr_subl_addr -ltr_subl_addl. *)
+(* suff : sup imf - f t > k^-1 by move=> /ltW; rewrite leNgt => /negbTE ->. *)
+(* rewrite -[ltRHS]invrK ltf_pinv// ?qualifE ?invr_gt0 ?subr_gt0 ?imf_ltsup//. *)
+(* by rewrite (le_lt_trans (ler_norm _) _) ?imVfltk//; exact: imageP. *)
+(* Admitted. *)
+Admitted.
+Lemma globally0 {T} (S : set T) : globally set0 S.
+Admitted.
+Lemma lipschitz_set0 (f : R^o -> R^o) :[lipschitz f x | x in set0].
+Admitted.
+Lemma lipschitz_set1 (f : R^o -> R^o) a :[lipschitz f x | x in set1 a].
+Admitted.
+
+Lemma C1_is_lipschitz (a b : R) (f : R^o -> R^o) :
+  C1 a b f -> [lipschitz f x | x in `[a, b]].
+Proof.
+move=> [df cdf].
+have [|ab] := leP b a.
+  rewrite le_eqVlt => /predU1P [->|ba].
+    rewrite set_itvE.
+    exact:lipschitz_set1.
+  rewrite set_itv_ge ?bnd_simp -?ltNge //.
+  exact:lipschitz_set0.
+have [f0|nf0] := eqVneq f (cst 0).
+  apply (@klipschitzW _ _ _ 1).
+    apply (@globally_properfilter _ _ (a, a)).
+    apply inferP => /=.
+    rewrite in_itv /=.
+    by rewrite lexx (ltW ab).
+  move=> x y /=.
+  rewrite f0 /=.
+  by rewrite subrr normr0 mul1r.
+have cdabsf : {within `[a, b], continuous (fun x=> `|f^`() x|)}.
+  move=> x.
+  by apply: continuous_comp => /=; [ exact: cdf | exact: norm_continuous ].
+have [c cab dfmax] := EVT_max (ltW ab) cdabsf.
+pose M := `|(f:R^o -> R^o)^`() c|.
+apply (@klipschitzW _ _ _ M).
+  apply (@globally_properfilter _ _ (a, a)).
+  apply inferP.
+  rewrite /=.
+  rewrite in_itv /=.
+  by rewrite lexx (ltW ab).
+move=> [x y] /= [xab yab] /=.
+wlog : x y xab yab / x < y.
+  move=> h.
+  have [|] := ltP x y.
+    by apply (h x y xab yab).
+  rewrite le_eqVlt => /predU1P[->|].
+    by rewrite !subrr normr0 mulr0.
+  rewrite distrC (distrC x).
+  by apply (h y x yab xab).
+move=> xy.
+have := derivable_within_continuous (fun x h => (diff_derivable (df x h))).
+move=> cf.
+have cf_xy : {within `[x, y], continuous f}.
+  apply: continuous_subspaceW cf.
+  move=> k /=.
+  rewrite !in_itv /=.
+have df_xy : forall z:R, z \in `]x, y[ -> differentiable f z.
+  admit.
+  have [d dxy] :=
+    MVT xy (fun z h => derivableP (diff_derivable (df_xy z h))) cf_xy.
+rewrite -derive1E => mvt.
+have := f_equal normr mvt.
+rewrite normrM => mvt_n.
+rewrite distrC (distrC x _).
+rewrite mvt_n.
+apply: ler_pmul=> //.
+apply dfmax.
+move: dxy xab yab.
+rewrite !in_itv /=.
+move=> /andP[xd dy]/andP[ax xb] /andP[ay yb].
+rewrite (le_trans ax (ltW xd))//=.
+rewrite (le_trans (ltW dy) yb)//=.
+Admitted.
+
+Lemma Lipschitz_is_AC (a b : R) (f : R^o -> R^o) :
+  [lipschitz f x | x in `[a, b]] -> AC a b f.
+Proof.
+
+(* move=> [df cdf] e. *)
+(* have [f0|nf0] := eqVneq f (cst 0). *)
+(*   exists 1%:pos => n ab [] absub /= [] ab0 ab1. *)
+(*   rewrite f0 /= subr0 (_:maxr 0 0 = 0); last first. *)
+(*     by apply: max_idPr. *)
+(*   rewrite big1 //. *)
+(* (* forall n and ab, *)
+(*  * \sum_(k < n) maxr 0 (f (ab k).2 - f (ab k).1) *)
+(*  *    <= M * \sum_(k < n) maxr 0 ((ab k).2 - (ab k).1) *)
+(*  *    <  M * d *)
+(*  *    =  e *)
+(*  *) *)
+(* pose M := sup [set x : R| exists y, y \in `[a, b]%classic /\ x = *)
+(*      `|(f : R^o -> R^o)^`() y|]. *)
+(* have M0 : 0 < M. *)
+(*   admit. *)
+(* pose d := e%:num / M. *)
+(* have d0 : 0 < d. *)
+(*   apply: divr_gt0 => //. *)
+(* exists (PosNum d0). *)
+(* move=> n ab [abH [trivab sum_ltd]]. *)
+(* have : forall k, maxr 0 (f (ab k).2 - f (ab k).1) <= M * maxr 0 ((ab k).2 - (ab k).1). *)
+(*   move=> k. *)
+(*   have : ((ab k).1 >= (ab k).2) \/ ((ab k).1 < (ab k).2). *)
+(*     admit. *)
+(*   case; move=> abgt12. *)
+(*     rewrite (_: maxr 0 (f (ab k).2 - f (ab k).1) = 0). *)
+(*     admit. *)
+(*   admit. *)
+(*   have max_r : maxr 0 (f (ab k).2 - f (ab k).1) = (f (ab k).2 - f (ab k).1). *)
+(*   admit. *)
+(*   rewrite max_r. *)
+(*   have is_derive_f : (forall x : R^o, x \in `](ab k).1, (ab k).2[ -> *)
+(*                        is_derive x 1 (f : R^o -> R^o) ((f : R^o -> R^o)^`() x)). *)
+(*     admit. *)
+(*   have cf : {within `[(ab k).1, (ab k).2], continuous f}. *)
+(*     admit. *)
+(*   pose m:=(MVT abgt12 is_derive_f cf). *)
+(*   move: m=> [] c cab cMV. *)
+(*   rewrite cMV. *)
+(*   (*rewrite -(mulr0 ((f:R^o->R^o)^`() c)). maxr_pmulr?*) *)
+(*   have dfc0 : 0 < ((f:R^o->R^o)^`() c). *)
+(*     admit. *)
+(*   rewrite (_:(f:R^o->R^o)^`() c * ((ab k).2 - (ab k).1) = *)
+(*                (f:R^o->R^o)^`() c * ((ab k).2 - (ab k).1));last first. *)
+(*     admit. *)
+(*   have cM : (f:R^o->R^o)^`() c <= M. *)
+(*   admit. *)
+(*   have abgt0: 0 < (ab k).2 - (ab k).1. *)
+(*     admit. *)
+(*   have cM_le : ((f:R^o->R^o)^`() c * ((ab k).2 - (ab k).1) <= *)
+(*       M * ((ab k).2 - (ab k).1)). *)
+(*     by rewrite (ler_pmul2r abgt0). *)
+(*   apply (le_trans cM_le). *)
+(*   rewrite (_:maxr 0 ((ab k).2 - (ab k).1) = (ab k).2 - (ab k).1);last first. *)
+(*     admit. *)
+(*   done. *)
+
 Admitted.
 
 Definition BV (a b : R) (f : R -> R) :=
@@ -494,29 +663,18 @@ Lemma deriveM (f1 f2: R^o -> R^o) : (f1 \* f2)^`() =
 Proof.
 Admitted.
 
-Lemma derive1_arctan : (tan\^-1 : R^o -> R^o)^`() = (fun t => 1 / (1 + t ^+ 2)).
-Proof.
-have tan_inv (x : R): tan\^-1=(fun x => cos x) \* (fun x => 1/sin x).
-  rewrite /tan/inv_fun.
-  under eq_fun do rewrite invf_div.
-  rewrite /mul_fun.
-  apply/funext => z.
-  by rewrite mulrA mulr1.
-rewrite tan_inv.
-apply /funext => x.
-apply deriveM.
-rewrite derive1E.
-apply deriveM.
-rewrite derive_val.
-Admitted.
+Check is_derive1_atan.
 
-Lemma integral_arctan (x : R) : \int[mu]_(z in `[0, x]) tan\^-1 z = x ^+ 2 + 1.
+Lemma integral_atan (x : R) : x \in `[- (pi/2), pi/2] ->
+   \int[mu]_(z in `[0, x]) atan z = (1 +x ^+ 2)^-1.
 Proof.
 Admitted.
 
 Check Fubini.
 
-Lemma
+Section change2polar.
+
+End
 
 Lemma integral_ : \int[dx]_(x in `[0, +oo]) (fun t => 1 / (2 * (1 + t ^+ 2)) x = .
 
