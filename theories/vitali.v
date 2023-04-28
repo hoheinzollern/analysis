@@ -5,6 +5,7 @@ From mathcomp.classical Require Import boolp classical_sets functions.
 From mathcomp.classical Require Import cardinality fsbigop mathcomp_extra.
 Require Import signed reals ereal topology normedtype sequences esum measure.
 Require Import lebesgue_measure lebesgue_integral numfun derive exp trigo.
+Require Import realfun.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -13,8 +14,25 @@ Import Order.TTheory GRing.Theory Num.Def Num.Theory.
 Import numFieldTopology.Exports.
 Import set_interval.
 
+Import numFieldNormedType.Exports.
+
 Local Open Scope classical_set_scope.
 Local Open Scope ring_scope.
+
+Reserved Notation "{ 'within' A , 'derivable' f }"
+  (at level 70, A at level 69, format "{ 'within'  A ,  'derivable'  f }").
+
+(* differentiable *)
+
+(* Notation "{ 'within' A , 'derivable' f }" := *)
+(* [cvg_to [filteredType _ of @type_of_filter _ [filter of F]]] *)
+        
+(*  cvg_to ((fun h => h^-1 *: ((f \o shift a) (h *: v) - f a)) @ 0^'). *)
+
+(*   cvg_to [filter of fmap f (filter_of (Phantom (subspace A) x))] *)
+(*          [filter of f x]) : classical_set_scope. *)
+
+(*   (derivable (f : subspace A -> _)). *)
 
 (* Inspired by https://math-wiki.com/images/2/2f/88341leb_fund_thm.pdf *)
 
@@ -22,9 +40,8 @@ Section AC_BV.
 Variable R : realType.
 
 Definition C1 (a b : R) (f : R^o -> R^o) :=
-  (forall x, x \in `]a, b[ -> differentiable f x) /\
+derivable_oo_continuous_bnd f a b /\
   {within `[a, b], continuous f^`()}.
-
 (* Definition C1 (I : set R) (f : R^o -> R^o) := *)
 (*   (forall x, x \in I -> differentiable f x) /\ *)
 (*   {within I, continuous f^`()}. *)
@@ -81,12 +98,7 @@ have imf_sup : has_sup imf.
 (* by rewrite (le_lt_trans (ler_norm _) _) ?imVfltk//; exact: imageP. *)
 (* Admitted. *)
 Admitted.
-Lemma globally0 {T} (S : set T) : globally set0 S.
-Admitted.
-Lemma lipschitz_set0 (f : R^o -> R^o) :[lipschitz f x | x in set0].
-Admitted.
-Lemma lipschitz_set1 (f : R^o -> R^o) a :[lipschitz f x | x in set1 a].
-Admitted.
+
 
 Lemma C1_is_lipschitz (a b : R) (f : R^o -> R^o) :
   C1 a b f -> [lipschitz f x | x in `[a, b]].
@@ -128,15 +140,15 @@ wlog : x y xab yab / x < y.
   rewrite distrC (distrC x).
   by apply (h y x yab xab).
 move=> xy.
-have := derivable_within_continuous (fun x h => (diff_derivable (df x h))).
-move=> cf.
+move: (df) => [dfo _ _].
+have := derivable_within_continuous (fun x h => (dfo x h)).
+move=> cfo.
+have cf_ab := derivable_oo_continuous_bnd_within df.
 have cf_xy : {within `[x, y], continuous f}.
-  apply: continuous_subspaceW cf.
-  move=> k /=.
-  rewrite !in_itv /=.
+  admit.
 have df_xy : forall z:R, z \in `]x, y[ -> differentiable f z.
   admit.
-  have [d dxy] :=
+have [d dxy] :=
     MVT xy (fun z h => derivableP (diff_derivable (df_xy z h))) cf_xy.
 rewrite -derive1E => mvt.
 have := f_equal normr mvt.
