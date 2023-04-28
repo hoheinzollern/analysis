@@ -1,19 +1,19 @@
 (* mathcomp analysis (c) 2017 Inria and AIST. License: CeCILL-C.              *)
 From HB Require Import structures.
 From mathcomp Require Import all_ssreflect ssralg ssrnum ssrint interval finmap.
-From mathcomp.classical Require Import boolp classical_sets functions.
-From mathcomp.classical Require Import cardinality fsbigop mathcomp_extra.
+From mathcomp.classical Require Import mathcomp_extra boolp classical_sets.
+From mathcomp.classical Require Import functions cardinality fsbigop.
+From mathcomp.classical Require Import set_interval.
 Require Import signed reals ereal topology normedtype sequences esum measure.
-Require Import lebesgue_measure lebesgue_integral numfun derive exp trigo.
-Require Import realfun.
+Require Import derive realfun exp trigo lebesgue_measure lebesgue_integral.
+Require Import numfun.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
+
 Import Order.TTheory GRing.Theory Num.Def Num.Theory.
 Import numFieldTopology.Exports.
-Import set_interval.
-
 Import numFieldNormedType.Exports.
 
 Local Open Scope classical_set_scope.
@@ -22,29 +22,14 @@ Local Open Scope ring_scope.
 Reserved Notation "{ 'within' A , 'derivable' f }"
   (at level 70, A at level 69, format "{ 'within'  A ,  'derivable'  f }").
 
-(* differentiable *)
-
-(* Notation "{ 'within' A , 'derivable' f }" := *)
-(* [cvg_to [filteredType _ of @type_of_filter _ [filter of F]]] *)
-        
-(*  cvg_to ((fun h => h^-1 *: ((f \o shift a) (h *: v) - f a)) @ 0^'). *)
-
-(*   cvg_to [filter of fmap f (filter_of (Phantom (subspace A) x))] *)
-(*          [filter of f x]) : classical_set_scope. *)
-
-(*   (derivable (f : subspace A -> _)). *)
-
 (* Inspired by https://math-wiki.com/images/2/2f/88341leb_fund_thm.pdf *)
 
 Section AC_BV.
 Variable R : realType.
 
 Definition C1 (a b : R) (f : R^o -> R^o) :=
-derivable_oo_continuous_bnd f a b /\
+  derivable_oo_continuous_bnd f a b /\
   {within `[a, b], continuous f^`()}.
-(* Definition C1 (I : set R) (f : R^o -> R^o) := *)
-(*   (forall x, x \in I -> differentiable f x) /\ *)
-(*   {within I, continuous f^`()}. *)
 
 Definition AC (a b : R) (f : R -> R) := forall e : {posnum R},
   exists d : {posnum R}, forall n (ab : 'I_n -> R * R),
@@ -54,11 +39,6 @@ Definition AC (a b : R) (f : R -> R) := forall e : {posnum R},
     \sum_(k < n) maxr 0 (f (ab k).2  - f (ab k).1) < e%:num.
 
 Open Scope ring_scope.
-
-Lemma derivable_within_continuous (f : R^o -> R^o) (i : interval R) :
-  {in i, forall x, derivable f x (1:R^o)} -> {within [set` i], continuous f}.
-Proof. Admitted.
-
 
 Lemma EVT_maxabs (f : R -> R) (a b : R) : (* TODO : Filter not infered *)
   a <= b -> {within `[a, b], continuous f} -> exists2 c, c \in `[a, b]%R &
@@ -97,72 +77,46 @@ have imf_sup : has_sup imf.
 (* rewrite -[ltRHS]invrK ltf_pinv// ?qualifE ?invr_gt0 ?subr_gt0 ?imf_ltsup//. *)
 (* by rewrite (le_lt_trans (ler_norm _) _) ?imVfltk//; exact: imageP. *)
 (* Admitted. *)
-Admitted.
-
+Abort.
 
 Lemma C1_is_lipschitz (a b : R) (f : R^o -> R^o) :
   C1 a b f -> [lipschitz f x | x in `[a, b]].
 Proof.
-move=> [df cdf].
-have [|ab] := leP b a.
+move=> [df cf]; have [|ab] := leP b a.
   rewrite le_eqVlt => /predU1P [->|ba].
-    rewrite set_itvE.
-    exact:lipschitz_set1.
-  rewrite set_itv_ge ?bnd_simp -?ltNge //.
-  exact:lipschitz_set0.
-have [f0|nf0] := eqVneq f (cst 0).
-  apply (@klipschitzW _ _ _ 1).
-    apply (@globally_properfilter _ _ (a, a)).
-    apply inferP => /=.
-    rewrite in_itv /=.
-    by rewrite lexx (ltW ab).
-  move=> x y /=.
-  rewrite f0 /=.
-  by rewrite subrr normr0 mul1r.
-have cdabsf : {within `[a, b], continuous (fun x=> `|f^`() x|)}.
-  move=> x.
-  by apply: continuous_comp => /=; [ exact: cdf | exact: norm_continuous ].
-have [c cab dfmax] := EVT_max (ltW ab) cdabsf.
-pose M := `|(f:R^o -> R^o)^`() c|.
-apply (@klipschitzW _ _ _ M).
-  apply (@globally_properfilter _ _ (a, a)).
-  apply inferP.
-  rewrite /=.
-  rewrite in_itv /=.
-  by rewrite lexx (ltW ab).
+    by rewrite set_itvE; exact: lipschitz_set1.
+  by rewrite set_itv_ge ?bnd_simp -?ltNge//; exact: lipschitz_set0.
+have : {within `[a, b], continuous (fun x => `|f^`() x|)}.
+  by move=> x; apply: continuous_comp; [exact: cf|exact: norm_continuous].
+move=> /(EVT_max (ltW ab))[c cab dfmax].
+pose M := `|f^`() c|; apply: (@klipschitzW _ _ _ M).
+  apply: (@globally_properfilter _ _ (a, a)); apply inferP.
+  by rewrite /= in_itv /= lexx (ltW ab).
 move=> [x y] /= [xab yab] /=.
 wlog : x y xab yab / x < y.
-  move=> h.
-  have [|] := ltP x y.
-    by apply (h x y xab yab).
-  rewrite le_eqVlt => /predU1P[->|].
-    by rewrite !subrr normr0 mulr0.
-  rewrite distrC (distrC x).
-  by apply (h y x yab xab).
+  move=> h; have [|] := ltP x y; first exact: (h x y xab yab).
+  rewrite le_eqVlt => /predU1P[->|]; first by rewrite !subrr normr0 mulr0.
+  by rewrite distrC (distrC x); exact: (h y x yab xab).
 move=> xy.
-move: (df) => [dfo _ _].
-have := derivable_within_continuous (fun x h => (dfo x h)).
-move=> cfo.
-have cf_ab := derivable_oo_continuous_bnd_within df.
-have cf_xy : {within `[x, y], continuous f}.
-  admit.
-have df_xy : forall z:R, z \in `]x, y[ -> differentiable f z.
-  admit.
-have [d dxy] :=
-    MVT xy (fun z h => derivableP (diff_derivable (df_xy z h))) cf_xy.
-rewrite -derive1E => mvt.
-have := f_equal normr mvt.
-rewrite normrM => mvt_n.
-rewrite distrC (distrC x _).
-rewrite mvt_n.
-apply: ler_pmul=> //.
-apply dfmax.
-move: dxy xab yab.
-rewrite !in_itv /=.
-move=> /andP[xd dy]/andP[ax xb] /andP[ay yb].
-rewrite (le_trans ax (ltW xd))//=.
-rewrite (le_trans (ltW dy) yb)//=.
-Admitted.
+have xydf (z : R) : z \in `]x, y[ -> differentiable f z.
+  move=> zxy; apply/derivable1_diffP.
+  move: df => [+ _ _]; apply.
+  have xyabo : `]x, y[ `<=` `]a, b[.
+    move=> d /= dxy; move: dxy xab yab; rewrite !in_itv/=.
+    move=> /andP[xz zy]/andP[ax xb] /andP[ay yb].
+    by rewrite (le_lt_trans ax xz)//= (lt_le_trans zy yb).
+  exact: xyabo.
+have xyab : `[x, y] `<=` `[a, b].
+  move=> d /= dxy; move: dxy xab yab; rewrite !in_itv/=.
+  move=> /andP[xd dy]/andP[ax xb] /andP[ay yb].
+  by rewrite (le_trans ax xd)//= (le_trans dy yb).
+have: {within `[x, y], continuous f}.
+  have /continuous_subspaceW := derivable_oo_continuous_bnd_within df.
+  exact.
+move=> /(MVT xy (fun z h => derivableP (diff_derivable (xydf z h))))[d dxy mvt].
+rewrite distrC {}mvt -derive1E normrM (distrC y) ler_pmul//.
+exact/dfmax/xyab/subset_itv_oo_cc.
+Qed.
 
 Lemma Lipschitz_is_AC (a b : R) (f : R^o -> R^o) :
   [lipschitz f x | x in `[a, b]] -> AC a b f.
