@@ -147,7 +147,7 @@ Lemma Lp_norm_hoelder (f g : T -> R) p q :
   (p%:R^-1 + q%:R^-1 = 1 :> R) ->
     (`|| (f \* g)%R ||_1 <= `|| f ||_p * `|| g ||_q)%E.
 Proof.
-have Lp_norm_hoelder0 (f' g' : T -> R) p' q' :
+have hoelder0 (f' g' : T -> R) p' q' :
   (p' != 0)%N -> (q' != 0)%N ->
   (`|| f' ||_p' = 0)%E ->
   measurable_fun setT f' -> measurable_fun setT g' -> (p'%:R^-1 + q'%:R^-1 = 1 :> R) ->
@@ -177,12 +177,12 @@ have Lp_norm_hoelder0 (f' g' : T -> R) p' q' :
     by rewrite expr0n (negPf p0).
   by rewrite mul0r normr0 //.
 move=> p0 q0 mf mg pq.
-have [f0|f0] := eqVneq (`|| f ||_ (p)) 0%E; first by apply Lp_norm_hoelder0.
+have [f0|f0] := eqVneq (`|| f ||_ (p)) 0%E; first by apply hoelder0.
 have [g0|g0] := eqVneq (`|| g ||_ (q)) 0%E.
   rewrite muleC.
   have ->: `|| (f \* g)%R ||_ (1) = `|| (g \* f)%R ||_ (1)
     by apply congr1; rewrite /GRing.mul_fun; apply funext => x; rewrite mulrC.
-  by apply Lp_norm_hoelder0 => //; rewrite addrC.
+  by apply hoelder0 => //; rewrite addrC.
 have [foo|foo] := eqVneq (`|| f ||_(p)) +oo%E.
   rewrite foo gt0_mulye ?leey//.
   by rewrite lt_neqAle eq_sym g0/= powere_pos_ge0.
@@ -212,9 +212,9 @@ have igpow : mu.-integrable [set: T] (fun x : T => (`|g x| `^ q%:R)%:E).
     rewrite invr_gt0 ltr0n lt0n.
   by under eq_integral => x _ do rewrite power_pos_mulrn // gee0_abs //.
 pose F f p x := `| f x | / (fine `|| f ||_p).
-have Fp1 f' p' : p' != 0%N -> (`|| f' ||_(p') != +oo)%E -> mu.-integrable [set: T] (fun x : T => (`|f' x| `^ p'%:R)%:E)
+have Fp1 f' p' : p' != 0%N -> (0 < `|| f' ||_(p'))%E -> (`|| f' ||_(p') != 0)%E -> (`|| f' ||_(p') != +oo)%E -> mu.-integrable [set: T] (fun x : T => (`|f' x| `^ p'%:R)%:E)
  -> \int[mu]_x (F f' p' x `^ p'%:R) = 1.
-  rewrite /F => p0' foo'.
+  rewrite /F => p0' fpos' f0' foo'.
   transitivity (\int[mu]_x ((`|f' x| `^ p' %:R) / (fine `|| f' ||_ (p') `^ p'%:R))).
     apply: eq_Rintegral => t _.
     rewrite power_posM //; last by rewrite invr_ge0 fine_ge0 // Lp_norm_ge0.
@@ -234,11 +234,17 @@ have Fp1 f' p' : p' != 0%N -> (`|| f' ||_(p') != +oo)%E -> mu.-integrable [set: 
     apply eq_integral => x _; rewrite mulrC -EFinM.
     apply congr1; apply congr2 => //; apply congr1.
     by rewrite -fine_powere_pos.
-  rewrite /Lp_norm.
-  rewrite -powere_posMD.
-  rewrite mulVf; last admit.
+  rewrite /Lp_norm -powere_posMD mulVf; last admit.
   rewrite powere_pose1; last first.
     apply integral_ge0 => x _; rewrite lee_fin; apply exprn_ge0; apply: normr_ge0.
+  under [X in fine X / _]eq_integral => x _ do rewrite power_pos_mulrn //.
+  rewrite divff //.
+  rewrite fine_eq0.
+    case: eqP => //= int0; move: f0'.
+    rewrite /Lp_norm int0 /powere_pos /power_pos ifT//.
+    case: eqP => //=; case: eqP => //=.
+    rewrite -{1}invr0; move/invr_inj => //.
+    admit.
   admit.
 pose s x := ln ((F f p x) `^ p%:R).
 pose t x := ln ((F g q x) `^ q%:R).
