@@ -234,7 +234,8 @@ have Fp1 f' p' : p' != 0%N -> (0 < `|| f' ||_(p'))%E -> (`|| f' ||_(p') != 0)%E 
     apply eq_integral => x _; rewrite mulrC -EFinM.
     apply congr1; apply congr2 => //; apply congr1.
     by rewrite -fine_powere_pos.
-  rewrite /Lp_norm -powere_posMD mulVf; last admit.
+  rewrite /Lp_norm -powere_posMD mulVf; last first.
+    admit.
   rewrite powere_pose1; last first.
     apply integral_ge0 => x _; rewrite lee_fin; apply exprn_ge0; apply: normr_ge0.
   under [X in fine X / _]eq_integral => x _ do rewrite power_pos_mulrn //.
@@ -245,24 +246,33 @@ have Fp1 f' p' : p' != 0%N -> (0 < `|| f' ||_(p'))%E -> (`|| f' ||_(p') != 0)%E 
     case: eqP => //=; case: eqP => //=.
     rewrite -{1}invr0; move/invr_inj => //.
     admit.
+  apply/fin_numP;split.
+    rewrite -ltNye; apply: lt_le_trans; first apply ltNyr.
+    by apply integral_ge0 => x _; apply exprn_ge0.
+  by apply powere_pos_lty' in foo'; last by rewrite invr_gt0 ltr0n lt0n.
+pose s f' p' x := ln ((F f' p' x) `^ p'%:R).
+have Fs f' p' x : F f' p x = expR (s f' p' x / p'%:R).
+  rewrite /s ln_power_pos.
+    rewrite mulrC mulrA mulVf.
+      rewrite mul1r.
+        rewrite lnK //.
+        admit.
+      admit.
+    admit.
   admit.
-pose s x := ln ((F f p x) `^ p%:R).
 pose t x := ln ((F g q x) `^ q%:R).
-have Fs x : F f p x = expR (s x / p%:R).
-  rewrite /F /s.
-  admit.
 have Gt x : F g q x = expR (t x / q%:R).
   admit.
 have exp_convex x : F f p x * F g q x <= (F f p x) `^ p%:R / p%:R + (F f p x) `^ q%:R / q%:R.
   rewrite /F.
-  have: expR (s x / p%:R + t x / q%:R) <= p%:R^-1 * expR (s x) + q%:R^-1 * expR (t x).
+  have: expR (s f p x / p%:R + s g q x / q%:R) <= p%:R^-1 * expR (s f p x) + q%:R^-1 * expR (s g q x).
     admit. (* using convexity of exp *)
   rewrite expRD.
   rewrite -/(F f p x).
   rewrite -/(F g q x).
-  rewrite -Fs -Gt => /le_trans; apply.
-  rewrite /s /t.
-  rewrite [X in _ * X + _](@lnK _ (F f p x `^ p%:R)); last by admit.
+  rewrite -(Fs f p) -(Fs g q) => /le_trans. apply.
+  rewrite /s /s.
+  rewrite [X in _ * X + _](@lnK _ (F f p x `^ p%:R)); last admit.
   admit.
 Admitted.
 (* follow http://pi.math.cornell.edu/~erin/analysis/lectures.pdf version with convexity, not young inequality *)
