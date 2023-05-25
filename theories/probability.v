@@ -80,11 +80,27 @@ Definition inve (x : \bar R) := EFin ((fine x)^-1).
 Lemma fine_inv x : (fine x)^-1 = fine (inve x).
 Proof. by case: x. Qed.
 
-Lemma inveM x y : (inve x * inve y = inve (x * y))%E.
-Admitted.
+Lemma inveM x y : (x != 0 -> y != 0 -> inve x * inve y = inve (x * y))%E.
+Proof.
+case: x y => [x| |] [y| |] x0 y0;
+  rewrite /inve -?EFinM //; apply: congr1; 
+  rewrite ?invr0 ?mulr0 ?mul0r ?mulyy ?mulyNy ?mulNyy /fine ?invr0 //=;
+  first by rewrite -invrM ?unitfE // mulrC.
+- move: x0; rewrite neq_lt => /orP [x0|x0];
+  by rewrite ?(lt0_muley x0) ?(gt0_muley x0) // invr0.
+- move: x0; rewrite neq_lt => /orP [x0|x0];
+  by rewrite ?(lt0_muleNy x0) ?(gt0_muleNy x0) // invr0.
+- move: y0; rewrite neq_lt => /orP [y0|y0];
+  by rewrite ?(lt0_mulye y0) ?(gt0_mulye y0) // ?invr0.
+- move: y0; rewrite neq_lt => /orP [y0|y0];
+  by rewrite ?(lt0_mulNye y0) ?(gt0_mulNye y0) // ?invr0.
+Qed.
 
-Lemma inveK x : (x * inve x = 1)%E.
-Admitted.
+Lemma inveK x : (x != 0 -> x \is a fin_num -> x * inve x = 1)%E.
+Proof.
+case: x => [x x0| |] //=.
+  rewrite /inve /= -EFinM ?neq_lt // mulrC mulVf //.
+Qed.
 End fine.
 
 Lemma powere_pos_lty (x : \bar R) y : (x != +oo -> x `^ y != +oo)%E.
@@ -294,7 +310,13 @@ have FGfg : (`|| (f \* g)%R ||_(1) = `|| (F \* G)%R ||_(1) * `|| f ||_(p) * `|| 
   rewrite muleA EFinM !fine_inv.
   rewrite fineK; last first. admit.
   rewrite fineK; last first. admit.
-  by rewrite inveM inveK mul1e.
+  rewrite inveM ?inveK ?mul1e //.
+    apply mule_neq0=>//.
+  apply fin_numM;
+  rewrite ge0_fin_numE // ?lt_neqAle;
+  try (apply /andP; split) => //;
+  try apply Lp_norm_ge0;
+  apply leey.
 have FppGqq1 : (\int[mu]_x (F x `^ (p%:R) / (p%:R) + G x `^ (q%:R) / (q%:R))%:E = 1)%E.
   under eq_integral => x _ . rewrite EFinD mulrC (mulrC _ (_^-1)) EFinM EFinM.
     over.
