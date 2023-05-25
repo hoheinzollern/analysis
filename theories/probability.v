@@ -1,7 +1,7 @@
 (* mathcomp analysis (c) 2022 Inria and AIST. License: CeCILL-C.              *)
 From mathcomp Require Import all_ssreflect.
 From mathcomp Require Import ssralg ssrnum ssrint interval finmap.
-Require Import boolp reals ereal exp.
+Require Import boolp reals ereal exp itv.
 From HB Require Import structures.
 Require Import classical_sets signed functions topology normedtype cardinality.
 Require Import sequences esum measure numfun lebesgue_measure lebesgue_integral.
@@ -79,6 +79,12 @@ Definition inve (x : \bar R) := EFin ((fine x)^-1).
 
 Lemma fine_inv x : (fine x)^-1 = fine (inve x).
 Proof. by case: x. Qed.
+
+Lemma inveM x y : (inve x * inve y = inve (x * y))%E.
+Admitted.
+
+Lemma inveK x : (x * inve x = 1)%E.
+Admitted.
 End fine.
 
 Lemma powere_pos_lty (x : \bar R) y : (x != +oo -> x `^ y != +oo)%E.
@@ -211,10 +217,17 @@ have igpow : mu.-integrable [set: T] (fun x : T => (`|g x| `^ q%:R)%:E).
   apply powere_pos_lty' in goo => //; last by
     rewrite invr_gt0 ltr0n lt0n.
   by under eq_integral => x _ do rewrite power_pos_mulrn // gee0_abs //.
-pose F f p x := `| f x | / (fine `|| f ||_p).
-have Fp1 f' p' : p' != 0%N -> (0 < `|| f' ||_(p'))%E -> (`|| f' ||_(p') != 0)%E -> (`|| f' ||_(p') != +oo)%E -> mu.-integrable [set: T] (fun x : T => (`|f' x| `^ p'%:R)%:E)
- -> \int[mu]_x (F f' p' x `^ p'%:R) = 1.
-  rewrite /F => p0' fpos' f0' foo'.
+have Fp1 f' p' :
+  p' != 0%N -> (0 < `|| f' ||_(p'))%E -> (`|| f' ||_(p') != +oo)%E
+    -> mu.-integrable [set: T] (fun x : T => (`|f' x| `^ p'%:R)%:E)
+    -> (\int[mu]_x ((`| f' x | / (fine `|| f' ||_p')) `^ p'%:R) = 1).
+  move=> p0' fpos' foo'.
+  have finF1 : (\int[mu]_x (`|f' x| ^+ p')%:E)%E \is a fin_num.
+    apply/fin_numP; split.
+      by rewrite -ltNye; apply: lt_le_trans; [apply ltNyr|apply integral_ge0 => x _; apply exprn_ge0].
+    by apply powere_pos_lty' in foo'; last by rewrite invr_gt0 ltr0n lt0n.
+  have finF : (\int[mu]_x (`|f' x| `^ p'%:R)%:E \is a fin_num)%E
+    by under eq_integral => x _ do rewrite power_pos_mulrn //.
   transitivity (\int[mu]_x ((`|f' x| `^ p' %:R) / (fine `|| f' ||_ (p') `^ p'%:R))).
     apply: eq_Rintegral => t _.
     rewrite power_posM //; last by rewrite invr_ge0 fine_ge0 // Lp_norm_ge0.
@@ -223,57 +236,79 @@ have Fp1 f' p' : p' != 0%N -> (0 < `|| f' ||_(p'))%E -> (`|| f' ||_(p') != 0)%E 
   transitivity (
     \int[mu]_x (`|f' x| `^ p'%:R) / (fine (`|| f' ||_ (p') `^ p'%:R))
   ).
-    rewrite /Rintegral fine_inv mulrC -fineM => //;
-      last first.
-      apply/fin_numP; split.
-        rewrite -ltNye; apply: lt_le_trans; first apply ltNyr.
-        by apply integral_ge0 => x _; apply power_pos_ge0.
-      apply powere_pos_lty' in foo'; last by rewrite invr_gt0 ltr0n lt0n.
-      by under eq_integral => x _ do rewrite power_pos_mulrn //.
+    rewrite /Rintegral fine_inv mulrC -fineM => //.
     apply congr1; rewrite -integralM //.
     apply eq_integral => x _; rewrite mulrC -EFinM.
     apply congr1; apply congr2 => //; apply congr1.
     by rewrite -fine_powere_pos.
   rewrite /Lp_norm -powere_posMD mulVf; last first.
     admit.
-  rewrite powere_pose1; last first.
+  rewrite powere_pose1; last by
     apply integral_ge0 => x _; rewrite lee_fin; apply exprn_ge0; apply: normr_ge0.
   under [X in fine X / _]eq_integral => x _ do rewrite power_pos_mulrn //.
-  rewrite divff //.
-  rewrite fine_eq0.
-    case: eqP => //= int0; move: f0'.
-    rewrite /Lp_norm int0 /powere_pos /power_pos ifT//.
-    case: eqP => //=; case: eqP => //=.
-    rewrite -{1}invr0; move/invr_inj => //.
-    admit.
-  apply/fin_numP;split.
-    rewrite -ltNye; apply: lt_le_trans; first apply ltNyr.
-    by apply integral_ge0 => x _; apply exprn_ge0.
-  by apply powere_pos_lty' in foo'; last by rewrite invr_gt0 ltr0n lt0n.
-pose s f' p' x := ln ((F f' p' x) `^ p'%:R).
-have Fs f' p' x : F f' p x = expR (s f' p' x / p'%:R).
-  rewrite /s ln_power_pos.
-    rewrite mulrC mulrA mulVf.
-      rewrite mul1r.
-        rewrite lnK //.
-        admit.
-      admit.
-    admit.
+  rewrite divff // fine_eq0 //.
   admit.
-pose t x := ln ((F g q x) `^ q%:R).
-have Gt x : F g q x = expR (t x / q%:R).
-  admit.
-have exp_convex x : F f p x * F g q x <= (F f p x) `^ p%:R / p%:R + (F f p x) `^ q%:R / q%:R.
+pose F x := `| f x | / (fine `|| f ||_p).
+pose G x := `| g x | / (fine `|| g ||_q).
+pose s x := ln ((F x) `^ p%:R).
+pose t x := ln ((G x) `^ q%:R).
+have Fs x : F x = expR (s x / p%:R).
+  rewrite /s ln_power_pos; last admit.
+  rewrite mulrC mulrA mulVf; last admit.
+  rewrite mul1r lnK //; last admit.
+have Gt x : G x = expR (t x / q%:R).
+  rewrite /t ln_power_pos; last admit.
+  rewrite mulrC mulrA mulVf; last admit.
+  rewrite mul1r lnK //; last admit.
+have exp_convex x : F x * G x <= (F x) `^ p%:R / p%:R + (G x) `^ q%:R / q%:R.
   rewrite /F.
-  have: expR (s f p x / p%:R + s g q x / q%:R) <= p%:R^-1 * expR (s f p x) + q%:R^-1 * expR (s g q x).
+  have: expR (s x / p%:R + t x / q%:R) <= p%:R^-1 * expR (s x) + q%:R^-1 * expR (t x).
+    have -> : q%:R^-1 = (1:R) - p%:R^-1
+      by rewrite -{2}pq (addrC (p%:R^-1)) -addrA subrr addr0.
+    rewrite (mulrC (s x)) (mulrC (t x)).
+    (* apply (@convex_expR _ (p%:R^-1%:i01) (s x) (t x)). *)
     admit. (* using convexity of exp *)
-  rewrite expRD.
-  rewrite -/(F f p x).
-  rewrite -/(F g q x).
-  rewrite -(Fs f p) -(Fs g q) => /le_trans. apply.
-  rewrite /s /s.
-  rewrite [X in _ * X + _](@lnK _ (F f p x `^ p%:R)); last admit.
-  admit.
+  rewrite expRD -/(F x) -/(G x) -Fs -Gt => /le_trans; apply.
+  rewrite /s /t.
+  rewrite [X in _ * X + _](@lnK _ (F x `^ p%:R)); last first.
+    rewrite posrE.
+    apply power_pos_gt0.
+    admit.
+  rewrite (@lnK _ (G x `^ q%:R)); last first.
+    rewrite posrE.
+    apply power_pos_gt0.
+    admit.
+  by rewrite mulrC (mulrC _ (q%:R^-1)).
+have FGfg : (`|| (f \* g)%R ||_(1) = `|| (F \* G)%R ||_(1) * `|| f ||_(p) * `|| g ||_q)%E.
+  rewrite {1 2}/Lp_norm; under eq_integral => x _ do rewrite expr1.
+  rewrite invr1 powere_pose1; [|apply integral_ge0 => x _; rewrite lee_fin; apply normr_ge0].
+  under [in RHS]eq_integral=>x _.
+    rewrite /F /G /= (mulrC `|f x|) mulrA -(mulrA (_^-1)) (mulrC (_^-1)) -mulrA.
+    rewrite ger0_norm; last
+      (apply mulr_ge0 => //; apply mulr_ge0 => //; rewrite invr_ge0 fine_ge0 //; apply Lp_norm_ge0).
+    rewrite mulrC EFinM.
+    rewrite -normrM.
+    over.
+  rewrite integralM //; last first. admit.
+  rewrite -muleA muleC powere_pose1; last admit.
+  rewrite muleA EFinM !fine_inv.
+  rewrite fineK; last first. admit.
+  rewrite fineK; last first. admit.
+  by rewrite inveM inveK mul1e.
+have FppGqq1 : (\int[mu]_x (F x `^ (p%:R) / (p%:R) + G x `^ (q%:R) / (q%:R))%:E = 1)%E.
+  under eq_integral => x _ . rewrite EFinD mulrC (mulrC _ (_^-1)) EFinM EFinM.
+    over.
+  rewrite integralD => //; last 2 first. admit. admit.
+  rewrite integralM; last 2 first. admit. admit.
+  rewrite integralM; last 2 first. admit. admit.
+  have -> : (\int[mu]_x (F x `^ p%:R)%:E = 1)%E. admit. (* rewrite (Fp1 f p).*)
+  have -> : (\int[mu]_x (G x `^ q%:R)%:E = 1)%E. admit. (* rewrite (Fp1 g q).*)
+  rewrite mule1 mule1 -EFinD.
+  by apply congr1.
+rewrite FGfg -(mul1e (`|| f ||_p * _)) -muleA.
+apply: lee_pmul. admit. admit.
+admit.
+by [].
 Admitted.
 (* follow http://pi.math.cornell.edu/~erin/analysis/lectures.pdf version with convexity, not young inequality *)
 End Lspace.
