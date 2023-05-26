@@ -469,14 +469,22 @@ by exists (-y); rewrite expRN H3y invrK.
 Qed.
 
 Local Open Scope convex_scope.
-Lemma convex_expR (t : {i01 R}) (a b : R^o) : a <= b ->
+Lemma convex_expR (t : {i01 R}) (a b : R^o) :
   expR (a <| t |> b) <= (expR a : R^o) <| t |> (expR b : R^o).
 Proof.
-move=> ab; apply: second_derivative_convex => //.
-- by move=> x axb; rewrite derive_expR derive_val expR_ge0.
-- exact/cvg_at_left_filter/continuous_expR.
-- exact/cvg_at_right_filter/continuous_expR.
-- by move=> z zab; rewrite derive_expR; exact: derivable_expR.
+have [ad|ba] := leP a b.
+- apply: second_derivative_convex => //.
+  + by move=> x axb; rewrite derive_expR derive_val expR_ge0.
+  + exact/cvg_at_left_filter/continuous_expR.
+  + exact/cvg_at_right_filter/continuous_expR.
+  + by move=> z zab; rewrite derive_expR; exact: derivable_expR.
+- rewrite convC [leRHS]convC.
+  apply: second_derivative_convex => //.
+  + by move=> x axb; rewrite derive_expR derive_val expR_ge0.
+  + exact/cvg_at_left_filter/continuous_expR.
+  + exact/cvg_at_right_filter/continuous_expR.
+  + by move=> z zab; rewrite derive_expR; exact: derivable_expR.
+  + by rewrite ltW.
 Qed.
 Local Close Scope convex_scope.
 

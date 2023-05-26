@@ -3,8 +3,9 @@ From mathcomp Require Import all_ssreflect.
 From mathcomp Require Import ssralg ssrnum ssrint interval finmap.
 Require Import boolp reals ereal exp itv.
 From HB Require Import structures.
-Require Import classical_sets signed functions topology normedtype cardinality.
+Require Import classical_sets mathcomp_extra signed functions topology normedtype cardinality.
 Require Import sequences esum measure numfun lebesgue_measure lebesgue_integral.
+Require Import convex.
 
 (******************************************************************************)
 (*                       Probability (experimental)                           *)
@@ -138,9 +139,8 @@ have [->/=|z0] := eqVneq z 0.
 case: eqP => //= [_|xneq0].
   rewrite ifT // mulIr_eq0; last by apply /rregP.
   by move: y0; case: eqP.
-rewrite ifF; last admit.
-by rewrite expK mulrA (mulrC z).
-Admitted.
+by rewrite gt_eqF ?expR_gt0// expK mulrCA mulrA.
+Qed.
 
 Lemma powere_posMD (x : \bar R) y z : (x `^ (y * z) = (x `^ y) `^ z)%E.
 Proof.
@@ -162,17 +162,46 @@ case: x => [x| |]/=.
 by rewrite mulIr_eq0; [case: eqP|apply /rregP].
 Qed.
 
-Local Open Scope ring_scope.
-Lemma Lp_norm_hoelder (f g : T -> R) p q :
-  (0 < p) -> (0 < q) ->
+Lemma power_pos_gt0_inv (x : R) (r : R) : 0 < r -> 0 <= x -> 0 < x `^ r -> 0 < x.
+Proof.
+move=> r0 x0.
+rewrite /power_pos; case: ifPn => [_|x0' _].
+  by rewrite gt_eqF//= ltxx.
+by rewrite lt_neqAle x0 andbT eq_sym.
+Qed.
+
+Lemma powere_pos_gt0_inv (x : \bar R) (r : R) : 0 < r -> (0 <= x)%E ->
+  (0 < x `^ r)%E -> (0 < x)%E.
+Proof.
+move=> r0; move: x => [x|//|]; rewrite ?lee_fin => x0.
+  by rewrite powere_pos_EFin !lte_fin; exact: power_pos_gt0_inv.
+by rewrite powere_posNyr.
+Qed.
+
+Lemma ler_power_pos' (a : R) : 0 < a ->
+  {in `[0, +oo[%classic &, {homo (@power_pos _ ^~ a) : x y / x <= y >-> x <= y}}.
+Proof.
+move=> a0 u v; rewrite !inE /= !in_itv/= !andbT.
+rewrite !le_eqVlt => /orP[/eqP<-|u0].
+  move=> /orP[/eqP<- _|v0 _].
+    by rewrite eqxx.
+  rewrite power_pos0; apply/orP; right.
+  by rewrite gt_eqF//= power_pos_gt0.
+move=> /orP[/eqP<-|v0].
+  by rewrite gt_eqF//= ltNge (ltW u0).
+move=> /orP[/eqP->//|uv]; first by rewrite eqxx.
+apply/orP; right.
+by rewrite /power_pos !gt_eqF// ltr_expR ltr_pmul2l// ltr_ln.
+Qed.
+
+Lemma Lp_norm_hoelder (f g : T -> R) (p q : R) : 0 < p -> 0 < q ->
   measurable_fun setT f -> measurable_fun setT g ->
-  (p^-1 + q^-1 = 1 :> R) ->
+  p^-1 + q^-1 = 1 :> R ->
     (`|| (f \* g)%R ||_1 <= `|| f ||_p * `|| g ||_q)%E.
 Proof.
-have hoelder0 (f' g' : T -> R) p' q' :
-  (0 < p') -> (0 < q') ->
+have hoelder0 (f' g' : T -> R) (p' q' : R) : 0 < p' -> 0 < q' ->
   (`|| f' ||_p' = 0)%E ->
-  measurable_fun setT f' -> measurable_fun setT g' -> (p'^-1 + q'^-1 = 1 :> R) ->
+  measurable_fun setT f' -> measurable_fun setT g' -> p'^-1 + q'^-1 = 1 :> R ->
     (`|| (f' \* g')%R ||_1 <= `|| f' ||_p' * `|| g' ||_q')%E.
   move=> p0 q0 f0 mf mg pq; rewrite f0 mul0e.
   suff: `|| (f' \* g')%R ||_ (1) = 0%E by move=> ->.
@@ -184,7 +213,7 @@ have hoelder0 (f' g' : T -> R) p' q' :
     apply: measurableT_comp => //.
     have -> : (fun x : T => `|f' x| `^ p') = ((power_pos (R:=R))^~ p') \o normr \o f' by rewrite funeqE /=.
     apply: measurableT_comp => //; apply: measurableT_comp => //.
-    under eq_integral => x _. rewrite ger0_norm. over. 
+    under eq_integral => x _. rewrite ger0_norm. over.
       by apply power_pos_ge0; apply normr_ge0.
     by apply fp; apply: lt_le_trans; last
       by apply: integral_ge0 => x _; apply: power_pos_ge0; apply: normr_ge0.
@@ -207,8 +236,10 @@ have [f0|f0] := eqVneq (`|| f ||_p) 0%E.
   by apply hoelder0.
 have [g0|g0] := eqVneq (`|| g ||_q) 0%E.
   rewrite muleC.
-  have ->: `|| (f \* g)%R ||_ 1 = `|| (g \* f)%R ||_ 1
-    by apply congr1; rewrite /GRing.mul_fun; apply funext => x; rewrite mulrC.
+  have -> : `|| (f \* g)%R ||_ 1 = `|| (g \* f)%R ||_ 1.
+    apply: congr1.
+    (* NB: mulrC used to work *)
+    by apply/funext => x /=; rewrite mulrC.
   by apply hoelder0 => //; rewrite addrC.
 have [foo|foo] := eqVneq (`|| f ||_p) +oo%E.
   rewrite foo gt0_mulye ?leey//.
@@ -216,18 +247,16 @@ have [foo|foo] := eqVneq (`|| f ||_p) +oo%E.
 have [goo|goo] := eqVneq (`|| g ||_q) +oo%E.
   rewrite goo gt0_muley ?leey//.
   by rewrite lt_neqAle eq_sym f0/= powere_pos_ge0.
-have fpos : (0 < `|| f ||_ p)%E
-  by rewrite lt_neqAle eq_sym; apply/andP; split; [|apply Lp_norm_ge0].
-have gpos : (0 < `|| g ||_ q)%E
-  by rewrite lt_neqAle eq_sym; apply/andP; split; [|apply Lp_norm_ge0].
+have fpos : (0 < `|| f ||_ p)%E by rewrite lt_neqAle eq_sym Lp_norm_ge0 andbT.
+have gpos : (0 < `|| g ||_ q)%E by rewrite lt_neqAle eq_sym Lp_norm_ge0 andbT.
 have mfpow : measurable_fun [set: T] (fun x : T => (`|f x| `^ p)%:E).
   apply: measurableT_comp => //.
-  have -> : (fun x : T => `|f x| `^ p) = ((power_pos (R:=R))^~ p) \o normr \o f by rewrite funeqE => x /=.
+  have -> : (fun x => `|f x| `^ p) = ((power_pos (R:=R))^~ p) \o normr \o f by [].
   apply: measurableT_comp => //; apply: measurableT_comp => //.
 have mgpow : measurable_fun [set: T] (fun x : T => (`|g x| `^ q)%:E).
   apply: measurableT_comp => //.
-  have -> : (fun x : T => `|g x| `^ q) = ((power_pos (R:=R))^~ q) \o normr \o g by rewrite funeqE => x /=.
-  apply: measurableT_comp => //; apply: measurableT_comp => //.
+  have -> : (fun x => `|g x| `^ q) = ((power_pos (R:=R))^~ q) \o normr \o g by [].
+  by apply: measurableT_comp => //; apply: measurableT_comp => //.
 have ifpow : mu.-integrable [set: T] (fun x : T => (`|f x| `^ p)%:E).
   rewrite /integrable ltey; split; first apply mfpow.
   apply powere_pos_lty' in foo => //; last  by rewrite invr_gt0.
@@ -263,38 +292,54 @@ have Fp1 f' p' :
     apply integral_ge0 => x _; rewrite lee_fin; apply power_pos_ge0; apply: normr_ge0.
   rewrite divff // fine_eq0 //.
   rewrite neq_lt; apply/orP; right.
-  admit.
+  move/powere_pos_gt0_inv : fpos'; apply.
+    by rewrite invr_gt0.
+  rewrite integral_ge0// => t _.
+  by rewrite lee_fin power_pos_ge0.
 pose F x := `| f x | / (fine `|| f ||_p).
 pose G x := `| g x | / (fine `|| g ||_q).
 pose s x := ln ((F x) `^ p).
 pose t x := ln ((G x) `^ q).
-have Fs x : F x = expR (s x / p).
-  rewrite /s ln_power_pos; last admit.
-  rewrite mulrC mulrA mulVf; last admit.
-  rewrite mul1r lnK //; last admit.
-have Gt x : G x = expR (t x / q).
-  rewrite /t ln_power_pos; last admit.
-  rewrite mulrC mulrA mulVf; last admit.
-  rewrite mul1r lnK //; last admit.
+have Fs x : F x != 0 -> F x = expR (s x / p).
+  move=> Fx0.
+  rewrite /s ln_power_pos//.
+  rewrite mulrC mulrA mulVf ?gt_eqF//.
+  rewrite mul1r lnK // posrE lt_neqAle eq_sym Fx0/=.
+  by rewrite /F divr_ge0// fine_ge0// Lp_norm_ge0.
+have Gt x : G x != 0 -> G x = expR (t x / q).
+  move=> Gx0.
+  rewrite /t ln_power_pos//.
+  rewrite mulrC mulrA mulVf ?gt_eqF// mul1r lnK// posrE.
+  by rewrite lt_neqAle eq_sym Gx0/= /G divr_ge0// fine_ge0// Lp_norm_ge0.
 have exp_convex x : F x * G x <= (F x) `^ p / p + (G x) `^ q / q.
+  have [Fx0|Fx0] := eqVneq (F x) 0.
+    rewrite Fx0 mul0r power_pos0 gt_eqF//= mul0r add0r divr_ge0//.
+      by rewrite power_pos_ge0// ltW.
+    by rewrite ltW.
+  have {}Fx0 : 0 < F x.
+    by rewrite lt_neqAle eq_sym Fx0/= divr_ge0// fine_ge0// Lp_norm_ge0.
+  have [Gx0|Gx0] := eqVneq (G x) 0.
+    rewrite Gx0 mulr0 power_pos0 gt_eqF//= mul0r addr0 divr_ge0// /F.
+      by rewrite power_pos_ge0.
+    by rewrite ltW.
+  have {}Gx0 : 0 < G x.
+    by rewrite lt_neqAle eq_sym Gx0/= divr_ge0// fine_ge0// Lp_norm_ge0.
   rewrite /F.
-  have: expR (s x / p + t x / q) <= p^-1 * expR (s x) + q^-1 * expR (t x).
-    have -> : q^-1 = (1:R) - p^-1
-      by rewrite -pq (addrC (p^-1)) -addrA subrr addr0.
-    rewrite (mulrC (s x)) (mulrC (t x)).
-    (* apply (@convex_expR _ (p%:R^-1%:i01) (s x) (t x)). *)
-    admit. (* using convexity of exp *)
-  rewrite expRD -/(F x) -/(G x) -Fs -Gt => /le_trans; apply.
+  have : expR (p^-1 * s x + q^-1 * t x) <= p^-1 * expR (s x) + q^-1 * expR (t x).
+    have -> : p^-1 = (1:R) - q^-1.
+      by rewrite -pq addrK.
+    have @K : q^-1%R \in `[0, 1].
+      by rewrite in_itv/= invr_ge0 ltW//= -pq lerDr invr_ge0 ltW.
+    pose oneminvp : {i01 R} := @Itv.mk R `[0, 1] (q^-1)%R K.
+    have /= := @convex_expR _ oneminvp (s x) (t x).
+    exact.
+  rewrite expRD (mulrC _ (s x)) -Fs ?gt_eqF// (mulrC _ (t x)) -Gt ?gt_eqF// => /le_trans; apply.
   rewrite /s /t.
   rewrite [X in _ * X + _](@lnK _ (F x `^ p)); last first.
-    rewrite posrE.
-    apply power_pos_gt0.
-    admit.
+    by rewrite posrE power_pos_gt0.
   rewrite (@lnK _ (G x `^ q)); last first.
-    rewrite posrE.
-    apply power_pos_gt0.
-    admit.
-  by rewrite mulrC (mulrC _ (q^-1)).
+    by rewrite posrE power_pos_gt0.
+  by rewrite mulrC (mulrC _ q^-1).
 have FGfg : (`|| (f \* g)%R ||_1 = `|| (F \* G)%R ||_1 * `|| f ||_p * `|| g ||_q)%E.
   rewrite /Lp_norm; under eq_integral => x _ do rewrite power_posr1 //.
   rewrite invr1 powere_pose1; [|apply integral_ge0 => x _; rewrite lee_fin; apply normr_ge0].
@@ -306,9 +351,10 @@ have FGfg : (`|| (f \* g)%R ||_1 = `|| (F \* G)%R ||_1 * `|| f ||_p * `|| g ||_q
       rewrite mulr_ge0// mulr_ge0// invr_ge0 fine_ge0//; apply Lp_norm_ge0.
     rewrite mulrC -normrM EFinM.
     over.
-  rewrite integralM //; last admit.
+  rewrite integralM //; last first.
+    admit.
   rewrite -muleA muleC powere_pose1; last first.
-    apply mule_ge0.
+    rewrite mule_ge0//.
       rewrite lee_fin;apply mulr_ge0;rewrite invr_ge0 fine_ge0//;apply Lp_norm_ge0.
     by apply integral_ge0 => x _; rewrite lee_fin normr_ge0.
   rewrite muleA EFinM !fine_inv.
@@ -324,16 +370,22 @@ have FGfg : (`|| (f \* g)%R ||_1 = `|| (F \* G)%R ||_1 * `|| f ||_p * `|| g ||_q
 have FppGqq1 : (\int[mu]_x (F x `^ p / p + G x `^ q / q)%:E = 1)%E.
   under eq_integral => x _ . rewrite EFinD mulrC (mulrC _ (_^-1)) EFinM EFinM.
     over.
-  rewrite integralD //; last 2 first. admit. admit.
-  rewrite integralM; last 2 first. by []. admit.
-  rewrite integralM; last 2 first. by []. admit.
-  have -> : (\int[mu]_x (F x `^ p)%:E = 1)%E. admit. (* rewrite (Fp1 f p).*)
-  have -> : (\int[mu]_x (G x `^ q)%:E = 1)%E. admit. (* rewrite (Fp1 g q).*)
+  rewrite integralD //; last 2 first.
+    admit.
+    admit.
+  rewrite integralM; last 2 first. by [].
+    admit.
+  rewrite integralM; last 2 first. by [].
+    admit.
+  have -> : (\int[mu]_x (F x `^ p)%:E = 1)%E.
+    admit. (* rewrite (Fp1 f p).*)
+  have -> : (\int[mu]_x (G x `^ q)%:E = 1)%E.
+    admit. (* rewrite (Fp1 g q).*)
   rewrite mule1 mule1 -EFinD.
   by apply: congr1.
 rewrite FGfg -(mul1e (`|| f ||_p * _)) -muleA.
 apply: lee_pmul; try apply: mule_ge0; try apply: Lp_norm_ge0.
-admit.
+  admit.
 by [].
 Admitted.
 (* follow http://pi.math.cornell.edu/~erin/analysis/lectures.pdf version with convexity, not young inequality *)
@@ -468,7 +520,7 @@ Proof. by move=> ? ?; rewrite /expectation integralB_EFin. Qed.
 Lemma expectation_sqr_is_l2_norm (X : {RV P >-> R}) :
   Lp_norm P 2 X = sqrte 'E_P[X ^+ 2].
 Proof.
-  rewrite /Lp_norm /expectation powere12_sqrt.
+rewrite /Lp_norm /expectation powere12_sqrt.
   apply congr1; apply eq_integral => x _ /=; apply congr1.
   rewrite real_normK //; apply num_real.
   apply integral_ge0 => x _; rewrite lee_fin; apply sqr_ge0.
