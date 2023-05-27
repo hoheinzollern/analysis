@@ -297,7 +297,19 @@ have Fp1 f' p' :
   rewrite integral_ge0// => t _.
   by rewrite lee_fin power_pos_ge0.
 pose F x := `| f x | / (fine `|| f ||_p).
+have mF : measurable_fun [set: T] F.
+  have -> : F = [eta  *%R (fine `|| f ||_ (p))^-1] \o normr \o f.
+    by rewrite /F funeqE => x /=; rewrite mulrC.
+  apply: measurableT_comp => //.
+  apply: measurableT_comp => //.
+  apply: measurable_mulrl.
 pose G x := `| g x | / (fine `|| g ||_q).
+have mG : measurable_fun [set: T] G.
+  have -> : G = [eta  *%R (fine `|| g ||_ (q))^-1] \o normr \o g.
+    by rewrite /G funeqE => x /=; rewrite mulrC.
+  apply: measurableT_comp => //.
+  apply: measurableT_comp => //.
+  apply: measurable_mulrl.
 pose s x := ln ((F x) `^ p).
 pose t x := ln ((G x) `^ q).
 have Fs x : F x != 0 -> F x = expR (s x / p).
@@ -352,6 +364,10 @@ have FGfg : (`|| (f \* g)%R ||_1 = `|| (F \* G)%R ||_1 * `|| f ||_p * `|| g ||_q
     rewrite mulrC -normrM EFinM.
     over.
   rewrite integralM //; last first.
+    rewrite /integrable; split.
+      apply: measurableT_comp => //;
+      apply: measurableT_comp => //;
+      apply: measurable_funM => //.
     admit.
   rewrite -muleA muleC powere_pose1; last first.
     rewrite mule_ge0//.
@@ -367,15 +383,33 @@ have FGfg : (`|| (f \* g)%R ||_1 = `|| (F \* G)%R ||_1 * `|| f ||_p * `|| g ||_q
   try (apply /andP; split) => //;
   try apply Lp_norm_ge0;
   apply leey.
+have mpowF : measurable_fun [set: T] (fun x => F x `^ p).
+  have -> : (fun x => F x `^ p) = (power_pos (R:=R))^~ p \o F by [].
+  apply: measurableT_comp => //.
+have mpowG : measurable_fun [set: T] (fun x => G x `^ q).
+  have -> : (fun x => G x `^ q) = (power_pos (R:=R))^~ q \o G by [].
+  apply: measurableT_comp => //.
 have FppGqq1 : (\int[mu]_x (F x `^ p / p + G x `^ q / q)%:E = 1)%E.
   under eq_integral => x _ . rewrite EFinD mulrC (mulrC _ (_^-1)) EFinM EFinM.
     over.
   rewrite integralD //; last 2 first.
+    rewrite /integrable; split.
+      under eq_fun => x do rewrite -EFinM.
+      apply: measurableT_comp => //.
+      apply: measurableT_comp => //.
     admit.
+    rewrite /integrable; split.
+      under eq_fun => x do rewrite -EFinM.
+      apply: measurableT_comp => //.
+      apply: measurableT_comp => //.
     admit.
   rewrite integralM; last 2 first. by [].
+    rewrite /integrable; split.
+      apply: measurableT_comp => //.
     admit.
   rewrite integralM; last 2 first. by [].
+    rewrite /integrable; split.
+      apply: measurableT_comp => //.
     admit.
   have -> : (\int[mu]_x (F x `^ p)%:E = 1)%E.
     admit. (* rewrite (Fp1 f p).*)
