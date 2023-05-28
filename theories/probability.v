@@ -194,6 +194,21 @@ apply/orP; right.
 by rewrite /power_pos !gt_eqF// ltr_expR ltr_pmul2l// ltr_ln.
 Qed.
 
+Lemma ln_opp (a : R) : - ln a = ln a^-1.
+Admitted.
+
+Lemma power_pos_inv (a r : R) :
+  a^-1 `^ r = (a`^r)^-1.
+Proof.
+rewrite /power_pos.
+case: eqP => /eqP.
+  rewrite invr_eq0 => a0; rewrite ifT//.
+  case: eqP => //= r0; by rewrite ?invr1 ?invr0.
+rewrite invr_eq0 => a0; rewrite ifF.
+rewrite -expRN -mulrN ln_opp//.
+apply/eqP; move: a0 => /eqP //.
+Qed.
+
 Lemma Lp_norm_hoelder (f g : T -> R) (p q : R) : 0 < p -> 0 < q ->
   measurable_fun setT f -> measurable_fun setT g ->
   p^-1 + q^-1 = 1 :> R ->
@@ -412,7 +427,22 @@ have FppGqq1 : (\int[mu]_x (F x `^ p / p + G x `^ q / q)%:E = 1)%E.
       apply: measurableT_comp => //.
     admit.
   have -> : (\int[mu]_x (F x `^ p)%:E = 1)%E.
-    admit. (* rewrite (Fp1 f p).*)
+    rewrite /F.
+    rewrite 
+    under eq_integral => x _.
+      rewrite /F /Lp_norm power_posM//; last
+        rewrite invr_ge0 fine_ge0// powere_pos_ge0//.
+        rewrite mulrC EFinM.
+      over.
+    rewrite integralM.
+      rewrite fine_powere_pos -power_pos_inv -power_posMD mulVr ?power_posr1.
+      rewrite fine_inv fineK// muleC inveK//.
+      admit.
+      admit.
+      rewrite invr_ge0 fine_ge0//. admit.
+      admit.
+    by [].
+    admit.
   have -> : (\int[mu]_x (G x `^ q)%:E = 1)%E.
     admit. (* rewrite (Fp1 g q).*)
   rewrite mule1 mule1 -EFinD.
