@@ -194,27 +194,6 @@ apply/orP; right.
 by rewrite /power_pos !gt_eqF// ltr_expR ltr_pmul2l// ltr_ln.
 Qed.
 
-Lemma ln_opp (a : R) : - ln a = ln a^-1.
-Admitted.
-
-Lemma power_pos_inv (a r : R) :
-  a^-1 `^ r = (a`^r)^-1.
-Proof.
-rewrite /power_pos.
-case: eqP => /eqP.
-  rewrite invr_eq0 => a0; rewrite ifT//.
-  case: eqP => //= r0; by rewrite ?invr1 ?invr0.
-rewrite invr_eq0 => a0; rewrite ifF.
-rewrite -expRN -mulrN ln_opp//.
-apply/eqP; move: a0 => /eqP //.
-(* alternatively but requires 0 <= a:
-have [a0|a0] := Ring.le_dec.
-rewrite -power_pos_inv1.
-  rewrite power_posAC power_pos_inv1//.
-  apply power_pos_ge0.
-*)
-Qed.
-
 Lemma Lp_norm_hoelder (f g : T -> R) (p q : R) : 0 < p -> 0 < q ->
   measurable_fun setT f -> measurable_fun setT g ->
   p^-1 + q^-1 = 1 :> R ->
@@ -387,6 +366,9 @@ have FGfg : (`|| (f \* g)%R ||_1 = `|| (F \* G)%R ||_1 * `|| f ||_p * `|| g ||_q
       apply: measurableT_comp => //;
       apply: measurableT_comp => //;
       apply: measurable_funM => //.
+    under eq_integral => x _.
+      rewrite /abse normr_id. over.
+    simpl.
     admit.
   rewrite -muleA muleC powere_pose1; last first.
     rewrite mule_ge0//.
@@ -437,9 +419,26 @@ have FppGqq1 : (\int[mu]_x (F x `^ p / p + G x `^ q / q)%:E = 1)%E.
   rewrite mule1 mule1 -EFinD.
   by apply: congr1.
 rewrite FGfg -(mul1e (`|| f ||_p * _)) -muleA.
-apply: lee_pmul; try apply: mule_ge0; try apply: Lp_norm_ge0.
-  admit.
-by [].
+apply: lee_pmul => //; try apply: mule_ge0; try apply: Lp_norm_ge0.
+apply (le_trans (y:=\int[mu]_x (F x `^ p / p + G x `^ q / q)%:E))%E.
+  rewrite /Lp_norm.
+  rewrite invr1 powere_pose1; last first.
+    apply integral_ge0 => x _;
+    rewrite lee_fin; apply power_pos_ge0; apply normr_ge0.
+  apply: ae_ge0_le_integral.
+  - by [].
+  - move=> x _; apply power_pos_ge0; apply normr_ge0.
+  - admit.
+  - move=> x _. rewrite lee_fin;
+    apply addr_ge0; (apply mulr_ge0; first apply power_pos_ge0;
+      by rewrite invr_ge0 le_eqVlt; apply/orP; right).
+  - admit.
+  apply/aeW => x _.
+  rewrite lee_fin power_posr1// ger0_norm.
+    apply exp_convex.
+  apply mulr_ge0; rewrite /F /G; (apply mulr_ge0;
+    first apply normr_ge0; rewrite invr_ge0 fine_ge0// Lp_norm_ge0//).
+rewrite FppGqq1//.
 Admitted.
 (* follow http://pi.math.cornell.edu/~erin/analysis/lectures.pdf version with convexity, not young inequality *)
 End Lspace.
