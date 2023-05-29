@@ -217,7 +217,7 @@ have hoelder0 (f' g' : T -> R) (p' q' : R) : 0 < p' -> 0 < q' ->
       by apply power_pos_ge0; apply normr_ge0.
     by apply fp; apply: lt_le_trans; last
       by apply: integral_ge0 => x _; apply: power_pos_ge0; apply: normr_ge0.
-  rewrite (ae_eq_integral (cst 0)%E) => //.
+  rewrite (ae_eq_integral (cst 0)%E) => [|//||//|].
   - by rewrite integral_cst // mul0e.
   - apply: measurableT_comp => //.
     have -> : (fun x : T => `|f' x * g' x| `^ 1) = normr \o (f' \* g') by rewrite funeqE => x /=; rewrite power_posr1.
@@ -259,11 +259,11 @@ have mgpow : measurable_fun [set: T] (fun x : T => (`|g x| `^ q)%:E).
   by apply: measurableT_comp => //; apply: measurableT_comp => //.
 have ifpow : mu.-integrable [set: T] (fun x : T => (`|f x| `^ p)%:E).
   rewrite /integrable ltey; split; first apply mfpow.
-  apply powere_pos_lty' in foo => //; last  by rewrite invr_gt0.
+  apply powere_pos_lty' in foo; last  by rewrite invr_gt0.
   by under eq_integral => x _ do rewrite gee0_abs // ?lee_fin ?power_pos_ge0 //.
 have igpow : mu.-integrable [set: T] (fun x : T => (`|g x| `^ q)%:E).
   rewrite /integrable ltey; split; first apply mgpow.
-  apply powere_pos_lty' in goo => //; last by rewrite invr_gt0.
+  apply powere_pos_lty' in goo; last by rewrite invr_gt0.
   by under eq_integral => x _ do rewrite gee0_abs // ?lee_fin ?power_pos_ge0 //.
 have Fp1 f' p' :
   0 < p' -> (0 < `|| f' ||_(p'))%E -> (`|| f' ||_(p') != +oo)%E
@@ -361,14 +361,9 @@ have FGfg : (`|| (f \* g)%R ||_1 = `|| (F \* G)%R ||_1 * `|| f ||_p * `|| g ||_q
       rewrite mulr_ge0// mulr_ge0// invr_ge0 fine_ge0//; apply Lp_norm_ge0.
     rewrite mulrC -normrM EFinM.
     over.
-  rewrite integralM //; last first.
-    rewrite /integrable; split.
-      apply: measurableT_comp => //;
-      apply: measurableT_comp => //;
-      apply: measurable_funM => //.
-    under eq_integral => x _.
-      rewrite /abse normr_id. over.
-    simpl.
+  rewrite integralM => [|//|]; last first.
+    apply/eq_integrable => [//|x _|].
+      by rewrite normrM EFinM.
     admit.
   rewrite -muleA muleC powere_pose1; last first.
     rewrite mule_ge0//.
@@ -393,7 +388,7 @@ have mpowG : measurable_fun [set: T] (fun x => G x `^ q).
 have FppGqq1 : (\int[mu]_x (F x `^ p / p + G x `^ q / q)%:E = 1)%E.
   under eq_integral => x _ . rewrite EFinD mulrC (mulrC _ (_^-1)) EFinM EFinM.
     over.
-  rewrite integralD //; last 2 first.
+  rewrite integralD => [|//||]; last 2 first.
     rewrite /integrable; split.
       under eq_fun => x do rewrite -EFinM.
       apply: measurableT_comp => //.
@@ -404,7 +399,7 @@ have FppGqq1 : (\int[mu]_x (F x `^ p / p + G x `^ q / q)%:E = 1)%E.
       apply: measurableT_comp => //.
       apply: measurableT_comp => //.
     admit.
-  rewrite integralM; last 2 first. by [].
+  rewrite {1}integralM; last 2 first. by [].
     rewrite /integrable; split.
       apply: measurableT_comp => //.
     admit.
@@ -412,7 +407,7 @@ have FppGqq1 : (\int[mu]_x (F x `^ p / p + G x `^ q / q)%:E = 1)%E.
     rewrite /integrable; split.
       apply: measurableT_comp => //.
     admit.
-  have -> : (\int[mu]_x (F x `^ p)%:E = 1)%E by
+  have {1}-> : (\int[mu]_x (F x `^ p)%:E = 1)%E by
     rewrite /F; apply Fp1=>//.
   have -> : (\int[mu]_x (G x `^ q)%:E = 1)%E by
     rewrite /G; apply Fp1=>//.
@@ -428,11 +423,18 @@ apply (le_trans (y:=\int[mu]_x (F x `^ p / p + G x `^ q / q)%:E))%E.
   apply: ae_ge0_le_integral.
   - by [].
   - move=> x _; apply power_pos_ge0; apply normr_ge0.
-  - admit.
+  - have -> : (fun x : T => (`|(F \* G) x| `^ 1)%:E) = EFin \o normr \o (F \* G) by
+      apply eq_fun => x //=; rewrite power_posr1//.
+    apply: measurableT_comp => //.
+    apply: measurableT_comp => //.
+    apply: measurable_funM => //.
   - move=> x _. rewrite lee_fin;
     apply addr_ge0; (apply mulr_ge0; first apply power_pos_ge0;
       by rewrite invr_ge0 le_eqVlt; apply/orP; right).
-  - admit.
+  - have -> : (fun x : T => (F x `^ p / p + G x `^ q / q)%:E) = EFin \o ((fun x => F x `^ p / p) \+ (fun x => G x `^ q / q)) by
+      apply eq_fun => x //=; rewrite power_posr1//.
+    apply: measurableT_comp => //.
+    apply: measurable_funD; apply: measurable_funM => //.
   apply/aeW => x _.
   rewrite lee_fin power_posr1// ger0_norm.
     apply exp_convex.
