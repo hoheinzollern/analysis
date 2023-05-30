@@ -493,25 +493,34 @@ have h : 'N_p [(f \+ g)%R] `^ p <=
         rewrite /L_norm invr1 [leRHS]powere_pose1/=; last first.
           by apply: integral_ge0 => x _; rewrite lee_fin power_posr1.
         apply: ge0_le_integral => //.
-        - admit.
-        - admit.
-        - admit.
-        - admit.
+        - move=> x _; rewrite lee_fin mulr_ge0// power_pos_ge0//.
+        - apply: measurableT_comp => //; apply: measurable_funM.
+            apply: measurableT_comp => //.
+          apply: measurableT_comp_power_pos; apply: measurableT_comp => //.
+          apply: measurable_funD => //.
+        - move=> x _; rewrite lee_fin power_pos_ge0//.
+        - apply: measurableT_comp => //; apply: measurableT_comp_power_pos.
+          apply: measurableT_comp => //; apply: measurable_funM => //.
+          apply: measurableT_comp_power_pos => //; apply: measurable_funD => //.
         - move=> x _.
           rewrite lee_fin power_posr1// normrM.
           rewrite ler_wpmul2l//.
           rewrite /power_pos subr_eq0 (gt_eqF p1)/= normr_eq0.
           case: ifPn => [|fxgx0]; first by rewrite normr0.
           rewrite gtr0_norm ?expR_gt0//.
-          admit.
+          rewrite le_eqVlt; apply/orP; left; apply/eqP.
+          apply congr1; apply congr1; apply congr1.
+          apply gtr0_norm. admit.
       rewrite (_ : 1 - p^-1 = (p / (p - 1))^-1)%R; last first.
-        admit.
+        rewrite invrM ?invrK ?mulrDl ?divrr ?mulN1r//.
+        admit. admit. admit.
       apply: le_trans.
         apply: (@hoelder _ _ p (p/(p - 1))) => //.
         - admit.
         - admit.
         - admit.
-        - admit.
+        - rewrite invrM ?invrK ?mulrDl ?divrr ?mulN1r// ?(addrC p^-1) -?addrA ?(addrC _ (p^-1)) ?subrr ?addr0//.
+          admit. admit. admit.
       rewrite lee_wpmul2l; [by []|by rewrite L_norm_ge0 |].
       rewrite /L_norm/=.
       admit.
