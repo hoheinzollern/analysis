@@ -427,24 +427,23 @@ Qed.
 (* follow http://pi.math.cornell.edu/~erin/analysis/lectures.pdf version with convexity, not young inequality *)
 
 Lemma minkowski (f g : T -> R) (p : R) :
-  1 < p ->
-  (`|| (f \+ g)%R ||_p <= `|| f ||_p + `|| g ||_p)%E.
+  (1 < p)%R ->
+  'N_p [(f \+ g)%R] <= 'N_p [f] + 'N_p [g].
 Proof.
 move=> p1.
-have h: (`|| (f \+ g)%R ||_p `^ p <= (`|| f ||_p + `|| g ||_p) * `|| (f \+ g)%R ||_p `^ p * inve `|| (f \+ g)%R ||_p)%E.
-  have -> : (`|| (f \+ g)%R ||_p `^ p = \int[mu]_x (`| f x + g x | `^ p)%:E)%E.
-    rewrite /Lp_norm.
+have h: ('N_p [(f \+ g)%R] `^ p <= ('N_p [f] + 'N_p [g]) * 'N_p [(f \+ g)%R] `^ p * inve 'N_p [(f \+ g)%R]).
+  have -> : ('N_p [(f \+ g)%R] `^ p = \int[mu]_x (`| f x + g x | `^ p)%:E).
+    rewrite /L_norm.
     rewrite -powere_posMD mulVf ?powere_pose1 ?ltW//.
       admit.
     by rewrite neq_lt; apply/orP; right; rewrite (lt_trans _ p1).
   have -> : (\int[mu]_x (`|f x + g x| `^ p)%:E = \int[mu]_x (`|f x + g x| * `|f x + g x| `^ (p-1))%:E)%E.
     apply: eq_integral => x _. apply congr1.
-    rewrite -[X in X * _]power_posr1; last first.
+    rewrite -[X in (X * _)%R]power_posr1; last first.
       apply normr_ge0.
     rewrite -power_posD; last first.
       admit.
-    rewrite addrA (addrC 1) -addrA (_:1-1 = 0) ?addr0//.
-      by apply/eqP;rewrite subr_eq0.
+    by rewrite addrCA subrr addr0.
   apply: (le_trans (y:=\int[mu]_x ((`|f x| + `|g x|) * `|f x + g x| `^ (p-1))%:E)%E).
     apply: ge0_le_integral => //.
     - move=> x _; rewrite lee_fin; apply: mulr_ge0=>//; apply: power_pos_ge0.
@@ -464,9 +463,26 @@ have h: (`|| (f \+ g)%R ||_p `^ p <= (`|| f ||_p + `|| g ||_p) * `|| (f \+ g)%R 
     - admit.
     - move=> x _; rewrite lee_fin; apply: mulr_ge0=>//; apply: power_pos_ge0.
     - admit.
-  apply (le_trans (y:=((\int[mu]_x (`|f x| `^ p)%:E)`^(p^-1) + (\int[mu]_x (`|g x| `^ p)%:E)`^(p^-1)) * (\int[mu]_x (`| f x + g x | `^ (p-1) `^ (p / (p-1)))%:E)`^(1-p^-1)))%E.
-    admit. (* Hoelder's inequality *)
-  rewrite /Lp_norm -muleA.
+  apply: (le_trans (y:=((\int[mu]_x (`|f x| `^ p)%:E)`^(p^-1) + (\int[mu]_x (`|g x| `^ p)%:E)`^(p^-1)) * (\int[mu]_x (`| f x + g x | `^ (p-1) `^ (p / (p-1)))%:E)`^(1-p^-1))).
+    rewrite [leLHS](_ : _ = 'N_1 [(f \* (@power_pos R ^~ (p-1) \o (f \+ g)))%R] + 'N_1 [(g \* (@power_pos R ^~ (p-1) \o (f \+ g)))%R]); last first.
+      rewrite /L_norm invr1.
+      admit.
+    rewrite muleDl; last 2 first.
+    - admit.
+    - admit.
+    apply: lee_add.
+      apply: le_trans.
+      apply: (@hoelder _ _ p (((p-1)/p)^-1)) => //.
+      - admit.
+      - admit.
+      - admit.
+      - admit.
+      - admit.
+       (* by rewrite invrK addrCA subrr addr0. *)
+      rewrite -[X in _ <= X * _]/('N_p [f]).
+      rewrite lee_wpmul2l ?L_norm_ge0//.
+      admit. (* Hoelder's inequality *)
+  rewrite /L_norm -muleA.
   rewrite le_eqVlt; apply/orP; left; apply/eqP.
   apply congr1.
   admit.
