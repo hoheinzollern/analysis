@@ -424,7 +424,54 @@ rewrite integral_normed//; last exact: integrable_power_pos.
 rewrite integral_normed//; last exact: integrable_power_pos.
 by rewrite 2!mule1 -EFinD pq.
 Qed.
+(* follow http://pi.math.cornell.edu/~erin/analysis/lectures.pdf version with convexity, not young inequality *)
 
+Lemma minkowski (f g : T -> R) (p : R) :
+  1 < p ->
+  (`|| (f \+ g)%R ||_p <= `|| f ||_p + `|| g ||_p)%E.
+Proof.
+move=> p1.
+have h: (`|| (f \+ g)%R ||_p `^ p <= (`|| f ||_p + `|| g ||_p) * `|| (f \+ g)%R ||_p `^ p * inve `|| (f \+ g)%R ||_p)%E.
+  have -> : (`|| (f \+ g)%R ||_p `^ p = \int[mu]_x (`| f x + g x | `^ p)%:E)%E.
+    rewrite /Lp_norm.
+    rewrite -powere_posMD mulVf ?powere_pose1 ?ltW//.
+      admit.
+    by rewrite neq_lt; apply/orP; right; rewrite (lt_trans _ p1).
+  have -> : (\int[mu]_x (`|f x + g x| `^ p)%:E = \int[mu]_x (`|f x + g x| * `|f x + g x| `^ (p-1))%:E)%E.
+    apply: eq_integral => x _. apply congr1.
+    rewrite -[X in X * _]power_posr1; last first.
+      apply normr_ge0.
+    rewrite -power_posD; last first.
+      admit.
+    rewrite addrA (addrC 1) -addrA (_:1-1 = 0) ?addr0//.
+      by apply/eqP;rewrite subr_eq0.
+  apply: (le_trans (y:=\int[mu]_x ((`|f x| + `|g x|) * `|f x + g x| `^ (p-1))%:E)%E).
+    apply: ge0_le_integral => //.
+    - move=> x _; rewrite lee_fin; apply: mulr_ge0=>//; apply: power_pos_ge0.
+    - admit.
+    - move=> x _; rewrite lee_fin; apply: mulr_ge0=>//; apply: power_pos_ge0.
+    - admit.
+    - move=> x _.
+      rewrite lee_fin.
+      rewrite ler_pM//.
+        apply power_pos_ge0.
+      apply ler_normD.
+  have -> : ((\int[mu]_x ((`|f x| + `|g x|) * `|f x + g x| `^ (p - 1))%:E =
+    (\int[mu]_x (`|f x| * `|f x + g x| `^ (p - 1))%:E + (\int[mu]_x (`|g x| * `|f x + g x| `^ (p - 1))%:E))))%E.
+    under eq_integral=> x _ do rewrite mulrDl EFinD.
+    rewrite ge0_integralD//; last 4 first.
+    - move=> x _; rewrite lee_fin; apply: mulr_ge0=>//; apply: power_pos_ge0.
+    - admit.
+    - move=> x _; rewrite lee_fin; apply: mulr_ge0=>//; apply: power_pos_ge0.
+    - admit.
+  apply (le_trans (y:=((\int[mu]_x (`|f x| `^ p)%:E)`^(p^-1) + (\int[mu]_x (`|g x| `^ p)%:E)`^(p^-1)) * (\int[mu]_x (`| f x + g x | `^ (p-1) `^ (p / (p-1)))%:E)`^(1-p^-1)))%E.
+    admit. (* Hoelder's inequality *)
+  rewrite /Lp_norm -muleA.
+  rewrite le_eqVlt; apply/orP; left; apply/eqP.
+  apply congr1.
+  admit.
+rewrite -muleA in h.
+Admitted.
 End Hoelder.
 
 Section Minkowski.
@@ -573,8 +620,8 @@ Lemma expectation_sqr_is_l2_norm (X : {RV P >-> R}) :
 Proof.
 rewrite /Lp_norm /expectation powere12_sqrt.
   apply congr1; apply eq_integral => x _ /=; apply congr1.
-  rewrite real_normK //; apply num_real.
-  apply integral_ge0 => x _; rewrite lee_fin; apply sqr_ge0.
+  rewrite power_pos_mulrn// real_normK //; apply num_real.
+  apply integral_ge0 => x _; rewrite lee_fin; apply power_pos_ge0.
 Qed.
 
 Lemma expectation_sqr_eq0 (X : {RV P >-> R}) :
@@ -587,7 +634,7 @@ have x20: ae_eq P setT (EFin \o (X ^+ 2)%R) (EFin \o cst 0%R).
       under eq_integral => x _. rewrite gee0_abs. over.
       apply sqr_ge0.
       reflexivity.
-apply: (ae_imply _ x20) => x /=.
+apply: (filterS _ x20) => x /=.
 rewrite -expr2 => h0 _.
 apply EFin_inj in h0 => //.
 have: (X ^+ 2)%R x == 0%R. rewrite -h0 //.
@@ -644,7 +691,7 @@ Context d (T : measurableType d) (R : realType) (P : probability T R).
 
 Lemma markov (X : {RV P >-> R}) (f : R -> R) (eps : R) :
     (0 < eps)%R ->
-    measurable_fun [set: R] f -> (forall r : R, 0 <= f r)%R ->
+    measurable_fun [set: R] f -> (forall r, 0 <= f r)%R ->
     {in `[0, +oo[%classic &, {homo f : x y / x <= y}}%R ->
   (f eps)%:E * P [set x | eps%:E <= `| (X x)%:E | ] <=
     'E_P[f \o (fun x => `| x |%R) \o X].
@@ -652,16 +699,16 @@ Proof.
 move=> e0 mf f0 f_nd; rewrite -(setTI [set _ | _]).
 apply: (le_trans (@le_integral_comp_abse d T R P setT measurableT (EFin \o X)
   eps (er_map f) _ _ _ _ e0)) => //=.
-- exact: measurable_fun_er_map.
+- exact: measurable_er_map.
 - by case => //= r _; exact: f0.
-- exact: le_er_map.
+- by move=> [x| |] [y| |] xP yP xy//=; rewrite ?leey ?leNye// lee_fin f_nd.
 - exact/EFin_measurable_fun.
 Qed.
 
 Lemma chebyshev (X : {RV P >-> R}) (eps : R) : (0 < eps)%R ->
   P [set x | (eps <= `| X x - fine ('E_P[X])|)%R ] <= (eps ^- 2)%:E * 'V_P[X].
 Proof.
-move => heps; have [->|hv] := eqVneq ('V_P[X])%E +oo%E.
+move => heps; have [->|hv] := eqVneq 'V_P[X] +oo.
   by rewrite mulr_infty gtr0_sg ?mul1e// ?leey// invr_gt0// exprn_gt0.
 have h (Y : {RV P >-> R}) :
     P [set x | (eps <= `|Y x|)%R] <= (eps ^- 2)%:E * 'E_P[Y ^+ 2].
@@ -669,21 +716,16 @@ have h (Y : {RV P >-> R}) :
   rewrite exprnN expfV exprz_inv opprK -exprnP.
   apply: (@le_trans _ _ ('E_P[(@GRing.exp R ^~ 2%N \o normr) \o Y])).
     apply: (@markov Y (@GRing.exp R ^~ 2%N)) => //.
-    - exact/measurable_fun_exprn/measurable_fun_id.
     - by move=> r; apply: sqr_ge0.
     - move=> x y; rewrite !inE !mksetE !in_itv/= !andbT => x0 y0.
       by rewrite ler_sqr.
   apply: expectation_le => //.
-  - apply: measurable_funT_comp => //; apply: measurable_funT_comp => //.
-    exact/measurable_fun_exprn/measurable_fun_id.
+    - by apply: measurableT_comp => //; exact: measurableT_comp.
   - by move=> x /=; apply: sqr_ge0.
   - by move=> x /=; apply: sqr_ge0.
-simpl.
-
-
   - by apply/aeW => t /=; rewrite real_normK// num_real.
 have := h [the {mfun T >-> R} of (X \- cst (fine ('E_P[X])))%R].
-by move=> /le_trans; apply; rewrite lee_pmul2l// lte_fin invr_gt0 exprn_gt0.
+by move=> /le_trans; apply; rewrite /variance.
 Qed.
 
 End markov_chebyshev.
@@ -869,7 +911,7 @@ move => hfinex hfiney.
 have mf : measurable_fun [set: T] X by admit.
 have mg : measurable_fun [set: T] Y by admit.
 have twoone : (2^-1 + 2^-1)%R = 1%R :> R by admit.
-have := @Lp_norm_hoelder d T R P X Y 2%N 2%N erefl erefl mf mg twoone.
+have hoeld := @hoelder d T R P X Y 2 2 _ _ mf mg twoone.
 rewrite /expectation /Lp_norm/=.
 under eq_integral do rewrite expr1.
 rewrite invr1.
