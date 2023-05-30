@@ -52,36 +52,43 @@ Section inve.
 Context {R : realFieldType}.
 
 Definition inve (x : \bar R) :=
-(*  match x with
-  | x%:E => x^-1%E
-  | +oo%E => 1
-  | -oo%E => 1
-  end.*)
-EFin ((fine x)^-1).
+  match x with
+  | x%:E => x^-1%:E
+  | +oo%E => +oo%E
+  | -oo%E => -oo%E
+  end.
+
+Lemma inve_fin_num (x : \bar R) : (inve x \is a fin_num) = (x \is a fin_num).
+Proof. by move: x => [x| |]. Qed.
 
 Lemma fine_inv x : (fine x)^-1 = fine (inve x).
-Proof. by case: x. Qed.
+Proof. by case: x => //=; rewrite invr0. Qed.
 
 Lemma inveM x y : (x != 0 -> y != 0 -> inve x * inve y = inve (x * y))%E.
 Proof.
-case: x y => [x| |] [y| |] x0 y0;
-  rewrite /inve -?EFinM //; apply: congr1;
-  rewrite ?invr0 ?mulr0 ?mul0r ?mulyy ?mulyNy ?mulNyy /fine ?invr0 //=;
-  first by rewrite -invrM ?unitfE // mulrC.
-- move: x0; rewrite neq_lt => /orP [x0|x0];
-  by rewrite ?(lt0_muley x0) ?(gt0_muley x0) // invr0.
-- move: x0; rewrite neq_lt => /orP [x0|x0];
-  by rewrite ?(lt0_muleNy x0) ?(gt0_muleNy x0) // invr0.
-- move: y0; rewrite neq_lt => /orP [y0|y0];
-  by rewrite ?(lt0_mulye y0) ?(gt0_mulye y0) // ?invr0.
-- move: y0; rewrite neq_lt => /orP [y0|y0];
-  by rewrite ?(lt0_mulNye y0) ?(gt0_mulNye y0) // ?invr0.
+move: x y => [x| |] [y| |]//=; rewrite ?eqE/=.
+- by move=> x0 y0; rewrite -EFinM invfM.
+- rewrite neq_lt => /orP[|] x0 _.
+  + by rewrite mulry sgrV [in RHS]mulry ltr0_sg// mulN1e.
+  + by rewrite mulry sgrV [in RHS]mulry gtr0_sg// mul1e.
+- rewrite neq_lt => /orP[|] x0 _.
+  + by rewrite mulrNy sgrV [in RHS]mulrNy ltr0_sg// mulN1e.
+  + by rewrite mulrNy sgrV [in RHS]mulrNy gtr0_sg// mul1e.
+- move=> _; rewrite neq_lt => /orP[|] y0.
+  + by rewrite mulyr sgrV [in RHS]mulyr ltr0_sg// mulN1e.
+  + by rewrite mulyr sgrV [in RHS]mulyr gtr0_sg// mul1e.
+- by rewrite mulyy.
+- by rewrite mulyNy.
+- move=> _; rewrite neq_lt => /orP[|] y0.
+  + by rewrite mulNyr sgrV [in RHS]mulNyr ltr0_sg// mulN1e.
+  + by rewrite mulNyr sgrV [in RHS]mulNyr gtr0_sg// mul1e.
+- by rewrite mulNyy.
 Qed.
 
 Lemma inveK x : (x != 0 -> x \is a fin_num -> x * inve x = 1)%E.
 Proof.
 case: x => [x x0| |] //=.
-  rewrite /inve /= -EFinM ?neq_lt // mulrC mulVf //.
+by rewrite /inve /= -EFinM ?neq_lt // mulrC mulVf.
 Qed.
 
 End inve.
@@ -329,7 +336,13 @@ rewrite /L_norm -powere_posMD mulVf ?lt0r_neq0 //.
 rewrite powere_pose1; last first.
   by apply integral_ge0 => x _; rewrite lee_fin; exact: power_pos_ge0.
 under eq_integral do rewrite EFinM muleC.
-rewrite integralM// fine_inv fineK// muleC inveK//; last first.
+rewrite integralM// fine_inv fineK; last first.
+  rewrite inve_fin_num ge0_fin_numE.
+    case: ifp => _; apply: le_lt_trans; rewrite le_eqVlt.
+    apply/orP; left; apply/eqP; apply: eq_integral => x _.
+    by rewrite [RHS]gee0_abs// lee_fin power_pos_ge0.
+  by rewrite integral_ge0// => x _; rewrite lee_fin power_pos_ge0.
+rewrite muleC inveK//; last first.
   rewrite ge0_fin_numE//; last first.
     by rewrite integral_ge0// => x _; rewrite lee_fin// power_pos_ge0.
   case: ifp => _; apply: le_lt_trans; rewrite le_eqVlt; apply/orP; left; apply/eqP.
@@ -401,8 +414,8 @@ have -> : 'N_1[(f \* g)%R] = 'N_1[(F \* G)%R] * 'N_p[f] * 'N_q[g].
       by rewrite lee_fin mulr_ge0// invr_ge0 fine_ge0// L_norm_ge0.
     by apply integral_ge0 => x _; rewrite lee_fin.
   rewrite muleA EFinM !fine_inv.
-  rewrite fineK; last exact/fin_numP.
-  rewrite fineK; last exact/fin_numP.
+  rewrite fineK ?inve_fin_num ?ge0_fin_numE ?L_norm_ge0 ?ltey//.
+  rewrite fineK ?inve_fin_num ?ge0_fin_numE ?L_norm_ge0 ?ltey//.
   rewrite inveM ?gt_eqF// inveK ?mul1e ?mule_neq0// ?gt_eqF//.
   by rewrite fin_numM// ge0_fin_numE ?L_norm_ge0// ltey.
 rewrite -(mul1e ('N_p[f] * _)) -muleA lee_pmul ?mule_ge0 ?L_norm_ge0//.
@@ -454,8 +467,8 @@ case: x => // [x|_ p0].
   rewrite lte_fin => x0 p0.
   rewrite /powere_pos/= /inve/=.
   by rewrite /power_pos gt_eqF// mulNr expRN.
-rewrite /inve/= gt_eqF// oppr_eq0 gt_eqF//= invr0.
-Admitted.
+by rewrite /inve/= gt_eqF// oppr_eq0 gt_eqF.
+Qed.
 
 Lemma oneminvp (p : R) : (1 < p)%R ->  (1 - p^-1 = (p / (p - 1))^-1)%R.
 Proof.
@@ -505,19 +518,15 @@ under eq_integral.
   rewrite mulrCA divff// ?gt_eqF // ?subr_gt0// mulr1.
   over.
 rewrite /=.
-have [->|] := eqVneq (\int[mu]_x (`|f x| `^ p)%:E) +oo.
-  rewrite /powere_pos invr_eq0 mulf_eq0 !invr_eq0 gt_eqF// ?(lt_trans _ p1)//=.
-  rewrite subr_eq0 gt_eqF// /inve/= invr0 mule0.
-(*rewrite /= inve_powere_pos//; last 2 first.
-  rewrite ge0_fin_numE// integral_ge0// => x _.
-  by rewrite lee_fin power_pos_ge0.
+rewrite /= inve_powere_pos//; last 2 first.
+  by rewrite integral_ge0// => x _; rewrite lee_fin power_pos_ge0.
   by rewrite invr_gt0 (lt_trans _ p1).
 rewrite -oneminvp// powere_posB//; last 2 first.
   by rewrite integral_ge0// => x _; rewrite lee_fin power_pos_ge0.
   by rewrite gt_eqF// invf_lt1// (lt_trans _ p1).
 rewrite powere_pose1// integral_ge0// => x _.
 by rewrite lee_fin power_pos_ge0.
-Qed.*) Admitted.
+Qed.
 
 Lemma minkowski (f g : T -> R) (p : R) :
   measurable_fun setT f -> measurable_fun setT g ->
@@ -525,7 +534,7 @@ Lemma minkowski (f g : T -> R) (p : R) :
   'N_p [(f \+ g)%R] <= 'N_p [f] + 'N_p [g].
 Proof.
 move=> mf mg p1.
-have h : 'N_p [(f \+ g)%R] `^ p <=
+have : 'N_p [(f \+ g)%R] `^ p <=
     ('N_p [f] + 'N_p [g]) * 'N_p [(f \+ g)%R] `^ p * inve 'N_p [(f \+ g)%R].
   rewrite [leLHS](_ : _ = \int[mu]_x (`| f x + g x | `^ p)%:E); last first.
     rewrite /L_norm -powere_posMD mulVf; last by rewrite gt_eqF// (le_lt_trans _ p1).
@@ -609,9 +618,8 @@ have h : 'N_p [(f \+ g)%R] `^ p <=
     congr (_ `^ (1 - p^-1)).
     apply: eq_integral => x _.
     by rewrite [in RHS]ger0_norm// power_pos_ge0.
-  rewrite /= L_normK//.
-  
-rewrite -muleA in h.
+  by rewrite /= L_normK.
+rewrite muleAC.
 Admitted.
 
 End Hoelder.
