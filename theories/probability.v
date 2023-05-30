@@ -51,7 +51,13 @@ Local Open Scope ring_scope.
 Section inve.
 Context {R : realFieldType}.
 
-Definition inve (x : \bar R) := EFin ((fine x)^-1).
+Definition inve (x : \bar R) :=
+(*  match x with
+  | x%:E => x^-1%E
+  | +oo%E => 1
+  | -oo%E => 1
+  end.*)
+EFin ((fine x)^-1).
 
 Lemma fine_inv x : (fine x)^-1 = fine (inve x).
 Proof. by case: x. Qed.
@@ -440,6 +446,79 @@ rewrite integral_normed//; last exact: integrable_power_pos.
 by rewrite 2!mule1 -EFinD pq.
 Qed.
 
+Lemma inve_powere_pos x (p : R) : 0 <= x -> (0 < p)%R -> inve (x `^ p) = x `^ -p.
+Proof.
+rewrite le_eqVlt => /orP[/eqP <- p0|].
+  by rewrite !powere_pos0r oppr_eq0 gt_eqF//= /inve/= invr0.
+case: x => // [x|_ p0].
+  rewrite lte_fin => x0 p0.
+  rewrite /powere_pos/= /inve/=.
+  by rewrite /power_pos gt_eqF// mulNr expRN.
+rewrite /inve/= gt_eqF// oppr_eq0 gt_eqF//= invr0.
+Admitted.
+
+Lemma oneminvp (p : R) : (1 < p)%R ->  (1 - p^-1 = (p / (p - 1))^-1)%R.
+Proof.
+move=> p1.
+by rewrite invf_div mulrDl divff ?gt_eqF// ?(le_lt_trans _ p1)// mulN1r.
+Qed.
+
+Lemma power_posD (a x y : R) : (0 < a)%R -> (a `^ (x + y) = a `^ x * a `^ y)%R.
+Proof. by move=> a0; rewrite /power_pos gt_eqF// mulrDl expRD. Qed.
+
+Lemma powere_posD (a : \bar R) (x y : R) : 0 < a -> (0 <= x)%R -> (0 <= y)%R ->
+  a `^ (x + y) = a `^ x * a `^ y.
+Proof.
+move=> a0 x_ge0 y_ge0; move: a0.
+case: a => [a|_/=|//].
+  by rewrite lte_fin/= => a0; rewrite -EFinM power_posD.
+have [->|x0] := eqVneq x 0%R; first by rewrite mul1e add0r.
+have [->|y0] := eqVneq y 0%R; first by rewrite addr0 (negbTE x0) mule1.
+by rewrite paddr_eq0// (negbTE x0) (negbTE y0) mulyy.
+Qed.
+
+Lemma powere_posB (a : \bar R) (x y : R) : 0 <= a -> x != y ->
+  a `^ (x - y) = a `^ x * a `^ -y.
+Proof.
+move=> a0 xy.
+have [->|x0] := eqVneq x 0%R.
+  by rewrite powere_pose0 sub0r mul1e.
+have [->|y0] := eqVneq y 0%R.
+  by rewrite subr0 oppr0 powere_pose0 mule1.
+move: a0; case: a => [a|_/=|//].
+  rewrite lee_fin le_eqVlt => /orP[/eqP <-|a0].
+    by rewrite !powere_pos0r oppr_eq0 subr_eq0 (negbTE xy) (negbTE x0) (negbTE y0) mule0.
+  by rewrite /powere_pos /power_pos gt_eqF// mulrBl expRD mulNr.
+by rewrite oppr_eq0 (negbTE y0) (negbTE x0) subr_eq0 (negbTE xy) mulyy.
+Qed.
+
+Lemma L_normK (p : R) (f : T -> R) : (1 < p)%R ->
+  'N_p / (p - 1)[((power_pos (R:=R))^~ (p - 1)%R \o normr) \o f] =
+  'N_p[f] `^ p * inve 'N_p[f].
+Proof.
+move=> p1.
+rewrite /L_norm/=.
+rewrite -powere_posMD mulVf ?gt_eqF// ?(lt_trans _ p1)// powere_pose1; last first.
+  by rewrite integral_ge0// => x _; rewrite lee_fin power_pos_ge0.
+under eq_integral.
+  move=> x _; rewrite ger0_norm ?power_pos_ge0// -power_posMD.
+  rewrite mulrCA divff// ?gt_eqF // ?subr_gt0// mulr1.
+  over.
+rewrite /=.
+have [->|] := eqVneq (\int[mu]_x (`|f x| `^ p)%:E) +oo.
+  rewrite /powere_pos invr_eq0 mulf_eq0 !invr_eq0 gt_eqF// ?(lt_trans _ p1)//=.
+  rewrite subr_eq0 gt_eqF// /inve/= invr0 mule0.
+(*rewrite /= inve_powere_pos//; last 2 first.
+  rewrite ge0_fin_numE// integral_ge0// => x _.
+  by rewrite lee_fin power_pos_ge0.
+  by rewrite invr_gt0 (lt_trans _ p1).
+rewrite -oneminvp// powere_posB//; last 2 first.
+  by rewrite integral_ge0// => x _; rewrite lee_fin power_pos_ge0.
+  by rewrite gt_eqF// invf_lt1// (lt_trans _ p1).
+rewrite powere_pose1// integral_ge0// => x _.
+by rewrite lee_fin power_pos_ge0.
+Qed.*) Admitted.
+
 Lemma minkowski (f g : T -> R) (p : R) :
   measurable_fun setT f -> measurable_fun setT g ->
   (1 < p)%R ->
@@ -489,46 +568,49 @@ have h : 'N_p [(f \+ g)%R] `^ p <=
       admit.
       by rewrite ge0_adde_def//= inE L_norm_ge0.
     rewrite lee_add//.
-    - apply: (@le_trans _ _ ('N_1 [(f \* (@power_pos R ^~ (p - 1) \o (f \+ g)))%R])).
+    - apply: (@le_trans _ _ ('N_1 [(f \* (@power_pos R ^~ (p - 1) \o normr \o (f \+ g)))%R])).
         rewrite /L_norm invr1 [leRHS]powere_pose1/=; last first.
           by apply: integral_ge0 => x _; rewrite lee_fin power_posr1.
         apply: ge0_le_integral => //.
-        - move=> x _; rewrite lee_fin mulr_ge0// power_pos_ge0//.
+        - by move=> x _; rewrite lee_fin mulr_ge0// power_pos_ge0.
         - apply: measurableT_comp => //; apply: measurable_funM.
-            apply: measurableT_comp => //.
-          apply: measurableT_comp_power_pos; apply: measurableT_comp => //.
-          apply: measurable_funD => //.
-        - move=> x _; rewrite lee_fin power_pos_ge0//.
+            exact: measurableT_comp.
+          apply: measurableT_comp_power_pos.
+          by apply: measurableT_comp => //; exact: measurable_funD.
+        - by move=> x _; rewrite lee_fin power_posr1.
         - apply: measurableT_comp => //; apply: measurableT_comp_power_pos.
           apply: measurableT_comp => //; apply: measurable_funM => //.
-          apply: measurableT_comp_power_pos => //; apply: measurable_funD => //.
+          apply: measurableT_comp_power_pos.
+          by apply: measurableT_comp => //; exact: measurable_funD.
         - move=> x _.
           rewrite lee_fin power_posr1// normrM.
-          rewrite ler_wpmul2l//.
-          rewrite /power_pos subr_eq0 (gt_eqF p1)/= normr_eq0.
-          case: ifPn => [|fxgx0]; first by rewrite normr0.
-          rewrite gtr0_norm ?expR_gt0//.
-          rewrite le_eqVlt; apply/orP; left; apply/eqP.
-          apply congr1; apply congr1; apply congr1.
-          apply gtr0_norm. admit.
-      rewrite (_ : 1 - p^-1 = (p / (p - 1))^-1)%R; last first.
-        rewrite invrM ?invrK ?mulrDl ?divrr ?mulN1r//.
-        admit. admit. admit.
+          by rewrite ler_wpmul2l// [leRHS]ger0_norm// power_pos_ge0.
       apply: le_trans.
-        apply: (@hoelder _ _ p (p/(p - 1))) => //.
-        - admit.
-        - admit.
-        - admit.
-        - rewrite invrM ?invrK ?mulrDl ?divrr ?mulN1r// ?(addrC p^-1) -?addrA ?(addrC _ (p^-1)) ?subrr ?addr0//.
-          admit. admit. admit.
+        apply: (@hoelder _ _ p (p / (p - 1))) => //.
+        - apply: measurableT_comp => //.
+            exact: measurableT_comp.
+          exact: measurable_funD.
+        - by rewrite (lt_trans _ p1).
+        - by rewrite divr_gt0// ?subr_gt0// (lt_trans _ p1).
+        - by rewrite -oneminvp// addrCA subrr addr0.
       rewrite lee_wpmul2l; [by []|by rewrite L_norm_ge0 |].
-      rewrite /L_norm/=.
-      admit.
+      rewrite le_eqVlt; apply/orP; left; apply/eqP.
+      rewrite /L_norm/= -(oneminvp p1).
+      congr (_ `^ (1 - p^-1)).
+      apply: eq_integral => x _.
+      by rewrite ger0_norm// power_pos_ge0.
     - admit.
   rewrite -muleA.
   rewrite lee_wpmul2l// ?adde_ge0 ?L_norm_ge0//.
   rewrite le_eqVlt; apply/orP; left; apply/eqP.
-  admit.
+  rewrite (oneminvp p1).
+  transitivity ('N_(p/(p -1)) [(@power_pos R ^~ (p - 1)%R \o normr \o (f \+ g)%R)]).
+    rewrite /L_norm/= -(oneminvp p1).
+    congr (_ `^ (1 - p^-1)).
+    apply: eq_integral => x _.
+    by rewrite [in RHS]ger0_norm// power_pos_ge0.
+  rewrite /= L_normK//.
+  
 rewrite -muleA in h.
 Admitted.
 
