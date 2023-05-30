@@ -498,13 +498,12 @@ have h : 'N_p [(f \+ g)%R] `^ p <=
         - admit.
         - admit.
         - move=> x _.
-          rewrite lee_fin power_posr1//.
-          rewrite normrM.
-          have [fxgx0|fxgx0] := ltP (f x + g x)%R 0%R.
-            rewrite lt0_norm_power_pos// ?subr_gt0// mulr1.
-            rewrite (ltr0_norm fxgx0).
-            admit.
-          by rewrite norm_power_pos.
+          rewrite lee_fin power_posr1// normrM.
+          rewrite ler_wpmul2l//.
+          rewrite /power_pos subr_eq0 (gt_eqF p1)/= normr_eq0.
+          case: ifPn => [|fxgx0]; first by rewrite normr0.
+          rewrite gtr0_norm ?expR_gt0//.
+          admit.
       rewrite (_ : 1 - p^-1 = (p / (p - 1))^-1)%R; last first.
         admit.
       apply: le_trans.
