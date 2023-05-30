@@ -177,7 +177,7 @@ Reserved Notation "''N_' p [ f ]" (format "''N_' p [ f ]", at level 5).
 
 Section L_norm.
 Context d (T : measurableType d) (R : realType)
-  (mu : {finite_measure set T -> \bar R}).
+  (mu : {measure set T -> \bar R}).
 Local Open Scope ereal_scope.
 
 Definition L_norm (p : R) (f : T -> R) : \bar R :=
@@ -223,7 +223,7 @@ End PR_measure.
 
 Section Hoelder.
 Context d (T : measurableType d) (R : realType).
-Variable mu : {finite_measure set T -> \bar R}.
+Variable mu : {measure set T -> \bar R}.
 Local Open Scope ereal_scope.
 
 Local Notation "''N_' p [ f ]" := (L_norm mu p f).
@@ -426,6 +426,21 @@ by rewrite 2!mule1 -EFinD pq.
 Qed.
 
 End Hoelder.
+
+Section Minkowski.
+Context d (T : measurableType d) (R : realType).
+Variable mu : {measure set T -> \bar R}.
+Local Open Scope ereal_scope.
+
+Local Notation "''N_' p [ f ]" := (L_norm mu p f).
+
+Lemma minkowski f g p : (forall x, 0 <= f x)%R -> (forall x, 0 <= g x)%R ->
+  'N_p [(f \+ g)%R] <= 'N_p[f] + 'N_p[g].
+Proof.
+move=> f0 g0.
+Abort.
+
+End Minkowski.
 
 Definition random_variable d (T : measurableType d) (R : realType)
   (P : probability T R) := {mfun T >-> R}.
