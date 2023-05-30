@@ -1,11 +1,11 @@
 (* mathcomp analysis (c) 2022 Inria and AIST. License: CeCILL-C.              *)
 From mathcomp Require Import all_ssreflect.
 From mathcomp Require Import ssralg ssrnum ssrint interval finmap.
-Require Import boolp reals ereal exp itv.
 From HB Require Import structures.
-Require Import classical_sets mathcomp_extra signed functions topology normedtype cardinality.
-Require Import sequences esum measure numfun lebesgue_measure lebesgue_integral.
-Require Import convex.
+From mathcomp.classical Require Import mathcomp_extra cardinality boolp.
+From mathcomp.classical Require Import classical_sets functions.
+Require Import signed reals ereal sequences exp itv topology normedtype esum.
+Require Import numfun  measure convex lebesgue_measure lebesgue_integral.
 
 (******************************************************************************)
 (*                       Probability (experimental)                           *)
@@ -84,7 +84,7 @@ End inve.
 Section power_pos.
 Context {R : realType}.
 
-Lemma power_posMD (x y z : R) : (x `^ (y * z) = x `^ y `^ z)%R.
+Lemma power_posMD (x y z : R) : x `^ (y * z) = x `^ y `^ z.
 Proof.
 rewrite /power_pos.
 have [->/=|y0] := eqVneq y 0%R.
@@ -109,7 +109,7 @@ by rewrite lt_neqAle x0 andbT eq_sym.
 Qed.
 
 Lemma ler_power_pos' (a : R) : 0 < a ->
-  {in `[0, +oo[%classic &, {homo (@power_pos _ ^~ a) : x y / x <= y >-> x <= y}}.
+  {in `[0, +oo[%classic &, {homo @power_pos R ^~ a : x y / x <= y >-> x <= y}}.
 Proof.
 move=> a0 u v; rewrite !inE /= !in_itv/= !andbT.
 rewrite !le_eqVlt => /orP[/eqP<-|u0].
@@ -122,6 +122,22 @@ move=> /orP[/eqP<-|v0].
 move=> /orP[/eqP->//|uv]; first by rewrite eqxx.
 apply/orP; right.
 by rewrite /power_pos !gt_eqF// ltr_expR ltr_pmul2l// ltr_ln.
+Qed.
+
+Lemma lt0_norm_power_pos (a p : R) : a < 0 -> `|a `^ p| = 1.
+Proof.
+move=> a0.
+rewrite /power_pos.
+by rewrite lt_eqF// gtr0_norm ?expR_gt0// ln0 ?mulr0 ?expR0// ltW.
+Qed.
+
+Lemma norm_power_pos (a p : R) : 0 <= a -> `|a `^ p| = `|a| `^ p.
+Proof.
+move=> a0.
+rewrite /power_pos; case: ifPn => [/eqP ->|].
+  by rewrite normr0 eqxx normr_nat.
+rewrite neq_lt ltNge a0/= => {}a0.
+by rewrite gtr0_norm ?expR_gt0// gtr0_norm// gt_eqF.
 Qed.
 
 End power_pos.
@@ -228,8 +244,6 @@ Local Open Scope ereal_scope.
 
 Local Notation "''N_' p [ f ]" := (L_norm mu p f).
 
-(* ref http://pi.math.cornell.edu/~erin/analysis/lectures.pdf *)
-
 Let measurableT_comp_power_pos (f : T -> R) p :
   measurable_fun setT f -> measurable_fun setT (fun x => f x `^ p)%R.
 Proof. exact: (@measurableT_comp _ _ _ _ _ _ (@power_pos R ^~ p)). Qed.
@@ -319,6 +333,7 @@ apply: powere_pos_gt0_inv fpos; rewrite ?invr_gt0//.
 by apply integral_ge0 => t _; rewrite lee_fin power_pos_ge0.
 Qed.
 
+(* ref http://pi.math.cornell.edu/~erin/analysis/lectures.pdf *)
 Lemma hoelder (f g : T -> R) (p q : R) :
   measurable_fun setT f -> measurable_fun setT g ->
   (0 < p)%R -> (0 < q)%R -> (p^-1 + q^-1 = 1)%R ->
@@ -424,86 +439,92 @@ rewrite integral_normed//; last exact: integrable_power_pos.
 rewrite integral_normed//; last exact: integrable_power_pos.
 by rewrite 2!mule1 -EFinD pq.
 Qed.
-(* follow http://pi.math.cornell.edu/~erin/analysis/lectures.pdf version with convexity, not young inequality *)
 
 Lemma minkowski (f g : T -> R) (p : R) :
+  measurable_fun setT f -> measurable_fun setT g ->
   (1 < p)%R ->
   'N_p [(f \+ g)%R] <= 'N_p [f] + 'N_p [g].
 Proof.
-move=> p1.
-have h: ('N_p [(f \+ g)%R] `^ p <= ('N_p [f] + 'N_p [g]) * 'N_p [(f \+ g)%R] `^ p * inve 'N_p [(f \+ g)%R]).
-  have -> : ('N_p [(f \+ g)%R] `^ p = \int[mu]_x (`| f x + g x | `^ p)%:E).
-    rewrite /L_norm.
-    rewrite -powere_posMD mulVf ?powere_pose1 ?ltW//.
-      admit.
-    by rewrite neq_lt; apply/orP; right; rewrite (lt_trans _ p1).
-  have -> : (\int[mu]_x (`|f x + g x| `^ p)%:E = \int[mu]_x (`|f x + g x| * `|f x + g x| `^ (p-1))%:E)%E.
-    apply: eq_integral => x _. apply congr1.
-    rewrite -[X in (X * _)%R]power_posr1; last first.
-      apply normr_ge0.
-    rewrite -power_posD; last first.
-      admit.
+move=> mf mg p1.
+have h : 'N_p [(f \+ g)%R] `^ p <=
+    ('N_p [f] + 'N_p [g]) * 'N_p [(f \+ g)%R] `^ p * inve 'N_p [(f \+ g)%R].
+  rewrite [leLHS](_ : _ = \int[mu]_x (`| f x + g x | `^ p)%:E); last first.
+    rewrite /L_norm -powere_posMD mulVf; last by rewrite gt_eqF// (le_lt_trans _ p1).
+    by rewrite powere_pose1 ?integral_ge0// => x _; rewrite lee_fin// power_pos_ge0.
+  rewrite [leLHS](_ : _ = \int[mu]_x (`|f x + g x| * `|f x + g x| `^ (p - 1))%:E); last first.
+    apply: eq_integral => x _; congr EFin.
+    have [->|fxgx0]:= eqVneq `|f x + g x|%R 0%R.
+      by rewrite mul0r power_pos0 gt_eqF// (lt_trans _ p1).
+    rewrite -[X in (X * _)%R]power_posr1//.
+    rewrite -power_posD; last by rewrite lt_neqAle eq_sym fxgx0/=.
     by rewrite addrCA subrr addr0.
-  apply: (le_trans (y:=\int[mu]_x ((`|f x| + `|g x|) * `|f x + g x| `^ (p-1))%:E)%E).
+  apply: (@le_trans _ _ (\int[mu]_x ((`|f x| + `|g x|) * `|f x + g x| `^ (p - 1))%:E)).
     apply: ge0_le_integral => //.
-    - move=> x _; rewrite lee_fin; apply: mulr_ge0=>//; apply: power_pos_ge0.
-    - admit.
-    - move=> x _; rewrite lee_fin; apply: mulr_ge0=>//; apply: power_pos_ge0.
-    - admit.
-    - move=> x _.
-      rewrite lee_fin.
-      rewrite ler_pM//.
-        apply power_pos_ge0.
-      apply ler_normD.
-  have -> : ((\int[mu]_x ((`|f x| + `|g x|) * `|f x + g x| `^ (p - 1))%:E =
-    (\int[mu]_x (`|f x| * `|f x + g x| `^ (p - 1))%:E + (\int[mu]_x (`|g x| * `|f x + g x| `^ (p - 1))%:E))))%E.
-    under eq_integral=> x _ do rewrite mulrDl EFinD.
-    rewrite ge0_integralD//; last 4 first.
-    - move=> x _; rewrite lee_fin; apply: mulr_ge0=>//; apply: power_pos_ge0.
-    - admit.
-    - move=> x _; rewrite lee_fin; apply: mulr_ge0=>//; apply: power_pos_ge0.
-    - admit.
-  apply: (le_trans (y:=((\int[mu]_x (`|f x| `^ p)%:E)`^(p^-1) + (\int[mu]_x (`|g x| `^ p)%:E)`^(p^-1)) * (\int[mu]_x (`| f x + g x | `^ (p-1) `^ (p / (p-1)))%:E)`^(1-p^-1))).
-    rewrite [leLHS](_ : _ = 'N_1 [(f \* (@power_pos R ^~ (p-1) \o (f \+ g)))%R] + 'N_1 [(g \* (@power_pos R ^~ (p-1) \o (f \+ g)))%R]); last first.
-      rewrite /L_norm invr1.
-      admit.
+    - by move=> x _; rewrite lee_fin mulr_ge0// power_pos_ge0.
+    - apply: measurableT_comp => //; apply: measurable_funM.
+        by apply: measurableT_comp => //; exact: measurable_funD.
+      apply: measurableT_comp_power_pos.
+      by apply: measurableT_comp => //; exact: measurable_funD.
+    - by move=> x _; rewrite lee_fin mulr_ge0// power_pos_ge0.
+    - apply: measurableT_comp => //; apply: measurable_funM.
+        by apply: measurable_funD => //; exact: measurableT_comp.
+      apply: measurableT_comp_power_pos.
+      by apply: measurableT_comp => //; exact: measurable_funD.
+    - by move=> x _; rewrite lee_fin ler_wpmul2r// ?power_pos_ge0// ler_normD.
+  under eq_integral=> x _ do rewrite mulrDl EFinD.
+  rewrite ge0_integralD//; last 4 first.
+    - by move=> x _; rewrite lee_fin mulr_ge0// power_pos_ge0.
+    - apply: measurableT_comp => //; apply: measurable_funM.
+        exact: measurableT_comp.
+      apply: measurableT_comp_power_pos.
+      by apply: measurableT_comp => //; exact: measurable_funD.
+    - by move=> x _; rewrite lee_fin mulr_ge0// power_pos_ge0.
+    - apply: measurableT_comp => //; apply: measurable_funM.
+        exact: measurableT_comp.
+      apply: measurableT_comp_power_pos.
+      by apply: measurableT_comp => //; exact: measurable_funD.
+  apply: (@le_trans _ _ (('N_p[f] + 'N_p[g]) *
+      (\int[mu]_x (`|f x + g x| `^ (p - 1) `^ (p / (p - 1)))%:E) `^ (1 - p^-1))).
     rewrite muleDl; last 2 first.
-    - admit.
-    - admit.
-    apply: lee_add.
+      admit.
+      by rewrite ge0_adde_def//= inE L_norm_ge0.
+    rewrite lee_add//.
+    - apply: (@le_trans _ _ ('N_1 [(f \* (@power_pos R ^~ (p - 1) \o (f \+ g)))%R])).
+        rewrite /L_norm invr1 [leRHS]powere_pose1/=; last first.
+          by apply: integral_ge0 => x _; rewrite lee_fin power_posr1.
+        apply: ge0_le_integral => //.
+        - admit.
+        - admit.
+        - admit.
+        - admit.
+        - move=> x _.
+          rewrite lee_fin power_posr1//.
+          rewrite normrM.
+          have [fxgx0|fxgx0] := ltP (f x + g x)%R 0%R.
+            rewrite lt0_norm_power_pos// ?subr_gt0// mulr1.
+            rewrite (ltr0_norm fxgx0).
+            admit.
+          by rewrite norm_power_pos.
+      rewrite (_ : 1 - p^-1 = (p / (p - 1))^-1)%R; last first.
+        admit.
       apply: le_trans.
-      apply: (@hoelder _ _ p (((p-1)/p)^-1)) => //.
-      - admit.
-      - admit.
-      - admit.
-      - admit.
-      - admit.
-       (* by rewrite invrK addrCA subrr addr0. *)
-      rewrite -[X in _ <= X * _]/('N_p [f]).
-      rewrite lee_wpmul2l ?L_norm_ge0//.
-      admit. (* Hoelder's inequality *)
-  rewrite /L_norm -muleA.
+        apply: (@hoelder _ _ p (p/(p - 1))) => //.
+        - admit.
+        - admit.
+        - admit.
+        - admit.
+      rewrite lee_wpmul2l; [by []|by rewrite L_norm_ge0 |].
+      rewrite /L_norm/=.
+      admit.
+    - admit.
+  rewrite -muleA.
+  rewrite lee_wpmul2l// ?adde_ge0 ?L_norm_ge0//.
   rewrite le_eqVlt; apply/orP; left; apply/eqP.
-  apply congr1.
   admit.
 rewrite -muleA in h.
 Admitted.
+
 End Hoelder.
-
-Section Minkowski.
-Context d (T : measurableType d) (R : realType).
-Variable mu : {measure set T -> \bar R}.
-Local Open Scope ereal_scope.
-
-Local Notation "''N_' p [ f ]" := (L_norm mu p f).
-
-Lemma minkowski f g p : (forall x, 0 <= f x)%R -> (forall x, 0 <= g x)%R ->
-  'N_p [(f \+ g)%R] <= 'N_p[f] + 'N_p[g].
-Proof.
-move=> f0 g0.
-Abort.
-
-End Minkowski.
 
 Definition random_variable d (T : measurableType d) (R : realType)
   (P : probability T R) := {mfun T >-> R}.
