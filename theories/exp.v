@@ -636,10 +636,10 @@ rewrite /power_pos. have [->|_] := eqVneq x 0 => //.
 by move: (expR_gt0 (p * ln x)) => /gt_eqF /eqP.
 Qed.
 
-Lemma ler_power_pos a : 1 < a -> {homo power_pos a : x y / x <= y}.
+Lemma ler_power_pos a : 1 <= a -> {homo power_pos a : x y / x <= y}.
 Proof.
 move=> a1 x y xy.
-by rewrite /power_pos gt_eqF ?(le_lt_trans _ a1)// ler_expR ler_pmul2r// ln_gt0.
+by rewrite /power_pos gt_eqF ?(lt_le_trans _ a1)// ler_expR ler_wpmul2r// ln_ge0.
 Qed.
 
 Lemma power_posM x y r : 0 <= x -> 0 <= y -> (x * y) `^ r = x `^ r * y `^ r.
@@ -831,13 +831,11 @@ Proof. by move=> ?; rewrite /riemannR invr_gt0 power_pos_gt0. Qed.
 
 Lemma dvg_riemannR a : 0 <= a <= 1 -> ~ cvg (series (riemannR a)).
 Proof.
-case/andP => a0; rewrite le_eqVlt => /predU1P[->|a1].
-  rewrite (_ : riemannR 1 = harmonic); first exact: dvg_harmonic.
-  by rewrite funeqE => i /=; rewrite power_posr1.
+case/andP => a0 a1.
 have : forall n, harmonic n <= riemannR a n.
   case=> /= [|n]; first by rewrite power_pos1 invr1.
-  rewrite -[leRHS]div1r ler_pdivl_mulr ?power_pos_gt0 // mulrC ler_pdivr_mulr //.
-  by rewrite mul1r -[leRHS]power_posr1 // (ler_power_pos) // ?ltr1n // ltW.
+  rewrite -[leRHS]div1r ler_pdivl_mulr ?power_pos_gt0 // mulrC ler_pdivr_mulr//.
+  by rewrite mul1r -[leRHS]power_posr1 // (ler_power_pos) // ler1n.
 move/(series_le_cvg harmonic_ge0 (fun i => ltW (riemannR_gt0 i a0))).
 by move/contra_not; apply; exact: dvg_harmonic.
 Qed.

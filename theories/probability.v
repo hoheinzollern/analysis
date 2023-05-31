@@ -257,7 +257,7 @@ Local Open Scope ereal_scope.
 
 Local Notation "''N_' p [ f ]" := (L_norm mu p f).
 
-Let measurableT_comp_power_pos (f : T -> R) p :
+Lemma measurableT_comp_power_pos (f : T -> R) p :
   measurable_fun setT f -> measurable_fun setT (fun x => f x `^ p)%R.
 Proof. exact: (@measurableT_comp _ _ _ _ _ _ (@power_pos R ^~ p)). Qed.
 
@@ -763,9 +763,9 @@ Proof. by move=> ? ?; rewrite /expectation integralB_EFin. Qed.
 
 (* To be used in cauchy_schwarz *)
 Lemma expectation_sqr_is_l2_norm (X : {RV P >-> R}) :
-  Lp_norm P 2 X = sqrte 'E_P[X ^+ 2].
+  L_norm P 2 X = sqrte 'E_P[X ^+ 2].
 Proof.
-rewrite /Lp_norm /expectation powere12_sqrt.
+rewrite /L_norm /expectation powere12_sqrt.
   apply congr1; apply eq_integral => x _ /=; apply congr1.
   rewrite power_pos_mulrn// real_normK //; apply num_real.
   apply integral_ge0 => x _; rewrite lee_fin; apply power_pos_ge0.
@@ -877,6 +877,39 @@ Qed.
 
 End markov_chebyshev.
 
+Section prob_cvg.
+Context d (T : measurableType d) (R : realType) (P : probability T R).
+Local Open Scope ereal_scope.
+
+Definition prob_cvg (X_ : {RV P >-> R}^nat) (X : {RV P >-> R}) :=
+  forall a : {posnum R},
+  ((P [set t | (a%:num <= `| X_ n t - X t|)%R])) @[n --> \oo] --> 0%E.
+
+Local Notation "''N_' p [ f ]" := (L_norm P p f).
+
+Lemma L_norm_prob_cvg (X_ : {RV P >-> R}^nat) (X : {RV P >-> R}) (r : R) :
+  (1 <= r)%R ->
+  'N_r [(fun x => X_ n x - X x)%R] @[n --> \oo] --> 0%E ->
+  prob_cvg X_ X.
+Proof.
+move=> r1 + a.
+apply: (@squeeze_cvge _ _ _ _ (cst 0%E)); last exact: cvg_cst.
+near=> n.
+rewrite /= measure_ge0/=.
+set f := fun x : R => (x `^ r)%R.
+have : ((f a%:num)%:E * P [set t | (a%:num <= `| X_ n t - X t|)%R]) <=
+       'E_P[f \o normr \o (X_ n \- X)%R].
+  apply: markov => //.
+  by rewrite /f.
+  by move=> x; rewrite power_pos_ge0.
+  by move=> x y x0 y0 xy; rewrite ler_power_pos'// (lt_le_trans _ r1).
+rewrite -lee_pdivl_mull; last by rewrite /f power_pos_gt0//.
+move=> /le_trans; apply.
+rewrite lee_pdivr_mull ?power_pos_gt0//.
+rewrite /expectation /L_norm /f /=.
+Abort.
+
+End prob_cvg.
 
 HB.mixin Record MeasurableFun_isDiscrete d (T : measurableType d) (R : realType)
     (X : T -> R) of @MeasurableFun d T R X := {
