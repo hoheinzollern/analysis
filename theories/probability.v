@@ -534,6 +534,18 @@ Lemma minkowski (f g : T -> R) (p : R) :
   'N_p [(f \+ g)%R] <= 'N_p [f] + 'N_p [g].
 Proof.
 move=> mf mg p1.
+have : forall x, (`| f x + g x | `^ p <= 2 `^ (p-1) * (`| f x | `^ p  + `| g x | `^ p))%R.
+  move=> x.
+  have : (`| 2^-1 * f x + 2^-1 * g x | <= 2^-1 * `| f x | + 2^-1 * `| g x |)%R.
+    apply: (le_trans (y:=`|2^-1 * `| f x | + 2^-1 * `| g x | |))%R.
+      apply: le_trans; first apply: ler_normD.
+        by rewrite -[in leRHS](@ger0_norm _ (2^-1))%R ?invr_ge0// -normrM -normrM [in leRHS]ger0_norm//.
+      rewrite ger0_norm; last by rewrite addr_ge0.
+      by rewrite le_eqVlt; apply/orP; left; apply/eqP.
+  apply: le_trans.
+    rewrite le_eqVlt; apply/orP; left; apply/eqP.
+    apply: congr2.
+      apply: ger0_norm.x
 have : 'N_p [(f \+ g)%R] `^ p <=
     ('N_p [f] + 'N_p [g]) * 'N_p [(f \+ g)%R] `^ p * inve 'N_p [(f \+ g)%R].
   rewrite [leLHS](_ : _ = \int[mu]_x (`| f x + g x | `^ p)%:E); last first.
