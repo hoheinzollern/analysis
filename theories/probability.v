@@ -547,6 +547,16 @@ Search (_ \in `[_, _[).
 apply ln_ge0.*)
 Abort.
 
+Lemma power_pos_expR (x r : R) : (x != 0 -> x `^ r = expR (r * ln x))%R.
+Proof. by move=> /eqP x0; rewrite /power_pos ifF//; case: eqP. Qed.
+
+Lemma ln_le0 (x : R) : (x <= 1 -> ln x <= 0)%R.
+Proof.
+have [x0|x0 x1] := leP x 0%R.
+  by rewrite ln0.
+by rewrite -ler_expR expR0 lnK.
+Qed.
+
 Lemma convex_power_pos (t : {i01 R}) (a b : R^o) p : (1 <= p)%R ->
   (0 <= a)%R -> (0 <= b)%R ->
   ((conv t a b) `^ p <= conv t (a `^ p : R^o) (b `^ p : R^o))%R.
@@ -565,7 +575,12 @@ have [->|a0] := eqVneq a 0%R.
   have [->|b0] := eqVneq b 0%R.
     by rewrite scaler0 eqxx.
   rewrite mulf_eq0 (negbTE b0) orbF (negbTE t0).
-  admit.
+  rewrite lnM ?mulrDr ?expRD; try rewrite posrE lt_neqAle eq_sym ?t0 ?b0//=.
+  rewrite ler_wpmul2r ?expR_ge0//.
+  rewrite -[in leRHS](@lnK _ t%:inum); last rewrite posrE lt_neqAle eq_sym t0//=.
+  rewrite ler_expR. rewrite -[in leRHS](@mul1r _ (ln _)).
+  rewrite ler_wnmul2r//.
+  by rewrite ln_le0.
 have [->|b0] := eqVneq b 0%R.
   rewrite scaler0 addr0 mulf_eq0 subr_eq0 eq_sym (negbTE t1)/= (negbTE a0).
   admit.
