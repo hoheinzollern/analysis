@@ -539,12 +539,74 @@ case: ifP => /eqP x0.
     by rewrite mul0r expR0.
   by rewrite expR_ge0.
 rewrite ifF ?ler_expR ?ler_wpmul2l// ?ler_ln//.
-rewrite posrE lt_neqAle; apply /andP => [/eqP]; split=>//.
+(*rewrite posrE lt_neqAle; apply /andP => [/eqP]; split=>//.
 Search (_ \is Num.pos).
 
 rewrite bound_itvE.
 Search (_ \in `[_, _[).
-apply ln_ge0.
+apply ln_ge0.*)
+Abort.
+
+Lemma convex_power_pos (t : {i01 R}) (a b : R^o) p : (1 <= p)%R ->
+  (0 <= a)%R -> (0 <= b)%R ->
+  ((conv t a b) `^ p <= conv t (a `^ p : R^o) (b `^ p : R^o))%R.
+Proof.
+move=> p1 a_ge0 b_ge0.
+suff: (((`1-(t%:inum)) *: a + ((t%:inum)) *: b) `^ p <=
+       (`1-(t%:inum)) *: (a `^ p : R^o) + ((t%:inum)) *: (b `^ p : R^o))%R by [].
+rewrite /power_pos.
+rewrite (@gt_eqF _ _ p) ?(lt_le_trans _ p1)//=.
+have [->|t0] := eqVneq t%:inum 0%R.
+  by rewrite onem0 !scale0r addr0 !scale1r addr0.
+have [->|t1] := eqVneq t%:inum 1%R.
+  by rewrite onem1 !scale0r add0r !scale1r add0r.
+have [->|a0] := eqVneq a 0%R.
+  rewrite !scaler0 !add0r.
+  have [->|b0] := eqVneq b 0%R.
+    by rewrite scaler0 eqxx.
+  rewrite mulf_eq0 (negbTE b0) orbF (negbTE t0).
+  admit.
+have [->|b0] := eqVneq b 0%R.
+  rewrite scaler0 addr0 mulf_eq0 subr_eq0 eq_sym (negbTE t1)/= (negbTE a0).
+  admit.
+rewrite paddr_eq0 ?mulr_ge0 ?subr_ge0// !mulf_eq0 (negbTE a0) (negbTE b0).
+rewrite (negbTE t0)/= andbF.
+Admitted.
+
+Let minkowski00 (f g : T -> R) (p : R) x : (1 < p)%R ->
+  (`| 2^-1 * f x + 2^-1 * g x | `^ p <= 2^-1 * `| f x | `^ p + 2^-1 * `| g x | `^ p)%R.
+Proof.
+move=> p1.
+apply: (@le_trans _ _ (`|2^-1 * `| f x | + 2^-1 * `| g x | | `^ p))%R.
+  apply: ler_power_pos'.
+  - by rewrite (le_lt_trans _ p1).
+  - by rewrite inE/= in_itv/= andbT.
+  - by rewrite inE/= in_itv/= andbT.
+  - by rewrite -!mulrDr !normrM ger0_norm// ler_wpmul2l// [leRHS]ger0_norm// ler_normD.
+rewrite {1 3}(_ : 2^-1 = 1 - 2^-1 :> R)%R; last by rewrite {2}(splitr 1) div1r addrK.
+have K : ((2^-1 : R) \in `[0, 1])%R.
+  by rewrite in_itv//= invr_ge0 ler0n/= invf_le1// ler1n.
+rewrite ger0_norm; last first.
+  by rewrite addr_ge0// mulr_ge0// subr_ge0 invf_le1// ler1n.
+exact: (@convex_power_pos (@Itv.mk _ `[0, 1] 2^-1 K)%R (`|f x|)%R (`|g x|)%R _ (ltW p1)).
+Admitted.
+
+Let minkowski0 (f g : T -> R) (p : R) :
+  measurable_fun setT f -> measurable_fun setT g ->
+  (1 < p)%R ->
+  'N_p [f] < +oo -> 'N_p [g] < +oo -> 'N_p [(f \+ g)%R] < +oo.
+Proof.
+move=> mf mg p1 Nfoo Ngoo.
+have h x : (`| f x + g x | `^ p <= 2 `^ (p - 1) * (`| f x | `^ p  + `| g x | `^ p))%R.
+  have := minkowski00 (fun x => 2 * f x)%R (fun x => 2 * g x)%R x p1.
+  rewrite mulrA mulVf// mul1r mulrA mulVf// mul1r !normrM (@ger0_norm _ 2)//.
+  move=> /le_trans; apply.
+  rewrite !power_posM// !mulrA -power_pos_inv1//.
+  by rewrite -power_posD// (addrC _ p) -mulrDr.
+rewrite (@le_lt_trans _ _ ('N_p[f] + 'N_p[g]))//; last first.
+  by rewrite (lte_add_pinfty Nfoo Ngoo).
+rewrite /L_norm.
+Admitted.
 
 Lemma minkowski (f g : T -> R) (p : R) :
   measurable_fun setT f -> measurable_fun setT g ->
@@ -552,18 +614,12 @@ Lemma minkowski (f g : T -> R) (p : R) :
   'N_p [(f \+ g)%R] <= 'N_p [f] + 'N_p [g].
 Proof.
 move=> mf mg p1.
-have : forall x, (`| f x + g x | `^ p <= 2 `^ (p-1) * (`| f x | `^ p  + `| g x | `^ p))%R.
-  move=> x.
-  have : (`| 2^-1 * f x + 2^-1 * g x | `^ p <= 2^-1 * `| f x | `^ p + 2^-1 * `| g x | `^ p)%R.
-    apply: (le_trans (y:=`|2^-1 * `| f x | + 2^-1 * `| g x | | `^ p))%R.
-      apply: le_trans; first apply: ger_power_pos.
-        by rewrite -[in leRHS](@ger0_norm _ (2^-1))%R ?invr_ge0// -normrM -normrM [in leRHS]ger0_norm//.
-      rewrite ger0_norm; last by rewrite addr_ge0.
-      by rewrite le_eqVlt; apply/orP; left; apply/eqP.
-  apply: le_trans.
-    rewrite le_eqVlt; apply/orP; left; apply/eqP.
-    apply: congr2.
-      apply: ger0_norm.x
+have [->|Nfoo] := eqVneq 'N_p[f] +oo.
+  by rewrite addye ?leey// -ltNye (lt_le_trans _ (L_norm_ge0 _ _ _)).
+have [->|Ngoo] := eqVneq 'N_p[g] +oo.
+  by rewrite addey ?leey// -ltNye (lt_le_trans _ (L_norm_ge0 _ _ _)).
+have Nfgoo : 'N_p[(f \+ g)%R] < +oo.
+  by apply: minkowski0 => //; rewrite ltey; [exact: Nfoo|exact: Ngoo].
 have : 'N_p [(f \+ g)%R] `^ p <=
     ('N_p [f] + 'N_p [g]) * 'N_p [(f \+ g)%R] `^ p * inve 'N_p [(f \+ g)%R].
   rewrite [leLHS](_ : _ = \int[mu]_x (`| f x + g x | `^ p)%:E); last first.
