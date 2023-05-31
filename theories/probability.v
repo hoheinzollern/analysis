@@ -557,9 +557,16 @@ have [x0|x0 x1] := leP x 0%R.
 by rewrite -ler_expR expR0 lnK.
 Qed.
 
+Local Open Scope convex_scope.
+
+Lemma concave_ln (t : {i01 R}) (a b : R^o) :
+  (ln (a <| t |> b) >= (ln a : R^o) <| t |> (ln b : R^o))%R.
+Proof.
+Abort.
+
 Lemma convex_power_pos (t : {i01 R}) (a b : R^o) p : (1 <= p)%R ->
   (0 <= a)%R -> (0 <= b)%R ->
-  ((conv t a b) `^ p <= conv t (a `^ p : R^o) (b `^ p : R^o))%R.
+  ((a <| t |> b) `^ p <= (a `^ p : R^o) <| t |> b `^ p)%R.
 Proof.
 move=> p1 a_ge0 b_ge0.
 suff: (((`1-(t%:inum)) *: a + ((t%:inum)) *: b) `^ p <=
@@ -575,17 +582,27 @@ have [->|a0] := eqVneq a 0%R.
   have [->|b0] := eqVneq b 0%R.
     by rewrite scaler0 eqxx.
   rewrite mulf_eq0 (negbTE b0) orbF (negbTE t0).
-  rewrite lnM ?mulrDr ?expRD; try rewrite posrE lt_neqAle eq_sym ?t0 ?b0//=.
-  rewrite ler_wpmul2r ?expR_ge0//.
-  rewrite -[in leRHS](@lnK _ t%:inum); last rewrite posrE lt_neqAle eq_sym t0//=.
-  rewrite ler_expR. rewrite -[in leRHS](@mul1r _ (ln _)).
-  rewrite ler_wnmul2r//.
-  by rewrite ln_le0.
+  rewrite lnM; last 2 first.
+    by rewrite posrE lt_neqAle eq_sym t0/=.
+    by rewrite posrE lt_neqAle eq_sym b0.
+  rewrite mulrDr expRD ler_wpmul2r ?expR_ge0//.
+  rewrite -[in leRHS](@lnK _ (t%:inum)); last first.
+    by rewrite posrE lt_neqAle eq_sym t0/=.
+  by rewrite ler_expR// ler_neMl// ln_le0// lerBlDl ler_addr.
 have [->|b0] := eqVneq b 0%R.
-  rewrite scaler0 addr0 mulf_eq0 subr_eq0 eq_sym (negbTE t1)/= (negbTE a0).
-  admit.
+  rewrite scaler0 addr0 mulf_eq0 subr_eq0 eq_sym (negbTE t1)/= (negbTE a0) addr0.
+  rewrite lnM; last 2 first.
+    by rewrite posrE subr_gt0 lt_neqAle t1/=.
+    by rewrite posrE lt_neqAle eq_sym a0.
+  rewrite mulrDr expRD ler_wpmul2r ?expR_ge0//.
+  rewrite -[in leRHS](@lnK _ `1-(t%:inum)); last first.
+    by rewrite posrE subr_gt0 lt_neqAle t1/=.
+  by rewrite ler_expR// ler_neMl// ln_le0// lerBlDl ler_addr.
 rewrite paddr_eq0 ?mulr_ge0 ?subr_ge0// !mulf_eq0 (negbTE a0) (negbTE b0).
 rewrite (negbTE t0)/= andbF.
+rewrite -[leRHS]lnK; last first.
+  by rewrite posrE addr_gt0 ?mulr_gt0 ?expR_gt0// ?subr_gt0 lt_neqAle ?t1//= eq_sym t0//=.
+rewrite ler_expR.
 Admitted.
 
 Let minkowski00 (f g : T -> R) (p : R) x : (1 < p)%R ->
