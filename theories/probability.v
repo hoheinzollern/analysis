@@ -528,6 +528,24 @@ rewrite powere_pose1// integral_ge0// => x _.
 by rewrite lee_fin power_pos_ge0.
 Qed.
 
+Lemma ler_power_posr (r : R) : ((0 <= r) -> {in `[0, +oo[ &, {homo (@power_pos _ ^~ r) : x y / x <= y}})%R.
+Proof.
+move=>r0 x y xitv yitv xy.
+rewrite /power_pos.
+case: ifP => /eqP x0.
+  case: ifP => /eqP y0.
+    by case: eqP.
+  case: eqP => //= [->|].
+    by rewrite mul0r expR0.
+  by rewrite expR_ge0.
+rewrite ifF ?ler_expR ?ler_wpmul2l// ?ler_ln//.
+rewrite posrE lt_neqAle; apply /andP => [/eqP]; split=>//.
+Search (_ \is Num.pos).
+
+rewrite bound_itvE.
+Search (_ \in `[_, _[).
+apply ln_ge0.
+
 Lemma minkowski (f g : T -> R) (p : R) :
   measurable_fun setT f -> measurable_fun setT g ->
   (1 < p)%R ->
@@ -536,9 +554,9 @@ Proof.
 move=> mf mg p1.
 have : forall x, (`| f x + g x | `^ p <= 2 `^ (p-1) * (`| f x | `^ p  + `| g x | `^ p))%R.
   move=> x.
-  have : (`| 2^-1 * f x + 2^-1 * g x | <= 2^-1 * `| f x | + 2^-1 * `| g x |)%R.
-    apply: (le_trans (y:=`|2^-1 * `| f x | + 2^-1 * `| g x | |))%R.
-      apply: le_trans; first apply: ler_normD.
+  have : (`| 2^-1 * f x + 2^-1 * g x | `^ p <= 2^-1 * `| f x | `^ p + 2^-1 * `| g x | `^ p)%R.
+    apply: (le_trans (y:=`|2^-1 * `| f x | + 2^-1 * `| g x | | `^ p))%R.
+      apply: le_trans; first apply: ger_power_pos.
         by rewrite -[in leRHS](@ger0_norm _ (2^-1))%R ?invr_ge0// -normrM -normrM [in leRHS]ger0_norm//.
       rewrite ger0_norm; last by rewrite addr_ge0.
       by rewrite le_eqVlt; apply/orP; left; apply/eqP.
