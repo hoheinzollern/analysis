@@ -603,33 +603,43 @@ rewrite (negbTE t0)/= andbF.
 rewrite -[leRHS]lnK; last first.
   by rewrite posrE addr_gt0 ?mulr_gt0 ?expR_gt0// ?subr_gt0 lt_neqAle ?t1//= eq_sym t0//=.
 rewrite ler_expR.
-Admitted.
+Abort.
 
 Lemma convex_aboslute_power (t : {i01 R}) (x y : R^o) p : (1 <= p)%R ->
   (0 <= x)%R -> (0 <= y)%R ->
   (`|x <| t |> y| `^ p <= (`|x| `^ p : R^o) <| t |> `|y| `^ p)%R.
 Proof.
 move=> p1 x_ge0 y_ge0.
-rewrite -(@power_posr1 _ ((`|x| `^ p : R^o) <|t|> `|y| `^ p))%R; last first.
-  admit.
-have -> : (1 = p^-1 * p)%R.
-  rewrite mulrC divrr //. admit.
-rewrite power_posMD ler_power_pos'//. admit. admit. admit.
 pose w1 := `1-(t%:inum).
 pose w2 := t%:inum.
+suff: (`|w1 *: x + w2 *: y| `^ p<=
+       (w1 *: (`|x| `^ p : R^o) + w2 *: (`|y| `^ p : R^o)))%R by [].
+have [->|w10] := eqVneq w1 0%R.
+  rewrite scale0r add0r scale0r add0r. admit.
+have [->|w20] := eqVneq w2 0%R.
+  rewrite scale0r addr0 scale0r addr0. admit.
 pose q := p / (p - 1).
-suff: (`|w1 *: x + w2 *: y|<=
-       (w1 *: (`|x| `^ p : R^o) + w2 *: (`|y| `^ p : R^o))`^(p^-1))%R by [].
+rewrite -(@power_posr1 _ (w1 *: (`|x| `^ p : R^o) + w2 *: (`|y| `^ p : R^o)))%R; last first.
+  rewrite addr_ge0// mulr_ge0// ?power_pos_ge0// /w2 ?onem_ge0// ?itv_ge0.
+have -> : (1 = p^-1 * p)%R.
+  rewrite mulrC divrr //. admit.
+rewrite power_posMD ler_power_pos'//.
+- by rewrite (@lt_le_trans _ _ 1)%R//.
+- by rewrite set_interval.set_itvE; apply/mem_set => /=.
+- by rewrite set_interval.set_itvE; apply/mem_set => /=; rewrite power_pos_ge0.
 apply (le_trans (y:=w1 *: (`|x| : R^o) + w2 *: (`|y| : R^o)))%R.
-  admit.
+  apply: le_trans; first apply ler_normD.
+  rewrite normrZ normrZ le_eqVlt; apply/orP; left; apply/eqP.
+  apply: congr2; rewrite ger0_norm /w1 /w2 ?onem_ge0 ?itv_ge0//.
 have -> : (w1 *: (`|x| : R^o) + w2 *: (`|y| : R^o) = w1 `^ (p^-1) * w1 `^ (q^-1) *: (`|x| : R^o) + w2 `^ (p^-1) * w2 `^ (q^-1) *: (`|y| : R^o))%R.
   rewrite -!power_posD; last 2 first. admit. admit.
-  have -> : (p^-1 + q^-1 = 1)%R. admit.
+  have -> : (p^-1 + q^-1 = 1)%R.
+    rewrite /q invf_div -{1}(mul1r (p^-1)) -mulrDl (addrC p) addrA subrr add0r divrr//. admit.
   rewrite !power_posr1//. admit. admit.
 apply: (le_trans (y:=(w1 *: (`|x| `^ p : R^o) + w2 *: (`|y| `^ p : R^o)) `^ (p^-1) * (w1+w2) `^ (q^-1)))%R.
-  admit.
+  admit. (* apply hoelder. *)
 rewrite le_eqVlt; apply/orP; left; apply/eqP.
-  admit.
+rewrite {2}/w1 {2}/w2 -addrA (addrC (- _)%R) subrr addr0 power_pos1 mulr1//.
 Admitted.
 (* follows https://math.stackexchange.com/questions/2200155/elementary-proof-that-xp-is-convex *)
 
@@ -646,10 +656,9 @@ apply: (@le_trans _ _ (`|2^-1 * `| f x | + 2^-1 * `| g x | | `^ p))%R.
 rewrite {1 3}(_ : 2^-1 = 1 - 2^-1 :> R)%R; last by rewrite {2}(splitr 1) div1r addrK.
 have K : ((2^-1 : R) \in `[0, 1])%R.
   by rewrite in_itv//= invr_ge0 ler0n/= invf_le1// ler1n.
-rewrite ger0_norm; last first.
-  by rewrite addr_ge0// mulr_ge0// subr_ge0 invf_le1// ler1n.
-exact: (@convex_power_pos (@Itv.mk _ `[0, 1] 2^-1 K)%R (`|f x|)%R (`|g x|)%R _ (ltW p1)).
-Admitted.
+rewrite -{2}(@normr_id _ _ (f x)) -{2}(@normr_id _ _ (g x)).
+exact: (@convex_aboslute_power (@Itv.mk _ `[0, 1] 2^-1 K)%R (`|f x|)%R (`|g x|)%R _ (ltW p1)); apply normr_ge0.
+Qed.
 
 Let minkowski0 (f g : T -> R) (p : R) :
   measurable_fun setT f -> measurable_fun setT g ->
