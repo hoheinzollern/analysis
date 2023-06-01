@@ -605,6 +605,34 @@ rewrite -[leRHS]lnK; last first.
 rewrite ler_expR.
 Admitted.
 
+Lemma convex_aboslute_power (t : {i01 R}) (x y : R^o) p : (1 <= p)%R ->
+  (0 <= x)%R -> (0 <= y)%R ->
+  (`|x <| t |> y| `^ p <= (`|x| `^ p : R^o) <| t |> `|y| `^ p)%R.
+Proof.
+move=> p1 x_ge0 y_ge0.
+rewrite -(@power_posr1 _ ((`|x| `^ p : R^o) <|t|> `|y| `^ p))%R; last first.
+  admit.
+have -> : (1 = p^-1 * p)%R.
+  rewrite mulrC divrr //. admit.
+rewrite power_posMD ler_power_pos'//. admit. admit. admit.
+pose w1 := `1-(t%:inum).
+pose w2 := t%:inum.
+pose q := p / (p - 1).
+suff: (`|w1 *: x + w2 *: y|<=
+       (w1 *: (`|x| `^ p : R^o) + w2 *: (`|y| `^ p : R^o))`^(p^-1))%R by [].
+apply (le_trans (y:=w1 *: (`|x| : R^o) + w2 *: (`|y| : R^o)))%R.
+  admit.
+have -> : (w1 *: (`|x| : R^o) + w2 *: (`|y| : R^o) = w1 `^ (p^-1) * w1 `^ (q^-1) *: (`|x| : R^o) + w2 `^ (p^-1) * w2 `^ (q^-1) *: (`|y| : R^o))%R.
+  rewrite -!power_posD; last 2 first. admit. admit.
+  have -> : (p^-1 + q^-1 = 1)%R. admit.
+  rewrite !power_posr1//. admit. admit.
+apply: (le_trans (y:=(w1 *: (`|x| `^ p : R^o) + w2 *: (`|y| `^ p : R^o)) `^ (p^-1) * (w1+w2) `^ (q^-1)))%R.
+  admit.
+rewrite le_eqVlt; apply/orP; left; apply/eqP.
+  admit.
+Admitted.
+(* follows https://math.stackexchange.com/questions/2200155/elementary-proof-that-xp-is-convex *)
+
 Let minkowski00 (f g : T -> R) (p : R) x : (1 < p)%R ->
   (`| 2^-1 * f x + 2^-1 * g x | `^ p <= 2^-1 * `| f x | `^ p + 2^-1 * `| g x | `^ p)%R.
 Proof.
@@ -733,7 +761,8 @@ have : 'N_p [(f \+ g)%R] `^ p <=
   rewrite (oneminvp p1).
   transitivity ('N_(p/(p -1)) [(@power_pos R ^~ (p - 1)%R \o normr \o (f \+ g)%R)]).
     rewrite /L_norm/= -(oneminvp p1).
-    congr (_ `^ (1 - p^-1)).
+    apply congr2=>[|//].
+    (* congr (_ `^ (1 - p^-1)). *)
     apply: eq_integral => x _.
     by rewrite [in RHS]ger0_norm// power_pos_ge0.
   by rewrite /= L_normK.
