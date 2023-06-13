@@ -605,6 +605,12 @@ rewrite -[leRHS]lnK; last first.
 rewrite ler_expR.
 Abort.
 
+Lemma ger_power_pos (a : R) : (0 < a <= 1 -> {homo power_pos a : x y /~ y <= x})%R.
+Proof.
+move=> /andP [a0 a1] x y xy.
+rewrite /power_pos gt_eqF// ler_expR ler_wnmul2r// ln_le0//.
+Qed.
+
 Lemma convex_aboslute_power (t : {i01 R}) (x y : R^o) p : (1 <= p)%R ->
   (0 <= x)%R -> (0 <= y)%R ->
   (`|x <| t |> y| `^ p <= (`|x| `^ p : R^o) <| t |> `|y| `^ p)%R.
@@ -615,14 +621,24 @@ pose w2 := t%:inum.
 suff: (`|w1 *: x + w2 *: y| `^ p<=
        (w1 *: (`|x| `^ p : R^o) + w2 *: (`|y| `^ p : R^o)))%R by [].
 have [->|w10] := eqVneq w1 0%R.
-  rewrite scale0r add0r scale0r add0r. admit.
+  rewrite scale0r add0r scale0r add0r normrM ger0_norm; last rewrite /w2//.
+  rewrite power_posM//; last rewrite /w2//.
+  rewrite ler_wpmul2r// ?power_pos_ge0//.
+  rewrite -[in leRHS](@power_posr1 _ w2); last first.
+    rewrite /w2//.
+  have [->|w20] := eqVneq w2 0%R.
+    rewrite !power_pos0 gt_eqF// (lt_le_trans _ p1)//.
+  rewrite ger_power_pos//.
+  apply/andP; split=>//.
+    rewrite lt_neqAle eq_sym w20//= /w2//.
+  rewrite /w2//.
 have [->|w20] := eqVneq w2 0%R.
-  rewrite scale0r addr0 scale0r addr0. admit.
+  rewrite scale0r addr0 scale0r addr0. admit. (* same as above, factorize *)
 pose q := p / (p - 1).
 rewrite -(@power_posr1 _ (w1 *: (`|x| `^ p : R^o) + w2 *: (`|y| `^ p : R^o)))%R; last first.
   rewrite addr_ge0// mulr_ge0// ?power_pos_ge0// /w2 ?onem_ge0// ?itv_ge0.
 have -> : (1 = p^-1 * p)%R.
-  rewrite mulrC divrr //. admit.
+  rewrite mulVf//. admit.
 rewrite power_posMD ler_power_pos'//.
 - by rewrite (@lt_le_trans _ _ 1)%R//.
 - by rewrite set_interval.set_itvE; apply/mem_set => /=.
@@ -634,12 +650,13 @@ apply (le_trans (y:=w1 *: (`|x| : R^o) + w2 *: (`|y| : R^o)))%R.
 have -> : (w1 *: (`|x| : R^o) + w2 *: (`|y| : R^o) = w1 `^ (p^-1) * w1 `^ (q^-1) *: (`|x| : R^o) + w2 `^ (p^-1) * w2 `^ (q^-1) *: (`|y| : R^o))%R.
   rewrite -!power_posD; last 2 first. admit. admit.
   have -> : (p^-1 + q^-1 = 1)%R.
-    rewrite /q invf_div -{1}(mul1r (p^-1)) -mulrDl (addrC p) addrA subrr add0r divrr//. admit.
+    rewrite /q invf_div -{1}(mul1r (p^-1)) -mulrDl (addrC p) addrA subrr add0r mulfV//. admit.
   rewrite !power_posr1//. admit. admit.
 apply: (le_trans (y:=(w1 *: (`|x| `^ p : R^o) + w2 *: (`|y| `^ p : R^o)) `^ (p^-1) * (w1+w2) `^ (q^-1)))%R.
-  admit. (* apply hoelder. *)
+  admit. (* apply hoelder. using the counting measure turn that into sums, and finite sums gets you sums of two *)
 rewrite le_eqVlt; apply/orP; left; apply/eqP.
 rewrite {2}/w1 {2}/w2 -addrA (addrC (- _)%R) subrr addr0 power_pos1 mulr1//.
+(* todo: rebase, use integral_count, things that use non_negative are summable *)
 Admitted.
 (* follows https://math.stackexchange.com/questions/2200155/elementary-proof-that-xp-is-convex *)
 
