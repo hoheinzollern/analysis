@@ -132,6 +132,14 @@
     `independent_RVs2_funrpospos`
   + lemma `expectationM_ge0`, `integrable_expectationM`, `independent_integrableM`,
     ` expectation_prod`
+- in `lebesgue_integral.v`:
+  + lemma `abse_integralP`
+- in `signed.v`:
+  + definition `onem_NngNum`
+- in `measure.v`:
+  + definition `bernoulli`, declared as a probability measure instance
+- in `itv.v`:
+  + canonical `onem_itv01`
 
 ### Changed
 
