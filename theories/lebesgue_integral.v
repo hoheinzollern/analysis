@@ -4958,19 +4958,16 @@ Variable m2 : {sigma_finite_measure set T2 -> \bar R}.
 Implicit Types A : set (T1 * T2).
 
 Let pm10 : (m1 \x m2) set0 = 0.
-Proof. by rewrite [LHS]integral0_eq// => x/= _; rewrite xsection0 measure0. Qed.
+Proof. by rewrite [LHS]integral0_eq// => x/= _; rewrite xsection0. Qed.
 
 Let pm1_ge0 A : 0 <= (m1 \x m2) A.
-Proof.
-by apply: integral_ge0 => // *; exact/measure_ge0/measurable_xsection.
-Qed.
+Proof. by apply: integral_ge0 => // *. Qed.
 
 Let pm1_sigma_additive : semi_sigma_additive (m1 \x m2).
 Proof.
 move=> F mF tF mUF.
 rewrite [X in _ --> X](_ : _ = \sum_(n <oo) (m1 \x m2) (F n)).
-  apply/cvg_closeP; split; last by rewrite closeE.
-  by apply: is_cvg_nneseries => *; exact: integral_ge0.
+  by apply/cvg_closeP; split; [exact: is_cvg_nneseries|rewrite closeE].
 rewrite -integral_nneseries//; last by move=> n; exact: measurable_fun_xsection.
 apply: eq_integral => x _; apply/esym/cvg_lim => //=; rewrite xsection_bigcup.
 apply: (measure_sigma_additive _ (trivIset_xsection tF)) => ?.
@@ -5029,8 +5026,7 @@ HB.instance Definition _ := Measure_isSigmaFinite.Build _ _ _ (m1 \x m2)
 
 Lemma product_measure_unique
     (m' : {measure set [the semiRingOfSetsType _ of T1 * T2] -> \bar R}) :
-    (forall A1 A2, measurable A1 -> measurable A2 ->
-      m' (A1 `*` A2) = m1 A1 * m2 A2) ->
+    (forall A B, measurable A -> measurable B -> m' (A `*` B) = m1 A * m2 B) ->
   forall X : set (T1 * T2), measurable X -> (m1 \x m2) X = m' X.
 Proof.
 move=> m'E.
