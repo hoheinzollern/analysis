@@ -531,7 +531,11 @@ Context d (T : measurableType d) (R : realType) (P : probability T R).
 
 Lemma markov (X : {RV P >-> R}) (f : R -> R) (eps : R) :
     (0 < eps)%R ->
+<<<<<<< HEAD
     measurable_fun [set: R] f -> (forall r, 0 <= r -> 0 <= f r)%R ->
+=======
+    measurable_fun [set: R] f -> (forall r, 0 <= f r)%R ->
+>>>>>>> 7666bcfc (proof completed)
     {in Num.nneg &, {homo f : x y / x <= y}}%R ->
   (f eps)%:E * P [set x | eps%:E <= `| (X x)%:E | ] <=
     'E_P[f \o (fun x => `| x |%R) \o X].
@@ -541,6 +545,7 @@ apply: (le_trans (@le_integral_comp_abse _ _ _ P _ measurableT (EFin \o X)
   eps (er_map f) _ _ _ _ e0)) => //=.
 - exact: measurable_er_map.
 - by case => //= r _; exact: f0.
+<<<<<<< HEAD
 - move=> [x| |] [y| |]; rewrite !inE/= !in_itv/= ?andbT ?lee_fin ?leey//.
   by move=> ? ? ?; rewrite f_nd.
 - exact/measurable_EFinP.
@@ -562,6 +567,48 @@ rewrite (le_trans _ (markov _ (expR_gt0 (r * a)) _ _ _))//; last first.
 rewrite ger0_norm ?expR_ge0// muleC lee_pmul2l// ?lte_fin ?expR_gt0//.
 rewrite [X in _ <= P X](_ : _ = [set x | a <= X x]%R)//; apply: eq_set => t/=.
 by rewrite ger0_norm ?expR_ge0// lee_fin ler_expR  mulrC ler_pM2r.
+=======
+- by move=> [x| |] [y| |]; rewrite !set_interval.set_itvE !inE ?lee_fin => //= x0 y0 xy; rewrite ?f_nd ?leey.
+- exact/EFin_measurable_fun.
+- by rewrite unlock.
+Qed.
+
+Definition moment (X : {RV P >-> R}) (t : R) := 'E_P[expR \o t \o* X].
+
+HB.instance Definition _ := isMeasurableFun.Build _ _ _ (@expR R) (@measurable_expR R).
+
+Lemma measurableT_comp_subproof d1 (T1 : measurableType d1) (f : {mfun R >-> R}) (g : {mfun T1 >-> R}) :
+  measurable_fun setT (f \o g).
+Proof. apply: measurableT_comp. exact. apply: @measurable_funP _ _ _ g. Qed.
+
+HB.instance Definition _ (d1 : measure_display) (T1 : measurableType d1)
+  (f : {mfun R >-> R}) (g : {mfun T1 >-> R}) := isMeasurableFun.Build _ _ _ (f \o g) (@measurableT_comp_subproof _ _ _ _).
+
+Lemma ge0_ler_normr :
+  {in Num.nneg &, {mono (@normr _ R) : x y / x <= y}}%R.
+Proof. by move=> x y; rewrite !nnegrE => x0 y0; rewrite !ger0_norm. Qed.
+
+Lemma lt0_ger_normr :
+  {in Num.neg &, {mono (@normr _ R) : x y / x <= y >-> x >= y}}%R.
+Proof. by move=> x y; rewrite !negrE => x0 y0; rewrite !ler0_norm ?lter_oppE// ?ltW. Qed.
+
+Lemma chernoff (X : {RV P >-> R}) (t a : R) : (0 < t)%R ->
+  P [set x | X x >= a]%R * (expR (t * a))%:E <= moment X t.
+Proof.
+move=> t0.
+rewrite /= /moment.
+have h : (0 < `| expR (t * a) |)%R by rewrite normr_gt0 gt_eqF ?expR_gt0.
+pose Y : {RV P >-> R} := [the {mfun T >-> R} of expR \o (t \o* X)].
+have := @markov Y normr (`| expR (t * a)|)%R h (@measurable_normr _ _) (fun r => normr_ge0 r) (monoW_in ge0_ler_normr).
+rewrite normr_id.
+rewrite ger0_norm ?expR_ge0//.
+under eq_set => x.
+  rewrite /Y /= ger0_norm ?expR_ge0// lee_fin ler_expR.
+  rewrite mulrC (@ler_pmul2r _ t)//. over.
+rewrite /= muleC.
+suff -> : (normr \o [eta normr]) \o (expR \o t \o* X) = (expR \o t \o* X) => //.
+by apply: funext => x /=; rewrite normr_id ger0_norm ?expR_ge0.
+>>>>>>> 7666bcfc (proof completed)
 Qed.
 
 Lemma chebyshev (X : {RV P >-> R}) (eps : R) : (0 < eps)%R ->
@@ -575,7 +622,11 @@ have h (Y : {RV P >-> R}) :
   rewrite exprnN expfV exprz_inv opprK -exprnP.
   apply: (@le_trans _ _ ('E_P[(@GRing.exp R ^~ 2%N \o normr) \o Y])).
     apply: (@markov Y (@GRing.exp R ^~ 2%N)) => //.
+<<<<<<< HEAD
     - by move=> r _; exact: sqr_ge0.
+=======
+    - by move=> r; apply: sqr_ge0.
+>>>>>>> 7666bcfc (proof completed)
     - move=> x y; rewrite !nnegrE => x0 y0.
       by rewrite ler_sqr.
   apply: expectation_le => //.
