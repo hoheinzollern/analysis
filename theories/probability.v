@@ -573,7 +573,7 @@ by rewrite ger0_norm ?expR_ge0// lee_fin ler_expR  mulrC ler_pM2r.
 - by rewrite unlock.
 Qed.
 
-Definition moment (X : {RV P >-> R}) (t : R) := 'E_P[expR \o t \o* X].
+Definition mgf (X : {RV P >-> R}) (t : R) := 'E_P[expR \o t \o* X].
 
 HB.instance Definition _ := isMeasurableFun.Build _ _ _ (@expR R) (@measurable_expR R).
 
@@ -593,10 +593,10 @@ Lemma lt0_ger_normr :
 Proof. by move=> x y; rewrite !negrE => x0 y0; rewrite !ler0_norm ?lter_oppE// ?ltW. Qed.
 
 Lemma chernoff (X : {RV P >-> R}) (t a : R) : (0 < t)%R ->
-  P [set x | X x >= a]%R * (expR (t * a))%:E <= moment X t.
+  P [set x | X x >= a]%R * (expR (t * a))%:E <= mgf X t.
 Proof.
 move=> t0.
-rewrite /= /moment.
+rewrite /= /mgf.
 have h : (0 < `| expR (t * a) |)%R by rewrite normr_gt0 gt_eqF ?expR_gt0.
 pose Y : {RV P >-> R} := [the {mfun T >-> R} of expR \o (t \o* X)].
 have := @markov Y normr (`| expR (t * a)|)%R h (@measurable_normr _ _) (fun r => normr_ge0 r) (monoW_in ge0_ler_normr).
