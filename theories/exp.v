@@ -848,6 +848,39 @@ rewrite lnK//; last by rewrite posrE addr_gt0// mulr_gt0// ?invr_gt0.
 by rewrite (mulrC _ p^-1) (mulrC _ q^-1).
 Qed.
 
+Global Instance is_derive_powR r x : is_derive x 1 (powR ^~ r) (powR x (r-1)).
+Proof.
+pose s1 n := pseries_diffs (fun n => n`!%:R^-1) n * x ^+ n.
+rewrite powRD /=.
+rewrite /pseries.
+rewrite expRE /= /pseries (_ : (fun _ => _) = s1); last first.
+  by apply/funext => i; rewrite /s1 pseries_diffs_inv_fact.
+apply: (@pseries_snd_diffs _ _ (`|x| + 1)); rewrite /pseries.
+- by rewrite -exp_coeffE; apply: is_cvg_series_exp_coeff.
+- rewrite (_ : (fun _ => _) = exp_coeff (`|x| + 1)).
+    exact: is_cvg_series_exp_coeff.
+  by apply/funext => i; rewrite pseries_diffs_inv_fact exp_coeffE.
+- rewrite (_ : (fun _ => _) = exp_coeff (`|x| + 1)).
+    exact: is_cvg_series_exp_coeff.
+  by apply/funext => i; rewrite !pseries_diffs_inv_fact exp_coeffE.
+by rewrite [ltRHS]ger0_norm// addrC -subr_gt0 addrK.
+Qed.
+
+
+Lemma derivable_powR r x : derivable (powR ^~ r) x 1.
+Proof. 
+apply: ex_derive. 
+apply: is_derive_exp. Qed.
+
+Lemma derive_expR : 'D_1 expR = expR :> (R -> R).
+Proof. by apply/funext => r /=; rewrite derive_val. Qed.
+
+Lemma continuous_expR : continuous (@expR R).
+Proof.
+by move=> x; exact/differentiable_continuous/derivable1_diffP/derivable_expR.
+Qed.
+
+
 End PowR.
 Notation "a `^ x" := (powR a x) : ring_scope.
 
