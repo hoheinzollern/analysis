@@ -130,6 +130,45 @@ rewrite /= (gt_eqF p0); apply/eqP; congr (_ `^ _).
 by apply/eq_integral => t _; rewrite ger0_norm// powR_ge0.
 Qed.
 
+Local Open Scope ring_scope.
+
+Lemma young (a b p : R) :
+  let p' := p / (p-1) in
+  1 < p -> 0 <= a -> 0 <= b -> a * b <= a `^ p / p + b `^ p' / p'.
+Proof. (* follows: https://link.springer.com/content/pdf/10.1007/978-3-030-33143-6_7.pdf *)
+rewrite !le_eqVlt => p' p1.
+have p0 : 0 < p by rewrite (lt_trans _ p1).
+have p'0 : 0 < p' by rewrite /p' divr_gt0 ?subr_gt0.
+move=> /orP [/eqP <-|a0].
+  by rewrite powR0 ?(gt_eqF p0)// !mul0r add0r divr_ge0 ?powR_ge0 ?ltW.
+move=> /orP [/eqP <-|b0].
+  by rewrite powR0 ?gt_eqF// mulr0 mul0r addr0 divr_ge0 ?powR_ge0 ?ltW.
+pose f a := (a `^ p / p + b `^ p' / p' - a * b).
+have fdec : {in `[0, b`^(p-1)^-1], {homo f : x y / y <= x >-> x <= y}}.
+  move=> x; rewrite in_itv/= => /andP [x0 xb] y xy.
+  admit.
+have finc : {in `[b`^(p-1)^-1, +oo[%classic, {homo f : x y / x <= y}}.
+  move=> x; rewrite set_itvE inE /= => xb y xy.
+  admit.
+have f0 : f (b`^(p-1)^-1) = 0.
+  rewrite /f /p'.
+  rewrite -[X in _ - _ * X](@powRr1 _ b) ?ltW// -?powRD ?gt_eqF//; last first.
+    by rewrite addr_gt0// invr_gt0 subr_gt0.
+  rewrite (_ : (p-1)^-1+1 = p/(p-1)); last first.
+    rewrite -{2}(@mulfV _ (p-1)) ?gt_eqF ?subr_gt0// -{1}(mul1r (_^-1)) -mulrDl.
+    by rewrite (addrC p) addrA subrr add0r.
+  rewrite -[X in _ - X](mulr1 (b `^ _)).
+  rewrite -addrA -mulrBr invf_div -[X in _ / _ - X](@mulfV _ p) ?(gt_eqF (lt_trans _ p1))//.
+  rewrite -mulrBl (addrC p) -addrA subrr addr0 mulrA mulrN1 mulNr.
+  by rewrite -mulrBl -powRrM (mulrC p) subrr mul0r.
+rewrite -subr_ge0 -/(f a).
+have /orP [ab|ab] := @ger_leVge _ a (b `^ (p - 1)^-1) (ltW a0) (powR_ge0 _ _).
+  by rewrite -f0; apply: fdec => //; rewrite in_itv /= ab (ltW a0).
+by rewrite -f0; apply: finc => //; rewrite set_itvE inE /= le_refl.
+Admitted.
+
+Local Open Scope ereal_scope.
+
 Let hoelder0 f g p q : measurable_fun setT f -> measurable_fun setT g ->
   (0 < p)%R -> (0 < q)%R -> (p^-1 + q^-1 = 1)%R ->
   'N_p%:E[f] = 0 -> 'N_1[(f \* g)%R]  <= 'N_p%:E[f] * 'N_q%:E[g].
