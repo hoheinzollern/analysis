@@ -5,7 +5,7 @@ From mathcomp Require Import mathcomp_extra boolp classical_sets functions.
 From mathcomp Require Import cardinality fsbigop .
 Require Import signed reals ereal topology normedtype sequences real_interval.
 Require Import esum measure lebesgue_measure lebesgue_integral numfun exp.
-Require Import convex itv.
+Require Import convex itv derive.
 
 (******************************************************************************)
 (*                         Hoelder's Inequality                               *)
@@ -145,11 +145,34 @@ move=> /orP [/eqP <-|b0].
   by rewrite powR0 ?gt_eqF// mulr0 mul0r addr0 divr_ge0 ?powR_ge0 ?ltW.
 pose f a := (a `^ p / p + b `^ p' / p' - a * b).
 have fdec : {in `[0, b`^(p-1)^-1], {homo f : x y / y <= x >-> x <= y}}.
-  move=> x; rewrite in_itv/= => /andP [x0 xb] y xy.
-  admit.
+- move=> x; rewrite in_itv/= => /andP [x0 xb] y xy.
+  apply: (@ler0_derive1_nincr R _ 0 (b `^ (p-1)^-1)) => //.
+  + move=> z. rewrite in_itv => /andP /= [z0 zb].
+    rewrite /f.
+    rewrite derive1E deriveD// deriveD// deriveM// deriveM// deriveN// deriveM//=.
+    rewrite !derive_val !scaler0 addr0 !add0r addr0.
+    rewrite subr_le0.
+    rewrite scalerA mulVf ?gt_eqF// scale1r.
+    apply: (@le_trans _ _ (b `^ (p - 1)^-1 `^ (p-1))).
+    rewrite ge0_ler_powR// ?subr_ge0 ?nnegrE ?ltW// powR_gt0//.
+    rewrite -powRrM mulVf ?gt_eqF ?subr_gt0// powRr1. admit.
+    rewrite ltW//.
+  + admit.
+  + admit.
 have finc : {in `[b`^(p-1)^-1, +oo[%classic, {homo f : x y / x <= y}}.
   move=> x; rewrite set_itvE inE /= => xb y xy.
-  admit.
+  apply: (@le0r_derive1_ndecr R _ (b`^ (p-1)^-1)) => //.
+  + move=> z. rewrite in_itv/= => /andP [zb zy].
+    rewrite /f derive1E deriveD// deriveD// deriveM// deriveM// deriveN// deriveM//=.
+    rewrite !derive_val !scaler0 addr0 !add0r addr0.
+    rewrite subr_ge0.
+    rewrite scalerA mulVf ?gt_eqF// scale1r.
+    apply: (@le_trans _ _ (b `^ (p-1)^-1 `^ (p-1))).
+      admit.
+    rewrite ge0_ler_powR// ?subr_ge0 ?nnegrE ?ltW//.
+    rewrite powR_gt0//.
+    admit.
+  + admit.
 have f0 : f (b`^(p-1)^-1) = 0.
   rewrite /f /p'.
   rewrite -[X in _ - _ * X](@powRr1 _ b) ?ltW// -?powRD ?gt_eqF//; last first.
@@ -163,7 +186,7 @@ have f0 : f (b`^(p-1)^-1) = 0.
   by rewrite -mulrBl -powRrM (mulrC p) subrr mul0r.
 rewrite -subr_ge0 -/(f a).
 have /orP [ab|ab] := @ger_leVge _ a (b `^ (p - 1)^-1) (ltW a0) (powR_ge0 _ _).
-  by rewrite -f0; apply: fdec => //; rewrite in_itv /= ab (ltW a0).
+  by rewrite -f0; apply: fdec => //; rewrite in_itv /= powR_ge0 le_refl//.
 by rewrite -f0; apply: finc => //; rewrite set_itvE inE /= le_refl.
 Admitted.
 
