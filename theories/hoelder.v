@@ -154,9 +154,9 @@ have fdec : {in `[0, b`^(p-1)^-1], {homo f : x y / y <= x >-> x <= y}}.
     rewrite subr_le0.
     rewrite scalerA mulVf ?gt_eqF// scale1r.
     apply: (@le_trans _ _ (b `^ (p - 1)^-1 `^ (p-1))).
-    rewrite ge0_ler_powR// ?subr_ge0 ?nnegrE ?ltW// powR_gt0//.
-    rewrite -powRrM mulVf ?gt_eqF ?subr_gt0// powRr1. admit.
-    rewrite ltW//.
+      by rewrite ge0_ler_powR// ?subr_ge0 ?nnegrE ?ltW// powR_gt0.
+    rewrite -powRrM mulVf ?gt_eqF ?subr_gt0// powRr1; last by rewrite ltW.
+    by rewrite /GRing.scale/= mulr1.
   + admit.
   + admit.
 have finc : {in `[b`^(p-1)^-1, +oo[%classic, {homo f : x y / x <= y}}.
