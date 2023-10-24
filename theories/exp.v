@@ -848,19 +848,21 @@ rewrite lnK//; last by rewrite posrE addr_gt0// mulr_gt0// ?invr_gt0.
 by rewrite (mulrC _ p^-1) (mulrC _ q^-1).
 Qed.
 
-Global Instance is_derive_powR r x : is_derive x 1 (powR ^~ r) (r * (powR x (r-1))).
-Proof.
-pose s1 n := pseries_diffs (fun n => n`!%:R^-1) n * x ^+ n.
-rewrite powRD /=.
+Lemma powRK r : 0 < r -> {in Num.pos, cancel (powR ^~ r) (powR ^~ r^-1)}.
+move=> r0 x; rewrite qualifE => x_gt0.
+by rewrite -powRrM mulfV ?gt_eqF// powRr1 ?ltW.
+Qed.
+
+Lemma continuous_powR r x : 0 < x -> {for x, continuous (powR ^~ r)}.
+Admitted.
+
+Lemma is_derive_powR r x : 0 < x -> is_derive x 1 (powR ^~ r) (r * (powR x (r-1))).
 Admitted.
 
 Lemma derivable_powR r x : derivable (powR ^~ r) x 1.
-Proof. apply: ex_derive. Qed.
+Proof. apply: ex_derive. Admitted.
 
 Lemma derive_powR r : 'D_1 (powR ^~ r) = ( *%R r) \o (powR ^~ (r-1)) :> (R -> R).
-Proof. by apply/funext => x /=; rewrite derive_val. Qed.
-
-Lemma continuous_powR r : continuous (powR ^~ r).
 Admitted.
 
 End PowR.
