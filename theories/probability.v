@@ -7,7 +7,7 @@ From HB Require Import structures.
 From mathcomp Require Import exp numfun lebesgue_measure lebesgue_integral.
 From mathcomp Require Import reals ereal signed topology normedtype sequences.
 From mathcomp Require Import esum measure exp numfun lebesgue_measure.
-From mathcomp Require Import lebesgue_integral kernel.
+From mathcomp Require Import lebesgue_integral kernel hoelder.
 
 (**md**************************************************************************)
 (* # Probability                                                              *)
@@ -1630,14 +1630,9 @@ have -> : \int[P]_x `|(EFin \o X) x| = 'E_P[X].
 by rewrite bernoulli_expectation// ltry.
 Qed.
 
-Lemma probability_integrable_square (X : {RV P >-> R}) :
-  P.-integrable [set: T] (EFin \o X) -> P.-integrable [set: T] (EFin \o (X ^+ 2)%R).
-Proof.
-move=> /integrableP[mX iX]; apply/integrableP; split.
-  move/EFin_measurable_fun in mX.
-  apply/EFin_measurable_fun.
-  exact: (measurableT_comp (measurable_exprn 2)).
-Abort.
+Lemma bernoulli_integrable_square (X : {RV P >-> R}) :
+  bernoulli_RV X -> P.-integrable [set: T] (EFin \o (X ^+ 2)%R).
+Proof. by move=> /bernoulli_sqr/integrable_bernoulli. Qed.
 
 Lemma bernoulli_variance (X : {RV P >-> R}) :
 (* NB(rei): no need for that?
@@ -1647,14 +1642,12 @@ bernoulli_RV X -> 'V_P[X] = (p%:num * (`1-(p%:num)))%:E.
 move=> b.
 rewrite varianceE; last 2 first.
   exact: integrable_bernoulli.
-  rewrite unlock /integrable.
-  Search "integrable".
-  admit.
+  exact: bernoulli_integrable_square.
 rewrite (bernoulli_expectation b).
 have b2 := bernoulli_sqr b.
 rewrite (bernoulli_expectation b2) /=.
 by rewrite -EFinD mulrDr mulr1 mulrN.
-Admitted.
+Qed.
 
 (* TODO: formalize https://math.uchicago.edu/~may/REU2019/REUPapers/Rajani.pdf *)
 Theorem sampling (X : seq {RV P >-> R}) (theta delta : R) :
