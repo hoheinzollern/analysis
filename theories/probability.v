@@ -112,6 +112,33 @@ Proof. by move=> mf f0; rewrite integral_pushforward. Qed.
 
 End transfer_probability.
 
+Section giry_monad.
+Context d (T : measurableType d) {R : realType} (y : T).
+Definition ret (x : T) (A : set T) := @dirac d T x R A.
+Definition bind (mu : probability T R) (f : T -> probability T R) :=
+  fun (A : set T) => (\int[mu]_x f x A)%E.
+
+Lemma bindT mu f : bind mu f setT = 1%E.
+Proof.
+rewrite /bind.
+under eq_integral => x _ do rewrite probability_setT.
+Admitted.
+
+HB.instance Definition _ mu f :=
+  Measure_isProbability.Build _ _ _ (bind mu f) (bindT mu f).
+
+Lemma giry_left_id (mu : probability T R) (f : T -> probability T R) (x : T) : bind (ret x) f = f x.
+Proof.
+rewrite /bind/ret/=.
+Admitted.
+Lemma giry_right_id (mu : probability T R) A: bind mu (fun x => ret x) A = mu A.
+Proof.
+rewrite /bind/ret/=.
+Admitted.
+Lemma giry_assoc (mu : probability T R) f g A : bind (bind mu f) g = bind mu (fun x => bind (f x) g).
+Admitted.
+End giry_monad.
+
 HB.lock Definition expectation {d} {T : measurableType d} {R : realType}
   (P : probability T R) (X : T -> R) := (\int[P]_w (X w)%:E)%E.
 Canonical expectation_unlockable := Unlockable expectation.unlock.
