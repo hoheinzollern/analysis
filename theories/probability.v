@@ -166,13 +166,17 @@ Context d {T : measurableType d} {R : realType}.
 Lemma giry_left_id (mu : probability T R) (f : (*T -> probability T R*)R.-pker T ~> T) (x : T) :
   bind (ret x) f = f x.
 Proof.
-rewrite /bind/ret/=.
+rewrite /bind/ret/kcomp/=.
+apply: funext => A.
+rewrite integral_dirac//; last first.
+  apply measurable_kernel. admit.
+by rewrite diracT mul1e.
 Admitted.
 
 Lemma giry_right_id (mu : probability T R) A :
   bind mu (@ret _ T R) A = mu A.
 Proof.
-rewrite /bind/ret/=.
+rewrite /bind/ret/kcomp/=.
 Admitted.
 
 Variables (mu : probability T R) (f : R.-pker T ~> T) (g : R.-pker T ~> T).
@@ -201,6 +205,7 @@ Let bind'_kernel U : measurable U -> measurable_fun setT (bind' ^~ U).
 Proof.
 move=> mU.
 rewrite /bind'.
+(* apply: measurable_fun_mkcomp_sfinite. *)
 Admitted.
 
 HB.instance Definition _ := isKernel.Build _ _ T T R bind' bind'_kernel.
