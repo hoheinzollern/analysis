@@ -112,30 +112,81 @@ Proof. by move=> mf f0; rewrite integral_pushforward. Qed.
 
 End transfer_probability.
 
-Section giry_monad.
-Context d (T : measurableType d) {R : realType} (y : T).
-Definition ret (x : T) (A : set T) := @dirac d T x R A.
-Definition bind (mu : probability T R) (f : T -> probability T R) :=
+Section giry_monad_bind.
+Context d (T : measurableType d) {R : realType} (y : T)
+          (mu : measure T R) (f : T -> measure T R).
+Definition bind : set T -> \bar R :=
   fun (A : set T) => (\int[mu]_x f x A)%E.
 
-Lemma bindT mu f : bind mu f setT = 1%E.
+Let bind0 : bind set0 = 0.
 Proof.
 rewrite /bind.
-under eq_integral => x _ do rewrite probability_setT.
+under eq_integral => x _ do rewrite measure0.
+by rewrite integral_cst// mul0e.
+Qed.
+
+Let bind_ge0 B : (0 <= bind B)%E.
+Proof. exact: integral_ge0. Qed.
+
+Let bind_sigma_additive : semi_sigma_additive bind.
 Admitted.
 
-HB.instance Definition _ mu f :=
-  Measure_isProbability.Build _ _ _ (bind mu f) (bindT mu f).
+HB.instance Definition _ := isMeasure.Build _ _ _
+  bind bind0 bind_ge0 bind_sigma_additive.
 
-Lemma giry_left_id (mu : probability T R) (f : T -> probability T R) (x : T) : bind (ret x) f = f x.
+(* TODO: add specialization for probabilities *)
+
+(* Lemma bindT mu f : bind mu f setT = 1%E. *)
+(* Proof. *)
+(* rewrite /bind. *)
+(* under eq_integral => x _ do rewrite probability_setT. *)
+(* Admitted. *)
+
+(* HB.instance Definition _ mu f := *)
+(*   Measure_isProbability.Build _ _ _ (bind mu f) (bindT mu f). *)
+
+End giry_monad_bind.
+
+Section giry_monad_ret.
+Context d (T : measurableType d) {R : realType} (y : T).
+
+Definition ret (x : T) (A : set T) := @dirac d T x R A.
+
+End giry_monad_ret.
+
+Section giry_monad_bind2.
+Context d (T : measurableType d) {R : realType} (y : T).
+Context (f : T -> measure T R) (g : T -> measure T R) (x : T).
+
+Definition bind2 : set T -> \bar R := bind (f x) g.
+
+Let bind20 : bind2 set0 = 0.
+Proof. by rewrite /bind2 measure0. Qed.
+
+Let bind2_ge0 (A : set T) : (0 <= bind2 A)%E.
+Proof. by rewrite /bind2 measure_ge0. Qed.
+
+Let bind2_sigma_additive : semi_sigma_additive bind2.
+Proof. exact: measure_semi_sigma_additive. Qed.
+
+HB.instance Definition _ := isMeasure.Build _ _ _
+  bind2 bind20 bind2_ge0 bind2_sigma_additive.
+
+End giry_monad_bind2.
+
+Section giry_monad_laws.
+Context d (T : measurableType d) {R : realType} (y : T).
+
+Lemma giry_left_id (mu : measure T R) (f : T -> measure T R) (x : T) : bind (ret x) f = f x.
 Proof.
 rewrite /bind/ret/=.
 Admitted.
-Lemma giry_right_id (mu : probability T R) A: bind mu (fun x => ret x) A = mu A.
+Lemma giry_right_id (mu : measure T R) A: bind mu (fun x => ret x) A = mu A.
 Proof.
 rewrite /bind/ret/=.
 Admitted.
-Lemma giry_assoc (mu : probability T R) f g A : bind (bind mu f) g = bind mu (fun x => bind (f x) g).
+Lemma giry_assoc (mu : measure T R) (f g : T -> measure T R) :
+  bind (bind mu f) g = bind mu (fun x => bind (f x) g).
 Admitted.
 End giry_monad.
 
