@@ -163,21 +163,22 @@ Section giry_monad.
 Local Open Scope ereal_scope.
 Context d {T : measurableType d} {R : realType}.
 
-Lemma giry_left_id (mu : probability T R) (f : (*T -> probability T R*)R.-pker T ~> T) (x : T) :
-  bind (ret x) f = f x.
+Lemma giry_left_id (mu : probability T R) (f : (*T -> probability T R*)R.-pker T ~> T) (x : T) (A : set T) :
+  d.-measurable A ->
+  bind (ret x) f A = f x A.
 Proof.
-rewrite /bind/ret/kcomp/=.
-apply: funext => A.
-rewrite integral_dirac//; last first.
-  apply measurable_kernel. admit.
+rewrite /bind/ret/kcomp/= => mA.
+rewrite integral_dirac//; last exact: measurable_kernel.
 by rewrite diracT mul1e.
-Admitted.
+Qed.
 
 Lemma giry_right_id (mu : probability T R) A :
+  d.-measurable A ->
   bind mu (@ret _ T R) A = mu A.
 Proof.
-rewrite /bind/ret/kcomp/=.
-Admitted.
+by move=> mA; rewrite /bind/ret/kcomp integral_indic ?setIT.
+Qed.
+
 
 Variables (mu : probability T R) (f : R.-pker T ~> T) (g : R.-pker T ~> T).
 
@@ -205,6 +206,7 @@ Let bind'_kernel U : measurable U -> measurable_fun setT (bind' ^~ U).
 Proof.
 move=> mU.
 rewrite /bind'.
+under eq_fun => x. rewrite /bind/=.
 (* apply: measurable_fun_mkcomp_sfinite. *)
 Admitted.
 
@@ -225,9 +227,11 @@ HB.instance Definition _ :=
 Lemma giry_assoc :
   bind (bind mu f) g = bind mu bind'.
 Proof.
-rewrite /bind /bind' /kcomp.
+rewrite /bind' /bind /kcomp/=.
 apply/funext=> U.
-(* TODO: use integral_kcomp somehow? *)
+(* under [RHS]eq_integral => y _ do rewrite /kcomp. *)
+rewrite /bind.
+rewrite (@integral_kcomp _ _ _ _ _ _ _ (fun=> mu) (fun ttt : unit * T => f ttt.2) tt). (* TODO: use integral_kcomp somehow? *)
 Admitted.
 
 End giry_monad.
