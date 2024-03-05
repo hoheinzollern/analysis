@@ -128,10 +128,18 @@ Qed.
 Let bind_ge0 B : (0 <= bind B)%E.
 Proof. exact: integral_ge0. Qed.
 
-Let bind_sigma_additive : semi_sigma_additive bind.
+Let bind_sigma_additive:
+  semi_sigma_additive bind.
+Proof.
+move=> F mF tF mUF.
+rewrite /bind.
+apply/cvg_ballP => eps /posnumP[eps0].
+near=>m.
+rewrite -ge0_integral_sum//; last first.
+  move=> n. admit. (* we should assume f measurable *)
 Admitted.
 
-HB.instance Definition _ := isMeasure.Build _ _ _
+HB.instance Definition _ := isMeasure.Build d T R
   bind bind0 bind_ge0 bind_sigma_additive.
 
 (* TODO: add specialization for probabilities *)
@@ -169,7 +177,7 @@ Proof. by rewrite /bind2 measure_ge0. Qed.
 Let bind2_sigma_additive : semi_sigma_additive bind2.
 Proof. exact: measure_semi_sigma_additive. Qed.
 
-HB.instance Definition _ := isMeasure.Build _ _ _
+HB.instance Definition _ := isMeasure.Build d T R
   bind2 bind20 bind2_ge0 bind2_sigma_additive.
 
 End giry_monad_bind2.
@@ -177,18 +185,34 @@ End giry_monad_bind2.
 Section giry_monad_laws.
 Context d (T : measurableType d) {R : realType} (y : T).
 
-Lemma giry_left_id (mu : measure T R) (f : T -> measure T R) (x : T) : bind (ret x) f = f x.
+Lemma giry_left_id (mu : measure T R) (f : T -> measure T R) (mf : forall A, measurable_fun [set: T] (fun x0 : T => f x0 A)) (x : T) : bind (ret x) f = f x.
 Proof.
-rewrite /bind/ret/=.
-Admitted.
-Lemma giry_right_id (mu : measure T R) A: bind mu (fun x => ret x) A = mu A.
+rewrite /bind/ret/comp/=.
+apply: funext => A.
+by rewrite integral_dirac// diracT mul1e.
+Qed.
+
+Lemma giry_right_id (mu : measure T R) A (mA : d.-measurable A):
+  bind mu (fun x => ret x) A = mu A.
 Proof.
-rewrite /bind/ret/=.
-Admitted.
-Lemma giry_assoc (mu : measure T R) (f g : T -> measure T R) :
-  bind (bind mu f) g = bind mu (fun x => bind (f x) g).
-Admitted.
-End giry_monad.
+by rewrite /bind/ret integral_indic ?setIT.
+Qed.
+
+(* Lemma giry_assoc (mu : measure T R) (f g : T -> measure T R) : *)
+(*   let b1 : measure T R := bind mu f in *)
+(*   let b2 : T -> measure T R := bind2 f g in *)
+(*   bind b1 g = bind mu b2. *)
+(* Admitted. *)
+
+Definition fmap (fab : T -> T) (ma : measure T R) :=
+  bind ma (fun a => ret (fab a)).
+
+(* Definition fprod (mfab : measure T R) (ma : measure T R) := *)
+(*   bind mfab (fun fab => bind ma (fun x => ret (fab x))). *)
+
+End giry_monad_laws.
+Notation "mu '>>=' f" := (bind mu f) (at level 10).
+(* Notation "mfab '<*>' ma" := (fprod mfab ma) (at level 10). *)
 
 HB.lock Definition expectation {d} {T : measurableType d} {R : realType}
   (P : probability T R) (X : T -> R) := (\int[P]_w (X w)%:E)%E.
