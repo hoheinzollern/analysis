@@ -114,32 +114,67 @@ End transfer_probability.
 
 Require Import kernel.
 
-Section giry_bind.
-Local Open Scope ereal_scope.
-Context d {T : measurableType d} {R : realType}.
-Definition ret : R.-ker T ~> T := kdirac (@measurable_id _ _ setT).
 
-Variables (mu : probability T R) (f : (*T -> probability T R*) R.-pker T ~> T).
+(* a pker that takes a superfluous arg *)
+Section pker_curry.
+Context d {T : measurableType d} {R : realType}
+        d1 {T1 : measurableType d1}.
+Variable (f : R.-pker T ~> T1).
 
-Let mu' : unit -> {measure set T -> \bar R} := fun _ : unit => mu.
+Definition pker_curry (_ : T) : T -> {measure set T1 -> \bar R} := f.
 
-Let mu'_kernel U : measurable U -> measurable_fun setT (mu' ^~ U).
-Proof. by move=> mU /=; exact: measurable_cst. Qed.
+Let pker_curry_kernel (x : T) U :
+  measurable U -> measurable_fun setT (pker_curry x ^~ U).
+Proof. by move=> mU/=; exact/measurable_kernel. Qed.
 
-HB.instance Definition _ := isKernel.Build _ _ unit T R mu' mu'_kernel.
+HB.instance Definition _ (x : T) :=
+  isKernel.Build _ _ T T1 R (pker_curry x) (pker_curry_kernel x).
 
-Let f' : unit * T -> {measure set T -> \bar R} := fun ttt => f ttt.2.
+Let pker_curryT x : forall x', pker_curry x x' setT = 1%E.
+Proof. by move=> x'; rewrite /pker_curry prob_kernel. Qed.
 
-Let f'_kernel U : measurable U -> measurable_fun setT (f' ^~ U).
+HB.instance Definition _ (x : T) :=
+  Kernel_isProbability.Build _ _ _ _ R (pker_curry x) (pker_curryT x).
+
+End pker_curry.
+
+(* a pker that forgets its first arg *)
+Section pker_snd.
+Context d {T : measurableType d} {R : realType}
+        d1 {T1 : measurableType d1}
+        d2 {T2 : measurableType d2}.
+Variable (g : R.-pker T1 ~> T2).
+
+Definition pker_snd : T * T1 -> {measure set T2 -> \bar R} := g \o snd.
+
+Let pker_snd_kernel U : measurable U -> measurable_fun setT (pker_snd ^~ U).
 Proof.
 move=> mU /=.
-apply: (@measurableT_comp _ _ _ _ _ _ (fun x => f x U) _ snd) => //.
+apply: (@measurableT_comp _ _ _ _ _ _ (fun x => g x U) _ snd) => //.
 exact/measurable_kernel.
 Qed.
 
-HB.instance Definition _ := isKernel.Build _ _ _ _ R f' f'_kernel.
+HB.instance Definition _ := isKernel.Build _ _ _ _ R pker_snd pker_snd_kernel.
 
-Definition bind := kcomp mu' f' tt.
+Let pker_sndT x : pker_snd x setT = 1%E.
+Proof. by rewrite /pker_snd /= prob_kernel. Qed.
+
+HB.instance Definition _ (x : T) :=
+  Kernel_isProbability.Build _ _ _ _ R pker_snd pker_sndT.
+
+End pker_snd.
+
+Section giry_def.
+Local Open Scope ereal_scope.
+Context d {T : measurableType d} {R : realType} d' {T' : measurableType d'}.
+Let G := pprobability T R.
+
+Definition ret : R.-pker T ~> T := kdirac (@measurable_id _ _ setT).
+
+Variables (mu : probability T R) (f : R.-pker T ~> T').
+
+Definition bind :=
+  kcomp (kprobability (measurable_cst (mu : pprobability T R)))(*mu'*) (pker_snd f) tt.
 
 Lemma bindE A : bind A = \int[mu]_x f x A. Proof. by []. Qed.
 
@@ -148,93 +183,72 @@ HB.instance Definition _ := Measure.on bind.
 Lemma bindT : bind setT = 1%E.
 Proof.
 rewrite bindE.
-under eq_integral => x _ do rewrite (*probability_setT*) prob_kernel.
+under eq_integral => x _ do rewrite prob_kernel.
 by rewrite integral_cst// mul1e; exact: probability_setT.
 Qed.
 
 HB.instance Definition _ :=
   @Measure_isProbability.Build _ _ _ bind bindT.
 
-Check bind : probability T R.
+Check bind : probability T' R.
 
-End giry_bind.
+End giry_def.
 
-Section giry_monad.
+Section giry_prop.
 Local Open Scope ereal_scope.
-Context d {T : measurableType d} {R : realType}.
+Context d {T : measurableType d} {R : realType}
+        d1 {T1 : measurableType d1}
+        d2 {T2 : measurableType d2}.
 
-Lemma giry_left_id (mu : probability T R) (f : (*T -> probability T R*)R.-pker T ~> T) (x : T) (A : set T) :
-  d.-measurable A ->
-  bind (ret x) f A = f x A.
+Lemma giryretf (f : R.-pker T ~> T1) (x : T) A :
+  measurable A -> bind (ret x) f A = f x A.
 Proof.
-rewrite /bind/ret/kcomp/= => mA.
-rewrite integral_dirac//; last exact: measurable_kernel.
-by rewrite diracT mul1e.
+move=> ?; rewrite bindE /ret/= integral_dirac ?diracT ?mul1e//.
+exact: measurable_kernel.
 Qed.
 
-Lemma giry_right_id (mu : probability T R) A :
-  d.-measurable A ->
-  bind mu (@ret _ T R) A = mu A.
+Lemma girymret (mu : probability T R) A :
+  measurable A -> bind mu (@ret _ _ _) A = mu A.
 Proof.
-by move=> mA; rewrite /bind/ret/kcomp integral_indic ?setIT.
+by move=> ?; rewrite bindE /ret/kdirac/= integral_indic// setIT.
 Qed.
 
+Variables (mu : probability T R) (f : R.-pker T ~> T1) (g : R.-pker T1 ~> T2).
 
-Variables (mu : probability T R) (f : R.-pker T ~> T) (g : R.-pker T ~> T).
+Definition bindfg : T -> {measure set T2 -> \bar R} :=
+  fun x => ((pker_curry f x) \; pker_snd g) x.
 
-Let f' (x : T) : T -> {measure set T -> \bar R} := (fun _ => f x).
-
-Let f'_kernel (x : T) U : measurable U -> measurable_fun setT (f' x ^~ U).
-Proof. by move=> mU /=; exact: measurable_cst. Qed.
-
-HB.instance Definition _ (x : T) := isKernel.Build _ _ T T R (f' x) (f'_kernel x).
-
-Let g' : T * T -> {measure set T -> \bar R} := fun y : T * T => g y.2.
-
-Let g'_kernel U : measurable U -> measurable_fun setT (g' ^~ U).
+Let bindfg_kernel U : measurable U -> measurable_fun setT (bindfg ^~ U).
 Proof.
-move=> mU /=.
-apply: (@measurableT_comp _ _ _ _ _ _ (fun x => g x U) _ snd) => //.
+move=> mU.
+apply: (measurable_fun_integral_sfinite_kernel (pker_snd g ^~ U)) => //.
 exact/measurable_kernel.
 Qed.
 
-HB.instance Definition _ := isKernel.Build _ _ _ _ R g' g'_kernel.
+HB.instance Definition _ := isKernel.Build _ _ _ _ R bindfg bindfg_kernel.
 
-Definition bind' : T -> {measure set T -> \bar R} := fun x : T => ((f' x) \; g') x.
-
-Let bind'_kernel U : measurable U -> measurable_fun setT (bind' ^~ U).
+Let bindfgT x : bindfg x setT = 1.
 Proof.
-move=> mU.
-rewrite /bind'.
-under eq_fun => x. rewrite /bind/=.
-(* apply: measurable_fun_mkcomp_sfinite. *)
-Admitted.
-
-HB.instance Definition _ := isKernel.Build _ _ T T R bind' bind'_kernel.
-
-Lemma bind'T x : bind' x setT = 1%E.
-Proof.
-rewrite /bind' /f' /g' /mkcomp/= /kcomp.
-under eq_integral => z _ do rewrite (*probability_setT*) prob_kernel.
-rewrite integral_cst// mul1e.
-rewrite /f'.
-apply: prob_kernel.
+rewrite /bindfg /= /kcomp /=.
+under eq_integral do rewrite prob_kernel.
+by rewrite integral_cst// mul1e prob_kernel.
 Qed.
 
-HB.instance Definition _ :=
-  @Kernel_isProbability.Build _ _ _ _ _ bind' bind'T.
+HB.instance Definition _ := Kernel_isProbability.Build _ _ _ _ R bindfg bindfgT.
 
-Lemma giry_assoc :
-  bind (bind mu f) g = bind mu bind'.
+Lemma giryA U : measurable U ->
+  bind (bind mu f) g U = bind mu bindfg (*(fun x => bind (f x) g)*) U.
 Proof.
-rewrite /bind' /bind /kcomp/=.
-apply/funext=> U.
-(* under [RHS]eq_integral => y _ do rewrite /kcomp. *)
-rewrite /bind.
-rewrite (@integral_kcomp _ _ _ _ _ _ _ (fun=> mu) (fun ttt : unit * T => f ttt.2) tt). (* TODO: use integral_kcomp somehow? *)
-Admitted.
+move=> mU.
+rewrite !bindE.
+have -> : bind mu f = kcomp (cst mu) (pker_snd f) tt by [].
+have -> // := @integral_kcomp _ _ d1  _ T T1 R
+  (kprobability (measurable_cst (mu : pprobability T R (*IMP*))))
+  (pker_snd f) tt (g ^~ U).
+exact/measurable_kernel.
+Qed.
 
-End giry_monad.
+End giry_prop.
 
 HB.lock Definition expectation {d} {T : measurableType d} {R : realType}
   (P : probability T R) (X : T -> R) := (\int[P]_w (X w)%:E)%E.
