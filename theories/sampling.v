@@ -345,16 +345,15 @@ Context {R : realType} d {T : measurableType d}.
 Variable P : probability T R.
 Local Open Scope ereal_scope.
 
-(* def 2.3, independence of events *)
-(* TODO: rename to mutually_independent_events *)
-Definition mutually_independent (I : choiceType) (A : I -> set T) :=
+(* klenke def 2.3 (independence of events) *)
+Definition mutually_independent_events (I : choiceType) (A : I -> set T) :=
 (*  (forall i, J i -> measurable (A i)) /\*)
   forall J : {fset I},
-    P (\bigcap_(i in [set` J]) A i) = \prod_(i <- J) P (A i).
+    P (\big[setI/setT]_(i <- J) A i) = \prod_(i <- J) P (A i).
 
 End independent_events.
 
-(* independent class of events, klenke def 2.11, p.59 *)
+(* iklenke def 2.11, p.59 (independence of classed of events) *)
 Section independent_class.
 Context {R : realType} d {T : measurableType d}.
 Variable P : probability T R.
@@ -368,6 +367,38 @@ Definition independent_class (I : choiceType) (C : I -> set (set T)) :=
         P (\big[setI/setT]_(j <- J) E j) = \prod_(j <- J) P (E j).
 
 End independent_class.
+
+Section thm213.
+Local Open Scope ereal_scope.
+Context {R : realType} d {T : measurableType d}.
+Variable P : probability T R.
+
+Lemma thm213i (I : finType) (C : I -> set (set T)) :
+  (forall i : I, C i `<=` @measurable _ T /\ [set: T] \in C i) ->
+  independent_class P C <->
+  forall E : I -> set T,
+    (forall i : I, E i \in C i) ->
+    P (\big[setI/setT]_(j in I) E j) = \prod_(j in I) P (E j).
+Proof.
+move=> mCT; split => [PC E EC|].
+  move: PC => [_] => /(_ [fset i in I]%fset) /(_ E).
+  rewrite !big_imfset//= !big_enum; apply => i _.
+  exact: EC.
+move=> h; split=> [i|J E EC]; first by have [] := mCT i.
+pose F i := if i \in J then E i else setT.
+have {}/h : forall i, F i \in C i.
+  by move=> i; rewrite /F; case: ifPn => [|iJ]; [exact: EC|by have [] := mCT i].
+rewrite [in X in X = _ -> _](bigID (mem J))/=.
+rewrite [X in _ `&` X]big1 ?setIT; last by move=> i iJ; rewrite /F (negbTE iJ).
+rewrite [in X in _ = X -> _](bigID (mem J))/=.
+rewrite [X in _ * X]big1 ?mule1; last first.
+  by move=> i iJ; rewrite /F (negbTE iJ) probability_setT.
+rewrite (eq_bigr E); last by move=> i iJ; rewrite /F iJ.
+rewrite [X in _ = X -> _](eq_bigr (P \o E)); last by move=> i iJ; rewrite /F iJ.
+by do 2 rewrite big_uniq/= ?fset_uniq//.
+Qed.
+
+End thm213.
 
 Section independent_RV.
 Context {R : realType} d (T : measurableType d).
