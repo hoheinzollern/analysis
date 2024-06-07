@@ -359,9 +359,10 @@ Context {R : realType} d {T : measurableType d}.
 Variable P : probability T R.
 Local Open Scope ereal_scope.
 
-Definition independent_class (I : choiceType) (C : I -> set (set T)) :=
-  (forall i, C i `<=` @measurable _ T) /\
+Definition independent_class (I : choiceType) (D : set I) (C : I -> set (set T)) :=
+  (forall i, D i -> C i `<=` @measurable _ T) /\
   forall J : {fset I},
+    [set` J] `<=` D ->
     forall E : I -> set T,
       (forall i : I, i \in J -> E i \in C i) ->
         P (\big[setI/setT]_(j <- J) E j) = \prod_(j <- J) P (E j).
@@ -373,21 +374,23 @@ Local Open Scope ereal_scope.
 Context {R : realType} d {T : measurableType d}.
 Variable P : probability T R.
 
-Lemma thm213i (I : finType) (C : I -> set (set T)) :
-  (forall i : I, C i `<=` @measurable _ T /\ [set: T] \in C i) ->
-  independent_class P C <->
+Lemma thm213i (I : choiceType) (D : {fset I}) (C : I -> set (set T)) :
+  (forall i : I, i \in D -> C i `<=` @measurable _ T /\ [set: T] \in C i) ->
+  independent_class P [set` D] C <->
   forall E : I -> set T,
-    (forall i : I, E i \in C i) ->
-    P (\big[setI/setT]_(j in I) E j) = \prod_(j in I) P (E j).
+    (forall i : I, i \in D -> E i \in C i) ->
+    P (\big[setI/setT]_(j <- D) E j) = \prod_(j <- D) P (E j).
 Proof.
 move=> mCT; split => [PC E EC|].
-  move: PC => [_] => /(_ [fset i in I]%fset) /(_ E).
-  rewrite !big_imfset//= !big_enum; apply => i _.
-  exact: EC.
-move=> h; split=> [i|J E EC]; first by have [] := mCT i.
+  move: PC => [_].
+  move=> /(_ D).
+  move=> /(_ (@subset_refl _ _)).
+  by move=> /(_ E EC).
+move=> h; split=> [i Di|J JD E EC].
+  by have [] := mCT i Di.
 pose F i := if i \in J then E i else setT.
-have {}/h : forall i, F i \in C i.
-  by move=> i; rewrite /F; case: ifPn => [|iJ]; [exact: EC|by have [] := mCT i].
+have {}/h : forall i, i \in D -> F i \in C i.
+  by move=> i iD; rewrite /F; case: ifPn => [|iJ]; [exact: EC|have [] := mCT i iD].
 rewrite [in X in X = _ -> _](bigID (mem J))/=.
 rewrite [X in _ `&` X]big1 ?setIT; last by move=> i iJ; rewrite /F (negbTE iJ).
 rewrite [in X in _ = X -> _](bigID (mem J))/=.
@@ -395,7 +398,11 @@ rewrite [X in _ * X]big1 ?mule1; last first.
   by move=> i iJ; rewrite /F (negbTE iJ) probability_setT.
 rewrite (eq_bigr E); last by move=> i iJ; rewrite /F iJ.
 rewrite [X in _ = X -> _](eq_bigr (P \o E)); last by move=> i iJ; rewrite /F iJ.
-by do 2 rewrite big_uniq/= ?fset_uniq//.
+rewrite big_fset_condE/=.
+have DJJ : [fset i | i in D & i \in J]%fset = J.
+  by apply/fsetP => i; rewrite !inE/= andb_idl// => /JD.
+rewrite DJJ => ->.
+by rewrite big_fset_condE/= DJJ.
 Qed.
 
 End thm213.
@@ -408,10 +415,10 @@ Definition generated_salgebra (X : {RV P >-> R}) : set (set T) :=
   preimage_class setT X (@measurable _ R).
 
 Definition independent_RV (I : choiceType) (X : I -> {RV P >-> R}) :=
-  independent_class P (fun i : I => generated_salgebra (X i)).
+  independent_class P setT (fun i : I => generated_salgebra (X i)).
 
 Definition independent_RV_tuple n (X : n.-tuple {RV P >-> R}) :=
-  independent_class P (fun i => generated_salgebra (X `_ i)).
+  independent_class P setT (fun i => generated_salgebra (X `_ i)).
 
 Lemma independent_RV_tuple_thead_prod_behead n (X : n.+1.-tuple {RV P >-> R}) :
   independent_RV_tuple X ->
@@ -449,12 +456,12 @@ move: X; case: n => [X|n X].
 rewrite /independent_RV_tuple/independent_class/=.
 move=> [iXm iX].
 split; first by move=> i; rewrite nth_behead; exact: iXm.
-move=> J E h.
+move=> J _ E h.
 pose E' n := match n with
                0 => setT
              | S m => E m
              end.
-have := (@iX (0 |` [fset i.+1 | i in J])%fset E').
+have := (@iX (0 |` [fset i.+1 | i in J])%fset (@subsetT _ _) E').
 have ? : 0 \notin [fset i.+1 | i in J]%fset.
   apply/negP.
   move/imfsetP.
@@ -507,7 +514,7 @@ have : forall i : nat, i \in O1 ->
   move=> [|[|?]]; rewrite /O1 ?inE//= => _.
   + by rewrite /generated_salgebra; exact: preimage_class_mindic.
   + by rewrite /generated_salgebra; exact: preimage_class_mindic.
-move/AB.2.
+move/AB.2 => /(_ (@subsetT _ _)).
 by rewrite /O1 !big_fsetU1/= ?inE// !big_seq_fset1/=.
 Qed.
 
