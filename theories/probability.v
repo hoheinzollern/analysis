@@ -98,27 +98,27 @@ Import numFieldTopology.Exports.
 Local Open Scope classical_set_scope.
 Local Open Scope ring_scope.
 
-Definition random_variable (d : _) (T : measurableType d) (R : realType)
-  (P : probability T R) := {mfun T >-> R}.
+Definition random_variable (d d' : _) (T : measurableType d) (R : realType) (U : measurableType d')
+  (P : probability T R) := {mfun T >-> U}.
 
-Notation "{ 'RV' P >-> R }" := (@random_variable _ _ R P) : form_scope.
+Notation "{ 'RV' P >-> U }" := (@random_variable _ _ _ _ U P) : form_scope.
 
-Lemma notin_range_measure d (T : measurableType d) (R : realType)
-    (P : {measure set T -> \bar R}) (X : T -> R) r :
+Lemma notin_range_measure d d' (T : measurableType d) (R : realType) (U : measurableType d')
+    (P : {measure set T -> \bar R}) (X : T -> U) r :
   r \notin range X -> P (X @^-1` [set r]) = 0%E.
 Proof. by rewrite notin_setE => hr; rewrite preimage10. Qed.
 
-Lemma probability_range d (T : measurableType d) (R : realType)
-  (P : probability T R) (X : {RV P >-> R}) : P (X @^-1` range X) = 1%E.
+Lemma probability_range d d' (T : measurableType d) (R : realType) (U : measurableType d')
+  (P : probability T R) (X : {RV P >-> U}) : P (X @^-1` range X) = 1%E.
 Proof. by rewrite preimage_range probability_setT. Qed.
 
-Definition distribution d (T : measurableType d) (R : realType)
-    (P : probability T R) (X : {mfun T >-> R}) :=
+Definition distribution d d' (T : measurableType d) (R : realType) (U : measurableType d')
+    (P : probability T R) (X : {mfun T >-> U}) : set U -> \bar R :=
   pushforward P (@measurable_funP _ _ _ _ X).
 
 Section distribution_is_probability.
-Context d (T : measurableType d) (R : realType) (P : probability T R)
-        (X : {mfun T >-> R}).
+Context d d' (T : measurableType d) (U : measurableType d') (R : realType) (P : probability T R)
+        (X : {mfun T >-> U}).
 
 Let distribution0 : distribution P X set0 = 0%E.
 Proof. exact: measure0. Qed.
@@ -129,7 +129,7 @@ Proof. exact: measure_ge0. Qed.
 Let distribution_sigma_additive : semi_sigma_additive (distribution P X).
 Proof. exact: measure_semi_sigma_additive. Qed.
 
-HB.instance Definition _ := isMeasure.Build _ _ R (distribution P X)
+HB.instance Definition _ := isMeasure.Build _ _ _ (distribution P X)
   distribution0 distribution_ge0 distribution_sigma_additive.
 
 Let distribution_is_probability : distribution P X [set: _] = 1%:E.
@@ -137,7 +137,7 @@ Proof.
 by rewrite /distribution /= /pushforward /= preimage_setT probability_setT.
 Qed.
 
-HB.instance Definition _ := Measure_isProbability.Build _ _ R
+HB.instance Definition _ := Measure_isProbability.Build _ _ _
   (distribution P X) distribution_is_probability.
 
 End distribution_is_probability.
@@ -271,56 +271,67 @@ Qed.
 
 End expectation_lemmas.
 
-(* TODO: move *)
-From mathcomp Require Import fsbigop.
-
-Section product_lebesgue_measure.
-Context {R : realType}.
-
-Definition p := [the sigma_finite_measure _ _ of
-  ([the sigma_finite_measure _ _ of (@lebesgue_measure R)] \x
-   [the sigma_finite_measure _ _ of (@lebesgue_measure R)])]%E.
-
-Fixpoint iter_mprod (n : nat) : {d & measurableType d} :=
-  match n with
-  | 0%N => existT measurableType _ (salgebraType R.-ocitv.-measurable)
-  | n'.+1 => let t' := iter_mprod n' in
-    let a := existT measurableType _ (salgebraType R.-ocitv.-measurable) in
-    existT _ _ [the measurableType (projT1 a, projT1 t').-prod of
-                (projT2 a * projT2 t')%type]
-  end.
-
-Fixpoint measurable_of_typ (d : nat) : {d & measurableType d} :=
-  match d with
-  | O => existT _ _ (@lebesgue_measure R)
-  | d'.+1 => existT _ _
-      [the measurableType (projT1 (@lebesgue_measure R),
-                           projT1 (measurable_of_typ d')).-prod%mdisp of
-      ((@lebesgue_measure R) \x
-       projT2 (measurable_of_typ d'))%E]
-  end.
-
-Definition mtyp_disp t : measure_display := projT1 (measurable_of_typ t).
-
-Definition mtyp t : measurableType (mtyp_disp t) :=
-  projT2 (measurable_of_typ t).
-
-Definition measurable_of_seq (l : seq typ) : {d & measurableType d} :=
-  iter_mprod (map measurable_of_typ l).
-
-
-Fixpoint leb_meas (d : nat) :=
-  match d with
-  | 0%N => @lebesgue_measure R
-  | d'.+1 =>
-    ((leb_meas d') \x (@lebesgue_measure R))%E
-  end.
 
 
 
+(* Section product_lebesgue_measure. *)
+(* Context {R : realType}. *)
+
+(* Definition p := [the sigma_finite_measure _ _ of *)
+(*   ([the sigma_finite_measure _ _ of (@lebesgue_measure R)] \x *)
+(*    [the sigma_finite_measure _ _ of (@lebesgue_measure R)])]%E. *)
+
+(* Fixpoint iter_mprod (n : nat) : {d & measurableType d} := *)
+(*   match n with *)
+(*   | 0%N => existT measurableType _ (salgebraType R.-ocitv.-measurable) *)
+(*   | n'.+1 => let t' := iter_mprod n' in *)
+(*     let a := existT measurableType _ (salgebraType R.-ocitv.-measurable) in *)
+(*     existT _ _ [the measurableType (projT1 a, projT1 t').-prod of *)
+(*                 (projT2 a * projT2 t')%type] *)
+(*   end. *)
+
+(* Fixpoint measurable_of_typ (t : typ) : {d & measurableType d} := *)
+(*   match t with *)
+(*   | Unit => existT _ _ munit *)
+(*   | Bool => existT _ _ mbool *)
+(*   | Nat => existT _ _ (nat : measurableType _) *)
+(*   | Real => existT _ _ *)
+(*     [the measurableType _ of (@measurableTypeR R)] *)
+(*   end. *)
+
+(* Set Printing All. *)
+
+(* Fixpoint measurable_of_typ (d : nat) : {d & measurableType d} := *)
+(*   match d with *)
+(*   | O => existT _ _ (@lebesgue_measure R) *)
+(*   | d'.+1 => existT _ _ *)
+(*       [the measurableType (projT1 (@lebesgue_measure R), *)
+(*                            projT1 (measurable_of_typ d')).-prod%mdisp of *)
+(*       ((@lebesgue_measure R) \x *)
+(*        projT2 (measurable_of_typ d'))%E] *)
+(*   end. *)
+
+(* Definition mtyp_disp t : measure_display := projT1 (measurable_of_typ t). *)
+
+(* Definition mtyp t : measurableType (mtyp_disp t) := *)
+(*   projT2 (measurable_of_typ t). *)
+
+(* Definition measurable_of_seq (l : seq typ) : {d & measurableType d} := *)
+(*   iter_mprod (map measurable_of_typ l). *)
 
 
-End product_lebesgue_measure.
+(* Fixpoint leb_meas (d : nat) := *)
+(*   match d with *)
+(*   | 0%N => @lebesgue_measure R *)
+(*   | d'.+1 => *)
+(*     ((leb_meas d') \x (@lebesgue_measure R))%E *)
+(*   end. *)
+
+
+
+
+
+(* End product_lebesgue_measure. *)
 
 (* independent class of events, klenke def 2.11, p.59 *)
 Section independent_class.
@@ -667,7 +678,7 @@ Qed.
 End conditional_probability.
 Notation "' P [ E1 | E2 ]" := (conditional_probability P E1 E2).
 
-Require Import real_interval.
+From mathcomp Require Import real_interval.
 
 Section independent_RVs.
 Context d (T : measurableType d) (R : realType) (P : probability T R).
@@ -1873,48 +1884,48 @@ Qed.
 
 End uniform_probability.
 
-Section bernoulli.
-Variables (R : realType) (p : {nonneg R}) (p1 : (p%:num <= 1)%R).
-Local Open Scope ring_scope.
+(* Section bernoulli. *)
+(* Variables (R : realType) (p : {nonneg R}) (p1 : (p%:num <= 1)%R). *)
+(* Local Open Scope ring_scope. *)
 
-Definition bernoulli : set _ -> \bar R :=
-  measure_add
-    [the measure _ _ of mscale p [the measure _ _ of dirac (1%R:R)]]
-    [the measure _ _ of mscale (NngNum (onem_ge0 p1)) [the measure _ _ of dirac (0%R:R)]].
+(* Definition bernoulli : set _ -> \bar R := *)
+(*   measure_add *)
+(*     [the measure _ _ of mscale p [the measure _ _ of dirac (1%R:R)]] *)
+(*     [the measure _ _ of mscale (NngNum (onem_ge0 p1)) [the measure _ _ of dirac (0%R:R)]]. *)
 
-HB.instance Definition _ := Measure.on bernoulli.
+(* HB.instance Definition _ := Measure.on bernoulli. *)
 
-Local Close Scope ring_scope.
+(* Local Close Scope ring_scope. *)
 
-Let bernoulli_setT : bernoulli [set: _] = 1%E.
-Proof.
-rewrite /bernoulli/= /measure_add/= /msum 2!big_ord_recr/= big_ord0 add0e/=.
-by rewrite /mscale/= !diracT !mule1 -EFinD add_onemK.
-Qed.
+(* Let bernoulli_setT : bernoulli [set: _] = 1%E. *)
+(* Proof. *)
+(* rewrite /bernoulli/= /measure_add/= /msum 2!big_ord_recr/= big_ord0 add0e/=. *)
+(* by rewrite /mscale/= !diracT !mule1 -EFinD add_onemK. *)
+(* Qed. *)
 
-HB.instance Definition _ :=
-  @Measure_isProbability.Build _ _ R bernoulli bernoulli_setT.
+(* HB.instance Definition _ := *)
+(*   @Measure_isProbability.Build _ _ R bernoulli bernoulli_setT. *)
 
-End bernoulli.
+(* End bernoulli. *)
 
-Section bernoulli_RV.
-Context d (T : measurableType d) (R : realType) (P : probability T R).
+(* Section bernoulli_RV. *)
+(* Context d (T : measurableType d) (R : realType) (P : probability T R). *)
 
-Definition bernoulli_RV (p : R) : {RV P >-> R} := 
+(* Definition bernoulli_RV (p : R) : {RV P >-> R} :=  *)
 
-End bernoulli_RV.
+(* End bernoulli_RV. *)
 
-Local Open Scope ereal_scope.
-Lemma integral_bernoulli {R : realType}
-    (p : {nonneg R}) (p1 : (p%:num <= 1)%R) (f : R -> \bar R) :
-  measurable_fun setT f ->
-  (forall x, 0 <= f x) ->
-  \int[bernoulli p1]_y (f y) = p%:num%:E * f 1%R + (`1-(p%:num))%:E * f 0%R.
-Proof.
-move=> mf f0.
-rewrite ge0_integral_measure_sum//= 2!big_ord_recl/= big_ord0 adde0/=.
-by rewrite !ge0_integral_mscale//= !integral_dirac//= 2!diracT 2!mul1e.
-Qed.
+(* Local Open Scope ereal_scope. *)
+(* Lemma integral_bernoulli {R : realType} *)
+(*     (p : {nonneg R}) (p1 : (p%:num <= 1)%R) (f : R -> \bar R) : *)
+(*   measurable_fun setT f -> *)
+(*   (forall x, 0 <= f x) -> *)
+(*   \int[bernoulli p1]_y (f y) = p%:num%:E * f 1%R + (`1-(p%:num))%:E * f 0%R. *)
+(* Proof. *)
+(* move=> mf f0. *)
+(* rewrite ge0_integral_measure_sum//= 2!big_ord_recl/= big_ord0 adde0/=. *)
+(* by rewrite !ge0_integral_mscale//= !integral_dirac//= 2!diracT 2!mul1e. *)
+(* Qed. *)
 
 Section integrable_comp.
 Context d1 d2 (X : measurableType d1) (Y : measurableType d2) (R : realType).
@@ -1932,7 +1943,7 @@ apply/integrableP; split.
   exact: measurable_funeneg.
 move/integrableP : (intf) => [_].
 apply: le_lt_trans.
-rewrite integral_pushforward//=; last first.
+rewrite ge0_integral_pushforward//=; last first.
   apply: measurableT_comp => //=.
   exact: measurable_funeneg.
 apply: ge0_le_integral => //=.
@@ -1954,7 +1965,7 @@ apply/integrableP; split.
   exact: measurable_funepos.
 move/integrableP : (intf) => [_].
 apply: le_lt_trans.
-rewrite integral_pushforward//=; last first.
+rewrite ge0_integral_pushforward//=; last first.
   apply: measurableT_comp => //=.
   exact: measurable_funepos.
 apply: ge0_le_integral => //=.
@@ -1987,9 +1998,9 @@ move=> mf intf.
 transitivity (\int[mu]_y ((f^\+ \o phi) \- (f^\- \o phi)) y); last first.
   by apply: eq_integral => x _; rewrite [in RHS](funeposneg (f \o phi)).
 rewrite integralB//; [|exact: integrable_funepos|exact: integrable_funeneg].
-rewrite -[X in _ = X - _]integral_pushforward//; last first.
+rewrite -[X in _ = X - _]ge0_integral_pushforward//; last first.
   exact: measurable_funepos.
-rewrite -[X in _ = _ - X]integral_pushforward//; last first.
+rewrite -[X in _ = _ - X]ge0_integral_pushforward//; last first.
   exact: measurable_funeneg.
 rewrite -integralB//=; last first.
 - apply: integrable_comp_funepos => //.
@@ -2023,6 +2034,8 @@ Hypothesis intf1 : m1.-integrable D f.
 Hypothesis intf2 : m2.-integrable D f.
 Hypothesis mf : measurable_fun D f.
 
+Local Open Scope ereal_scope.
+
 Lemma integral_measure_add_new :
   \int[measure_add m1 m2]_(x in D) f x = \int[m1]_(x in D) f x + \int[m2]_(x in D) f x.
 transitivity (\int[m1]_(x in D) (f^\+ \- f^\-) x +
@@ -2035,12 +2048,12 @@ rewrite integralB//; last 2 first.
   exact: integrable_funepos.
   exact: integrable_funeneg.
 rewrite addeACA.
-rewrite -integral_measure_add//; last first.
+rewrite -ge0_integral_measure_add//; last first.
   apply: measurable_funepos.
   exact: measurable_int intf1.
 rewrite -oppeD; last first.
   by rewrite ge0_adde_def// inE integral_ge0.
-rewrite -integral_measure_add//; last first.
+rewrite -ge0_integral_measure_add//; last first.
   apply: measurable_funeneg.
   exact: measurable_int intf1.
 by rewrite integralE.
@@ -2048,68 +2061,75 @@ Qed.
 
 End integral_measure_add_new.
 
+Section bool_to_real.
+Context d (T : measurableType d) (R : realType) (P : probability T R).
+Definition bool_to_real (f : {mfun T >-> bool}) : T -> R := fun x => (f x)%:R.
+
+Lemma measurable_bool_to_real f : measurable_fun [set: T] (bool_to_real f).
+Proof.
+move => x Y mY.
+apply measurableI => //.
+rewrite (_ : Y = (Y `&` [set 0; 1]) `|` (Y `\` [set 0; 1]))%R; last first.
+  by rewrite SetOrder.Internal.joinIB.
+rewrite preimage_setU.
+apply: measurableU.
+  admit.
+rewrite (_ : bool_to_real f @^-1` (Y `\` [set 0%R; 1%R]) = set0)//.
+admit.
+Admitted.
+End bool_to_real.
+#[global] Hint Extern 0 (measurable_fun setT (bool_to_real _)) =>
+  solve [apply: measurable_bool_to_real] : core.
+
 Section bernoulli.
 
 Local Open Scope ereal_scope.
 Context d (T : measurableType d) (R : realType) (P : probability T R).
-Variable p : {nonneg R}.
-Hypothesis p1 : (p%:num <= 1)%R.
+Variable p : R.
+Hypothesis p01 : (0 <= p <= 1)%R.
 
-Definition bernoulli_RV (X : {RV P >-> R}) :=
-  distribution P X = bernoulli p1 /\ (range X = [set 0; 1])%R.
+Definition bernoulli_RV (X : {RV P >-> bool}) :=
+  distribution P X = bernoulli p.
 
-Lemma bernoulli_RV1 (X : {RV P >-> R}) : bernoulli_RV X ->
-  P [set i | X i == 1%R] == p%:num%:E.
+Lemma bernoulli_RV1 (X : {RV P >-> bool}) : bernoulli_RV X ->
+  P [set i | X i == 1%R] == p%:E.
 Proof.
 move=> [[/(congr1 (fun f => f [set 1%:R]))]].
-rewrite /bernoulli/=.
-rewrite measure_addE/=.
+rewrite bernoulliE//.
 rewrite /mscale/=.
-rewrite diracE/= mem_set// mule1// diracE/= memNset//; last first.
-  rewrite /=.
-  apply/eqP.
-  by rewrite eq_sym oner_eq0.
+rewrite diracE/= mem_set// mule1// diracE/= memNset//.
 rewrite mule0 adde0.
-rewrite /distribution /= => <- _.
+rewrite /distribution /= => <-.
 apply/eqP; congr (P _).
 rewrite /preimage/=.
 by apply/seteqP; split => [x /eqP H//|x /eqP].
 Qed.
 
-Lemma bernoulli_RV2 (X : {RV P >-> R}) : bernoulli_RV X ->
-  P [set i | X i == 0%R] == (`1-(p%:num))%:E.
+Lemma bernoulli_RV2 (X : {RV P >-> bool}) : bernoulli_RV X ->
+  P [set i | X i == 0%R] == (`1-p)%:E.
 Proof.
 move=> [[/(congr1 (fun f => f [set 0%:R]))]].
-rewrite /bernoulli/=.
-rewrite measure_addE/=.
+rewrite bernoulliE//.
 rewrite /mscale/=.
-rewrite diracE/= memNset//; last first.
-  rewrite /=.
-  apply/eqP.
-  by rewrite oner_eq0.
+rewrite diracE/= memNset//.
 rewrite mule0// diracE/= mem_set// add0e mule1.
-rewrite /distribution /= => <- _.
+rewrite /distribution /= => <-.
 apply/eqP; congr (P _).
 rewrite /preimage/=.
 by apply/seteqP; split => [x /eqP H//|x /eqP].
 Qed.
 
-Lemma bernoulli_ge0 (X : {RV P >-> R}) : bernoulli_RV X ->
-  forall t, (X t >= 0)%R.
-Proof.
-move=> bX t.
-suff: (range X) (X t) by rewrite bX.2 => -[] ->.
-by exists t.
-Qed.
-
-Lemma bernoulli_expectation (X : {RV P >-> R}) :
-  bernoulli_RV X -> 'E_P[X] = p%:num%:E.
+Lemma bernoulli_expectation (X : {RV P >-> bool}) :
+  bernoulli_RV X -> 'E_P[bool_to_real R X] = p%:E.
 Proof.
 move=> bX.
 rewrite unlock.
-transitivity (\int[P]_w `|X w|%:E).
+transitivity (\int[P]_w `|bool_to_real R X w|%:E).
   apply: eq_integral => t _.
   by rewrite ger0_norm// bernoulli_ge0.
+under eq_integral => x _.
+  rewrite (_ : (normr (bool_to_real R X x))%:E = ((EFin \o normr \o bool_to_real R X)) x)//.
+  over.
 rewrite -(@integral_distribution _ _ _ _ _ (EFin \o normr))//; last first.
   by move=> y //=.
   exact: measurableT_comp.
