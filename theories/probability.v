@@ -170,14 +170,14 @@ End probability.
 
 Section transfer_probability.
 Local Open Scope ereal_scope.
-Context d (T : measurableType d) (R : realType) (P : probability T R).
+Context d d' (T : measurableType d) (U : measurableType d') (R : realType) (P : probability T R).
 
-Lemma probability_distribution (X : {RV P >-> R}) r :
+Lemma probability_distribution (X : {RV P >-> U}) r :
   P [set x | X x = r] = distribution P X [set r].
 Proof. by []. Qed.
 
-Lemma integral_distribution (X : {RV P >-> R}) (f : R -> \bar R) :
-    measurable_fun [set: R] f -> (forall y, 0 <= f y) ->
+Lemma integral_distribution (X : {RV P >-> U}) (f : U -> \bar R) :
+    measurable_fun [set: U] f -> (forall y, 0 <= f y) ->
   \int[distribution P X]_y f y = \int[P]_x (f \o X) x.
 Proof. by move=> mf f0; rewrite ge0_integral_pushforward. Qed.
 
@@ -2015,9 +2015,9 @@ End transfer.
 
 Section transfer_probability.
 Local Open Scope ereal_scope.
-Context d (T : measurableType d) (R : realType) (P : probability T R).
+Context d d' (T : measurableType d) (U : measurableType d') (R : realType) (P : probability T R).
 
-Lemma integral_distribution_new (X : {RV P >-> R}) (f : R -> \bar R) :
+Lemma integral_distribution_new (X : {RV P >-> U}) (f : U -> \bar R) :
     measurable_fun setT f ->
     P.-integrable [set: T] (f \o X) ->
   \int[distribution P X]_y f y = \int[P]_x (f \o X) x.
@@ -2063,7 +2063,7 @@ End integral_measure_add_new.
 
 Section bool_to_real.
 Context d (T : measurableType d) (R : realType) (P : probability T R).
-Definition bool_to_real (f : {mfun T >-> bool}) : T -> R := fun x => (f x)%:R.
+Definition bool_to_real (f : T -> bool) : T -> R := (fun x => x%:R) \o f.
 
 Lemma measurable_bool_to_real f : measurable_fun [set: T] (bool_to_real f).
 Proof.
@@ -2123,69 +2123,40 @@ Lemma bernoulli_expectation (X : {RV P >-> bool}) :
   bernoulli_RV X -> 'E_P[bool_to_real R X] = p%:E.
 Proof.
 move=> bX.
-rewrite unlock.
-transitivity (\int[P]_w `|bool_to_real R X w|%:E).
-  apply: eq_integral => t _.
-  by rewrite ger0_norm// bernoulli_ge0.
-under eq_integral => x _.
-  rewrite (_ : (normr (bool_to_real R X x))%:E = ((EFin \o normr \o bool_to_real R X)) x)//.
-  over.
-rewrite -(@integral_distribution _ _ _ _ _ (EFin \o normr))//; last first.
+rewrite unlock /bool_to_real.
+rewrite -(@integral_distribution _ _ _ _ _ _ X (EFin \o [eta GRing.natmul 1]))//; last first.
   by move=> y //=.
-  exact: measurableT_comp.
-rewrite bX.1.
 rewrite /bernoulli/=.
-rewrite integral_measure_add//=; last first.
-  by apply: measurableT_comp.
-rewrite ge0_integral_mscale//=; last first.
-  by apply: measurableT_comp.
-rewrite ge0_integral_mscale//=; last first.
-  by apply: measurableT_comp.
-rewrite !integral_dirac//=; last 2 first.
-  by apply: measurableT_comp.
-  by apply: measurableT_comp.
-by rewrite normr1 normr0 !mule0 adde0 mule1 diracT mule1.
+rewrite (@eq_measure_integral _ _ _ _ (bernoulli p)); last first.
+  by move=> A mA _/=; rewrite (_ : distribution P X = bernoulli p).
+rewrite integral_bernoulli//=.
+by rewrite -!EFinM -EFinD mulr0 addr0 mulr1.
 Qed.
 
-Lemma bernoulli_sqr (X : {RV P >-> R}) :
-  bernoulli_RV X -> bernoulli_RV (X ^+ 2 : {RV P >-> R})%R.
-Proof.
-rewrite /bernoulli_RV => -[Xp1 X01]; split.
-  rewrite -Xp1; apply/funext => A.
-  rewrite /distribution /pushforward/=; congr (P _).
-  by apply/seteqP; split => [t|t];
-    (have : (range X) (X t) by exists t);
-    rewrite X01/= /GRing.mul/= => -[] ->; rewrite ?(mul0r,mul1r).
-rewrite -X01; apply/seteqP; split => [x|x].
-- move=> [t _] /=; rewrite /GRing.mul/= -expr2 => <-;
-  (have : (range X) (X t) by exists t);
-  by rewrite X01/= /GRing.mul/= => -[] Xt;
-    exists t => //; rewrite Xt ?(expr0n,expr1n).
-- move=> [t _] /=; rewrite /GRing.mul/= => <-;
-  (have : (range X) (X t) by exists t);
-  by rewrite X01/= => -[] Xt;
-    exists t => //=; rewrite Xt/= ?(mulr0,mulr1).
-Qed.
+(* Lemma bernoulli_sqr (X : {RV P >-> bool}) : *)
+(*   bernoulli_RV X -> bernoulli_RV (X ^+ 2). *)
 
-Lemma integrable_bernoulli (X : {RV P >-> R}) :
-  bernoulli_RV X -> P.-integrable [set: T] (EFin \o X).
+Lemma integrable_bernoulli (X : {RV P >-> bool}) :
+  bernoulli_RV X -> P.-integrable [set: T] (EFin \o bool_to_real R X).
 Proof.
 move=> bX.
-apply/integrableP; split; first by apply: measurableT_comp.
-have -> : \int[P]_x `|(EFin \o X) x| = 'E_P[X].
+apply/integrableP; split; first by apply: measurableT_comp => //; exact: measurable_bool_to_real.
+have -> : \int[P]_x `|(EFin \o bool_to_real R X) x| = 'E_P[bool_to_real R X].
   rewrite unlock /expectation.
   apply: eq_integral => x _.
-  rewrite gee0_abs //= lee_fin.
-  by rewrite bernoulli_ge0//.
+  by rewrite gee0_abs //= lee_fin.
 by rewrite bernoulli_expectation// ltry.
 Qed.
 
-Lemma bernoulli_variance (X : {RV P >-> R}) :
-(* NB(rei): no need for that?
-   P.-integrable setT (EFin \o X) ->
-   P.-integrable [set: T] (EFin \o (X ^+ 2)%R) ->*)
-bernoulli_RV X -> 'V_P[X] = (p%:num * (`1-(p%:num)))%:E.
+Lemma bernoulli_variance (X : {RV P >-> bool}) :
+  bernoulli_RV X -> 'V_P[bool_to_real R X] = (p * (`1-p))%:E.
+Proof.
 move=> b.
+rewrite (@varianceE _ _ _ _ ([the {RV P >-> R} of bool_to_real R X])).
+rewrite covarianceE.
+rewrite !bernoulli_expectation//.
+rewrite expecationE.
+rewrite fineK.
 rewrite varianceE; last 2 first.
   exact: integrable_bernoulli.
   exact: integrable_bernoulli (bernoulli_sqr b).
