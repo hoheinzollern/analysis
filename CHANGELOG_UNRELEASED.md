@@ -93,6 +93,46 @@
   + new lemmas `min_continuous`, `min_fun_continuous`, `max_continuous`, and
     `max_fun_continuous`.
 
+- in `constructive_ereal.v`:
+  + notation `\prod_( i <- r | P ) F` for extended real numbers and its variants
+
+- in `numfun.v`:
+  + defintions `funrpos`, `funrneg` with notations `^\+` and `^\-`
+  + lemmas `funrpos_ge0`, `funrneg_ge0`, `funrposN`, `funrnegN`, `ge0_funrposE`,
+    `ge0_funrnegE`, `le0_funrposE`, `le0_funrnegE`, `ge0_funrposM`, `ge0_funrnegM`,
+    `le0_funrposM`, `le0_funrnegM`, `funr_normr`, `funrposneg`, `funrD_Dpos`,
+    `funrD_posD`, `funrpos_le`, `funrneg_le`
+  + lemmas `funerpos`, `funerneg`
+
+- in `measure.v`:
+  + lemma `preimage_class_comp`
+  + defintions `mapping_display`, `g_sigma_algebra_mappingType`, `g_sigma_algebra_mapping`,
+    notations `.-mapping`, `.-mapping.-measurable`
+
+- in `lebesgue_measure.v`:
+  + lemma `measurable_indicP`
+  + lemmas `measurable_funrpos`, `measurable_funrneg`
+
+- in `lebesgue_integral.v`:
+  + definition `approx_A` (was `Let A`)
+  + definition `approx_B` (was `Let B`)
+  + lemma `measurable_fun_sum`
+  + lemma `integrable_indic`
+
+- in `probability.v`:
+  + lemma `expectationM_ge0`
+  + definition `independent_events`
+  + definition `mutual_independence`
+  + definition `independent_RVs`
+  + definition `independent_RVs2`
+  + lemmas `g_sigma_algebra_mapping_comp`, `g_sigma_algebra_mapping_funrpos`,
+    `g_sigma_algebra_mapping_funrneg`
+  + lemmas `independent_RVs2_comp`, `independent_RVs2_funrposneg`,
+    `independent_RVs2_funrnegpos`, `independent_RVs2_funrnegneg`,
+    `independent_RVs2_funrpospos`
+  + lemma `expectationM_ge0`, `integrable_expectationM`, `independent_integrableM`,
+    ` expectation_prod`
+
 ### Changed
 
 - in file `normedtype.v`,
@@ -156,6 +196,9 @@
   + HB.Instance of a Tvs od R^o
   + HB.Instance of a Tvs on a product of Tvs
   
+- in `lebesgue_integrale.v`
+  + change implicits of `measurable_funP`
+
 ### Changed
 
 - in normedtype.v
@@ -173,6 +216,12 @@
 - in normedtype.v
   + Section `regular_topology` to `standard_topology`
   
+- in `lebesgue_measure.v`:
+  + `measurable_fun_indic` -> `measurable_indic`
+
+- in `probability.v`:
+  + `expectationM` -> `expectationMl`
+
 ### Generalized
 
 - in `lebesgue_integral.v`:
@@ -187,6 +236,9 @@
 - in `topology_structure.v`:
   + lemma `closureC`
 
+- in file `lebesgue_integral.v`:
+  + lemma `approximation`
+
 ### Removed
 
 - in `lebesgue_integral.v`:
@@ -200,6 +252,10 @@
   + lemma `cst_mfun_subproof` (use lemma `measurable_cst` instead)
   + lemma `cst_nnfun_subproof` (turned into a `Let`)
   + lemma `indic_mfun_subproof` (use lemma `measurable_fun_indic` instead)
+
+- in `lebesgue_integral.v`:
+  + lemma `measurable_indic` (was uselessly specializing `measurable_fun_indic` (now `measurable_indic`) from `lebesgue_measure.v`)
+  + notation `measurable_fun_indic` (deprecation since 0.6.3)
 
 ### Infrastructure
 
