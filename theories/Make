@@ -55,6 +55,7 @@ ftc.v
 hoelder.v
 probability.v
 independence.v
+sampling.v
 lebesgue_stieltjes_measure.v
 convex.v
 charge.v
