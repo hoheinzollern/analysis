@@ -551,6 +551,31 @@ Notation "\sum_ ( i 'in' A ) F" :=
 Notation "\sum_ ( i 'in' A ) F" :=
   (\big[+%E/0%E]_(i in A) F%E) : ereal_scope.
 
+Notation "\prod_ ( i <- r | P ) F" :=
+  (\big[*%E/1%:E]_(i <- r | P%B) F%E) : ereal_scope.
+Notation "\prod_ ( i <- r ) F" :=
+  (\big[*%E/1%:E]_(i <- r) F%E) : ereal_scope.
+Notation "\prod_ ( m <= i < n | P ) F" :=
+  (\big[*%E/1%:E]_(m <= i < n | P%B) F%E) : ereal_scope.
+Notation "\prod_ ( m <= i < n ) F" :=
+  (\big[*%E/1%:E]_(m <= i < n) F%E) : ereal_scope.
+Notation "\prod_ ( i | P ) F" :=
+  (\big[*%E/1%:E]_(i | P%B) F%E) : ereal_scope.
+Notation "\prod_ i F" :=
+  (\big[*%E/1%:E]_i F%E) : ereal_scope.
+Notation "\prod_ ( i : t | P ) F" :=
+  (\big[*%E/1%:E]_(i : t | P%B) F%E) (only parsing) : ereal_scope.
+Notation "\prod_ ( i : t ) F" :=
+  (\big[*%E/1%:E]_(i : t) F%E) (only parsing) : ereal_scope.
+Notation "\prod_ ( i < n | P ) F" :=
+  (\big[*%E/1%:E]_(i < n | P%B) F%E) : ereal_scope.
+Notation "\prod_ ( i < n ) F" :=
+  (\big[*%E/1%:E]_(i < n) F%E) : ereal_scope.
+Notation "\prod_ ( i 'in' A | P ) F" :=
+  (\big[*%E/1%:E]_(i in A | P%B) F%E) : ereal_scope.
+Notation "\prod_ ( i 'in' A ) F" :=
+  (\big[*%E/1%:E]_(i in A) F%E) : ereal_scope.
+
 Section ERealOrderTheory.
 Context {R : numDomainType}.
 Implicit Types x y z : \bar R.
