@@ -2061,25 +2061,50 @@ Qed.
 
 End integral_measure_add_new.
 
-Section bool_to_real.
-Context d (T : measurableType d) (R : realType) (P : probability T R).
-Definition bool_to_real (f : T -> bool) : T -> R := (fun x => x%:R) \o f.
-
-Lemma measurable_bool_to_real f : measurable_fun [set: T] (bool_to_real f).
+Lemma fiberwise_finite_preimage {T U} (B : set U) (f : T -> U) :
+  (forall b, B b -> finite_set (f @^-1` [set b])) ->
+             finite_set B -> finite_set (f @^-1` B).
 Proof.
-move => x Y mY.
-apply measurableI => //.
-rewrite (_ : Y = (Y `&` [set 0; 1]) `|` (Y `\` [set 0; 1]))%R; last first.
-  by rewrite SetOrder.Internal.joinIB.
-rewrite preimage_setU.
-apply: measurableU.
-  admit.
-rewrite (_ : bool_to_real f @^-1` (Y `\` [set 0%R; 1%R]) = set0)//.
-admit.
-Admitted.
+move=> *.
+rewrite -(image_id B) -bigcup_imset1 preimage_bigcup.
+exact: bigcup_finite.
+Qed.
+
+(* TODO : PR in progress *)
+Lemma countable_measurable d {T : measurableType d} (S : set T) :
+  (forall (a : T), measurable [set a]) -> countable S -> measurable S.
+Proof.
+move=> ma.
+move/countable_injP => [f injf].
+have [->//|/set0P[a Sa]] := eqVneq S set0.
+rewrite -(injpinv_image (fun=> a) injf).
+rewrite [X in _ X](_ :_= \bigcup_(x in f @` S) [set 'pinv_(fun=> a) S f x]); last first.
+  rewrite eqEsubset; split => x/=.
+    move=> [n [xn Sxn xnn nx]].
+    exists n => //=.
+    by exists xn.
+  move=> [n [xn Sxn xnn] /= xinvn].
+  exists n => //=.
+  by exists xn.
+apply: bigcup_measurable => n _.
+apply: ma.
+Qed.
+
+Section bool_to_real.
+Context d (T : measurableType d) (R : realType) (P : probability T R) (f : {mfun T >-> bool}).
+Definition bool_to_real : T -> R := (fun x => x%:R) \o (f : T -> bool).
+
+Lemma measurable_bool_to_real : measurable_fun [set: T] bool_to_real.
+Proof.
+rewrite /bool_to_real.
+apply: measurableT_comp => //=.
+exact: (@measurable_funP _ _ _ _ f).
+Qed.
+(* HB.about isMeasurableFun.Build. *)
+HB.instance Definition _ := 
+  isMeasurableFun.Build _ _ _ _ bool_to_real measurable_bool_to_real.
+
 End bool_to_real.
-#[global] Hint Extern 0 (measurable_fun setT (bool_to_real _)) =>
-  solve [apply: measurable_bool_to_real] : core.
 
 Section bernoulli.
 
@@ -2133,9 +2158,6 @@ rewrite integral_bernoulli//=.
 by rewrite -!EFinM -EFinD mulr0 addr0 mulr1.
 Qed.
 
-(* Lemma bernoulli_sqr (X : {RV P >-> bool}) : *)
-(*   bernoulli_RV X -> bernoulli_RV (X ^+ 2). *)
-
 Lemma integrable_bernoulli (X : {RV P >-> bool}) :
   bernoulli_RV X -> P.-integrable [set: T] (EFin \o bool_to_real R X).
 Proof.
@@ -2148,22 +2170,22 @@ have -> : \int[P]_x `|(EFin \o bool_to_real R X) x| = 'E_P[bool_to_real R X].
 by rewrite bernoulli_expectation// ltry.
 Qed.
 
+Lemma bool_RV_sqr (X : {RV P >-> bool}) :
+  ((bool_to_real R X ^+ 2) = bool_to_real R X)%R.
+Proof.
+apply: funext => x /=.
+rewrite /GRing.exp /bool_to_real /GRing.mul/=.
+by case: (X x) => /=; rewrite ?mulr1 ?mulr0.
+Qed.
+
 Lemma bernoulli_variance (X : {RV P >-> bool}) :
   bernoulli_RV X -> 'V_P[bool_to_real R X] = (p * (`1-p))%:E.
 Proof.
 move=> b.
-rewrite (@varianceE _ _ _ _ ([the {RV P >-> R} of bool_to_real R X])).
-rewrite covarianceE.
-rewrite !bernoulli_expectation//.
-rewrite expecationE.
-rewrite fineK.
-rewrite varianceE; last 2 first.
-  exact: integrable_bernoulli.
-  exact: integrable_bernoulli (bernoulli_sqr b).
-rewrite (bernoulli_expectation b).
-have b2 := bernoulli_sqr b.
-rewrite (bernoulli_expectation b2) /=.
-by rewrite -EFinD mulrDr mulr1 mulrN.
+rewrite (@varianceE _ _ _ _ (bool_to_real R X));
+  [|rewrite ?[X in _ \o X]bool_RV_sqr; exact: integrable_bernoulli..].
+rewrite [X in 'E_P[X]]bool_RV_sqr !bernoulli_expectation//.
+by rewrite /onem -EFin_expe -EFinD /GRing.exp/= mulrDr mulr1 mulrN.
 Qed.
 
 Definition independent (X Y : {RV P >-> R}) := 'E_P[X * Y] = 'E_P[X] * 'E_P[Y].
