@@ -2090,6 +2090,98 @@ apply: bigcup_measurable => n _.
 apply: ma.
 Qed.
 
+Section independent_events.
+Context {R : realType} d {T : measurableType d}.
+Variable P : probability T R.
+Local Open Scope ereal_scope.
+
+Definition independent_events (I0 : choiceType) (I : set I0) (A : I0 -> set T) :=
+  forall J : {fset I0}, [set` J] `<=` I ->
+    P (\bigcap_(i in [set` J]) A i) = \prod_(i <- J) P (A i).
+
+End independent_events.
+
+Section independent_classes.
+Context {R : realType} d {T : measurableType d}.
+Variable P : probability T R.
+Local Open Scope ereal_scope.
+
+Definition independent_classes (I0 : choiceType) (I : set I0)
+    (F : I0 -> set (set T)) :=
+  (forall i : I0, I i -> F i `<=` @measurable _ T) /\
+  forall J : {fset I0},
+    [set` J] `<=` I ->
+    forall E : I0 -> set T,
+      (forall i : I0, i \in J -> E i \in F i) ->
+        P (\big[setI/setT]_(j <- J) E j) = \prod_(j <- J) P (E j).
+
+End independent_classes.
+
+Definition g_sigma_algebra_mappingType d' (T : pointedType)
+  (T' : measurableType d') (f : T -> T') : Type := T.
+
+Definition g_sigma_algebra_mapping d' (T : pointedType)
+    (T' : measurableType d') (f : T -> T') :=
+  preimage_class setT f (@measurable _ T').
+
+Section generated_sigma_algebra.
+Context {d'} (T : pointedType) (T' : measurableType d').
+Variable f : T -> T'.
+
+Let g_sigma_algebra_mapping_set0 : g_sigma_algebra_mapping f set0.
+Proof.
+rewrite /g_sigma_algebra_mapping /preimage_class/=.
+by exists set0 => //; rewrite preimage_set0 setI0.
+Qed.
+
+Let g_sigma_algebra_mapping_setC A :
+  g_sigma_algebra_mapping f A -> g_sigma_algebra_mapping f (~` A).
+Proof.
+rewrite /g_sigma_algebra_mapping /preimage_class/= => -[B mB] <-{A}.
+by exists (~` B); [exact: measurableC|rewrite !setTI preimage_setC].
+Qed.
+
+Let g_sigma_algebra_mapping_bigcup (F : (set T)^nat) :
+  (forall i, g_sigma_algebra_mapping f (F i)) ->
+  g_sigma_algebra_mapping f (\bigcup_i (F i)).
+Proof.
+move=> mF; rewrite /g_sigma_algebra_mapping /preimage_class/=.
+pose g := fun i => sval (cid2 (mF i)).
+pose mg := fun i => svalP (cid2 (mF i)).
+exists (\bigcup_i g i).
+  by apply: bigcup_measurable => k; case: (mg k).
+  rewrite setTI /g preimage_bigcup; apply: eq_bigcupr => k _.
+by case: (mg k) => _; rewrite setTI.
+Qed.
+
+HB.instance Definition _ := Pointed.on (g_sigma_algebra_mappingType f).
+
+HB.instance Definition _ := @isMeasurable.Build default_measure_display
+  (g_sigma_algebra_mappingType f) (g_sigma_algebra_mapping f)
+  g_sigma_algebra_mapping_set0 g_sigma_algebra_mapping_setC
+  g_sigma_algebra_mapping_bigcup.
+
+End generated_sigma_algebra.
+
+Section generated_sigma_algebra_RV.
+Context {R : realType} d d' (T : measurableType d) (T' : measurableType d').
+Variable P : probability T R.
+
+Definition independent_RVs (I0 : choiceType) (I : set I0) (X : I0 -> {mfun T >-> T'}) : Prop :=
+  independent_classes P I (fun i => g_sigma_algebra_mapping (X i)).
+
+End generated_sigma_algebra_RV.
+
+Section independent_RVs2.
+Context {R : realType} d d' (T : measurableType d) (T' : measurableType d').
+Variable P : probability T R.
+
+Definition independent_RVs2 (X Y : {mfun T >-> T'}) :=
+  independent_RVs P [set 0%N; 1%N] [eta (fun=> cst point) with 0%N |-> X, 1%N |-> Y].
+
+End independent_RVs2.
+
+
 Section bool_to_real.
 Context d (T : measurableType d) (R : realType) (P : probability T R) (f : {mfun T >-> bool}).
 Definition bool_to_real : T -> R := (fun x => x%:R) \o (f : T -> bool).
@@ -2106,15 +2198,44 @@ HB.instance Definition _ :=
 
 End bool_to_real.
 
+(* Section measurable_fun. *)
+(* Local Open Scope ereal_scope. *)
+(* Context d (T : measurableType d) (R : realType). *)
+(* Implicit Types (D : set T) (f g : T -> R). *)
+
+(* Lemma measurable_funD D f g : *)
+(*   measurable_fun D f -> measurable_fun D g -> measurable_fun D (f \+ g). *)
+(* Proof. *)
+(* move=> /measurable_EFinP mf /measurable_EFinP mg. *)
+(* by have /measurable_EFinP := emeasurable_funD mf mg. *)
+(* Qed. *)
+
+(* Lemma measurable_fun_sum D I s (h : I -> (T -> R)) : *)
+(*   (forall n, measurable_fun D (h n)) -> *)
+(*   measurable_fun D (fun x => \sum_(i <- s) h i x)%R. *)
+(* Proof. *)
+(* move=> mh. *)
+(* apply/measurable_EFinP. *)
+(* rewrite (_ : _ \o _ = (fun t => (\sum_(i <- s) (h i t)%:E))); last first. *)
+(*   by apply/funext => t/=; rewrite -sumEFin. *)
+(* apply/emeasurable_fun_sum => i. *)
+(* exact/measurable_EFinP. *)
+(* Qed. *)
+
+(* End measurable_fun. *)
+
 Section bernoulli.
 
 Local Open Scope ereal_scope.
 Context d (T : measurableType d) (R : realType) (P : probability T R).
 Variable p : R.
 Hypothesis p01 : (0 <= p <= 1)%R.
+(* now: roll back to RV P R, keep a note for future *)
+(* Definition bernoulli_RV (X : {RV P >-> bool}) := *)
+(*   distribution P X = bernoulli p. *)
 
-Definition bernoulli_RV (X : {RV P >-> bool}) :=
-  distribution P X = bernoulli p.
+Definition bernoulli_RV (X : {RV P >-> R}) :=
+  distribution P X = bernoulli p /\ (range X = [set 0; 1])%R.
 
 Lemma bernoulli_RV1 (X : {RV P >-> bool}) : bernoulli_RV X ->
   P [set i | X i == 1%R] == p%:E.
@@ -2185,38 +2306,23 @@ move=> b.
 rewrite (@varianceE _ _ _ _ (bool_to_real R X));
   [|rewrite ?[X in _ \o X]bool_RV_sqr; exact: integrable_bernoulli..].
 rewrite [X in 'E_P[X]]bool_RV_sqr !bernoulli_expectation//.
-by rewrite /onem -EFin_expe -EFinD /GRing.exp/= mulrDr mulr1 mulrN.
+by rewrite expe2 -EFinD onemMr.
 Qed.
 
-Definition independent (X Y : {RV P >-> R}) := 'E_P[X * Y] = 'E_P[X] * 'E_P[Y].
+Definition is_bernoulli_trial n (X : {RV P >-> bool}^nat) :=
+  (forall i, (i < n)%nat -> bernoulli_RV (X i)) /\ independent_RVs P `I_n X.
 
-Definition independent_RVs (X : seq {RV P >-> R}) :=
-  forall Xi, Xi \in X -> forall Xj, Xj \in X -> independent Xi Xj.
+Definition bernoulli_trial n (X : {RV P >-> bool}^nat) : {RV P >-> R} :=
+  (\sum_(i<n) (bool_to_real R (X i) : {RV P >-> R}))%R. (* TODO: add HB instance measurablefun sum*)
 
-Lemma independent_RVs_expectation (X : seq {RV P >-> R}) :
-  independent_RVs X -> 'E_P[\prod_(Xi <- X) Xi] = \prod_(Xi <- X) 'E_P[Xi].
+Lemma expectation_bernoulli_trial (X : {RV P >-> bool}^nat) n :
+  is_bernoulli_trial n X -> 'E_P[@bernoulli_trial n X] = (n%:R * p)%:E.
 Proof.
-elim: X => [_|X0 X IH hRVs].
-  by rewrite !big_nil expectation_cst.
-rewrite !big_cons.
-rewrite -IH.
+move=> [bRV [_ Xn]]. rewrite /bernoulli_trial.
+transitivity ('E_P[bool_to_real R (\big[(fun f g x=>f x + g x)%nat/cst 0%nat]_(i<n) (nat_of_bool \o X i))]).
+rewrite -[X in 'E__[X]](big_morph (bool_to_real R) _ _ _ (xpredT) (X \o @nat_of_ord _)).
 
-
-Definition independent_RVs (X : seq {RV P >-> R}) := forall t,
-    (fine ('E_P[expR \o t \o* \sum_(Xi <- X) Xi]) = \prod_(Xi <- X) fine ('E_P[expR \o t \o* Xi]))%R.
-
-Definition is_bernoulli_trial (X : seq {RV P >-> R}) n :=
-  (forall Xi, Xi \in X -> bernoulli_RV Xi) /\
-    independent_RVs X /\
-    size X = n(*NB: used n.-tuple instead of seq*).
-
-Definition bernoulli_trial (X : seq {RV P >-> R}) :=
-  (\sum_(Xi <- X) Xi)%R.
-
-Lemma expectation_bernoulli_trial (X : seq {RV P >-> R}) n :
-  is_bernoulli_trial X n -> 'E_P[@bernoulli_trial X] = (n%:R * p%:num)%:E.
-Proof.
-move=> [bRV [_ Xn]]; rewrite expectation_sum; last first.
+rewrite expectation_sum. ; last first.
   by move=> Xi XiX; exact: (integrable_bernoulli (bRV _ XiX)).
 under eq_big_seq => Xi XiX.
   by rewrite (bernoulli_expectation (bRV Xi _))//; over.
