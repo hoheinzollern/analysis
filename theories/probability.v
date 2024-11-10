@@ -2196,6 +2196,8 @@ Qed.
 HB.instance Definition _ := 
   isMeasurableFun.Build _ _ _ _ bool_to_real measurable_bool_to_real.
 
+Definition btr : {RV P >-> R} := bool_to_real.
+
 End bool_to_real.
 
 (* Section measurable_fun. *)
@@ -2230,12 +2232,9 @@ Local Open Scope ereal_scope.
 Context d (T : measurableType d) (R : realType) (P : probability T R).
 Variable p : R.
 Hypothesis p01 : (0 <= p <= 1)%R.
-(* now: roll back to RV P R, keep a note for future *)
-(* Definition bernoulli_RV (X : {RV P >-> bool}) := *)
-(*   distribution P X = bernoulli p. *)
 
-Definition bernoulli_RV (X : {RV P >-> R}) :=
-  distribution P X = bernoulli p /\ (range X = [set 0; 1])%R.
+Definition bernoulli_RV (X : {RV P >-> bool}) :=
+  distribution P X = bernoulli p.
 
 Lemma bernoulli_RV1 (X : {RV P >-> bool}) : bernoulli_RV X ->
   P [set i | X i == 1%R] == p%:E.
@@ -2266,10 +2265,10 @@ by apply/seteqP; split => [x /eqP H//|x /eqP].
 Qed.
 
 Lemma bernoulli_expectation (X : {RV P >-> bool}) :
-  bernoulli_RV X -> 'E_P[bool_to_real R X] = p%:E.
+  bernoulli_RV X -> 'E_P[btr P X] = p%:E.
 Proof.
 move=> bX.
-rewrite unlock /bool_to_real.
+rewrite unlock /btr.
 rewrite -(@integral_distribution _ _ _ _ _ _ X (EFin \o [eta GRing.natmul 1]))//; last first.
   by move=> y //=.
 rewrite /bernoulli/=.
@@ -2280,11 +2279,11 @@ by rewrite -!EFinM -EFinD mulr0 addr0 mulr1.
 Qed.
 
 Lemma integrable_bernoulli (X : {RV P >-> bool}) :
-  bernoulli_RV X -> P.-integrable [set: T] (EFin \o bool_to_real R X).
+  bernoulli_RV X -> P.-integrable [set: T] (EFin \o btr P X).
 Proof.
 move=> bX.
 apply/integrableP; split; first by apply: measurableT_comp => //; exact: measurable_bool_to_real.
-have -> : \int[P]_x `|(EFin \o bool_to_real R X) x| = 'E_P[bool_to_real R X].
+have -> : \int[P]_x `|(EFin \o btr P X) x| = 'E_P[btr P X].
   rewrite unlock /expectation.
   apply: eq_integral => x _.
   by rewrite gee0_abs //= lee_fin.
@@ -2292,18 +2291,18 @@ by rewrite bernoulli_expectation// ltry.
 Qed.
 
 Lemma bool_RV_sqr (X : {RV P >-> bool}) :
-  ((bool_to_real R X ^+ 2) = bool_to_real R X)%R.
+  ((btr P X ^+ 2) = btr P X :> (T -> R))%R.
 Proof.
 apply: funext => x /=.
-rewrite /GRing.exp /bool_to_real /GRing.mul/=.
+rewrite /GRing.exp /btr/bool_to_real /GRing.mul/=.
 by case: (X x) => /=; rewrite ?mulr1 ?mulr0.
 Qed.
 
 Lemma bernoulli_variance (X : {RV P >-> bool}) :
-  bernoulli_RV X -> 'V_P[bool_to_real R X] = (p * (`1-p))%:E.
+  bernoulli_RV X -> 'V_P[btr P X] = (p * (`1-p))%:E.
 Proof.
 move=> b.
-rewrite (@varianceE _ _ _ _ (bool_to_real R X));
+rewrite (@varianceE _ _ _ _ (btr P X));
   [|rewrite ?[X in _ \o X]bool_RV_sqr; exact: integrable_bernoulli..].
 rewrite [X in 'E_P[X]]bool_RV_sqr !bernoulli_expectation//.
 by rewrite expe2 -EFinD onemMr.
@@ -2313,31 +2312,36 @@ Definition is_bernoulli_trial n (X : {RV P >-> bool}^nat) :=
   (forall i, (i < n)%nat -> bernoulli_RV (X i)) /\ independent_RVs P `I_n X.
 
 Definition bernoulli_trial n (X : {RV P >-> bool}^nat) : {RV P >-> R} :=
-  (\sum_(i<n) (bool_to_real R (X i) : {RV P >-> R}))%R. (* TODO: add HB instance measurablefun sum*)
+  (\sum_(i<n) (btr P (X i)))%R. (* TODO: add HB instance measurablefun sum*)
 
 Lemma expectation_bernoulli_trial (X : {RV P >-> bool}^nat) n :
   is_bernoulli_trial n X -> 'E_P[@bernoulli_trial n X] = (n%:R * p)%:E.
 Proof.
-move=> [bRV [_ Xn]]. rewrite /bernoulli_trial.
-transitivity ('E_P[bool_to_real R (\big[(fun f g x=>f x + g x)%nat/cst 0%nat]_(i<n) (nat_of_bool \o X i))]).
-rewrite -[X in 'E__[X]](big_morph (bool_to_real R) _ _ _ (xpredT) (X \o @nat_of_ord _)).
-
-rewrite expectation_sum. ; last first.
-  by move=> Xi XiX; exact: (integrable_bernoulli (bRV _ XiX)).
-under eq_big_seq => Xi XiX.
-  by rewrite (bernoulli_expectation (bRV Xi _))//; over.
-rewrite /= -Xn -sum1_size natr_sum big_distrl/= sumEFin; congr EFin.
-by under [RHS]eq_bigr do rewrite mul1r.
+move=> bRV. rewrite /bernoulli_trial.
+transitivity ('E_P[\sum_(s <- map (btr P \o X) (iota 0 n)) s]).
+  by rewrite big_map -[in RHS](subn0 n) big_mkord.
+rewrite expectation_sum; last first.
+  by move=> Xi; move/mapP=> [k kn] ->; apply: integrable_bernoulli; apply bRV; rewrite mem_iota leq0n in kn.
+rewrite big_map -[in LHS](subn0 n) big_mkord.
+transitivity (\sum_(i < n) p%:E).
+  apply: eq_bigr => k _.
+  rewrite bernoulli_expectation//.
+  apply bRV.
+  by [].
+by rewrite sumEFin big_const_ord iter_addr addr0 mulrC mulr_natr.
 Qed.
 
-Lemma bernoulli_trial_ge0 (X : seq {RV P >-> R}) n : is_bernoulli_trial X n ->
-  (forall t, 0 <= bernoulli_trial X t)%R.
+Lemma bernoulli_trial_ge0 (X : {RV P >-> bool}^nat) n : is_bernoulli_trial n X ->
+  (forall t, 0 <= bernoulli_trial n X t)%R.
 Proof.
 move=> [bRV Xn] t.
-rewrite /bernoulli_trial [leRHS](_ : _ = \sum_(Xi <- X) Xi t)%R; last first.
-  by rewrite {bRV Xn}; elim/big_ind2 : _ => //= _ f _ g <- <-.
-  (* NB: this maybe need to be a lemma*)
-by rewrite big_seq; apply: sumr_ge0 => i iX; exact/bernoulli_ge0/bRV.
+rewrite /bernoulli_trial.
+have -> : (\sum_(i < n) btr P (X i))%R = (\sum_(s <- map (btr P \o X) (iota 0 n)) s)%R.
+  by rewrite big_map -[in RHS](subn0 n) big_mkord.
+have -> : (\sum_(s <- [seq (btr P \o X) i | i <- iota 0 n]) s)%R t = (\sum_(s <- [seq (btr P \o X) i | i <- iota 0 n]) s t)%R.
+  admit.
+rewrite big_map.
+by apply: sumr_ge0 => i _/=; rewrite /bool_to_real/= ler0n.
 Qed.
 
 (* this seems to be provable like in https://www.cs.purdue.edu/homes/spa/courses/pg17/mu-book.pdf page 65 *)
