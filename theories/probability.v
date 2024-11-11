@@ -2331,6 +2331,32 @@ transitivity (\sum_(i < n) p%:E).
 by rewrite sumEFin big_const_ord iter_addr addr0 mulrC mulr_natr.
 Qed.
 
+Definition sumrfct (s : seq {mfun T >-> R}) := (fun x => \sum_(f <- s) f x)%R.
+
+Lemma measurable_sumrfct s : measurable_fun setT (sumrfct s).
+Proof.
+rewrite /sumrfct.
+pose n := size s.
+apply/measurable_EFinP => /=.
+have -> : (EFin \o (fun x : T => (\sum_(f <- s) f x)%R)) = (fun x : T => \sum_(i < n) (s`_i x)%:E)%R.
+  apply: funext => x /=.
+  rewrite sumEFin.
+  congr (_%:E).
+  rewrite big_tnth//.
+  apply: eq_bigr => i _ /=.
+  by rewrite (tnth_nth 0%R).
+apply: emeasurable_fun_sum => i.
+by apply/measurable_EFinP.
+Qed.
+
+HB.about isMeasurableFun.Build.
+HB.instance Definition _ s := 
+  isMeasurableFun.Build _ _ _ _ (sumrfct s) (measurable_sumrfct s).
+
+Lemma sumrfctE' (s : seq {mfun T >-> R}) x :
+  ((\sum_(f <- s) f) x = sumrfct s x)%R.
+Proof. by rewrite/sumrfct; elim/big_ind2 : _ => //= u a v b <- <-. Qed.
+
 Lemma bernoulli_trial_ge0 (X : {RV P >-> bool}^nat) n : is_bernoulli_trial n X ->
   (forall t, 0 <= bernoulli_trial n X t)%R.
 Proof.
@@ -2339,17 +2365,15 @@ rewrite /bernoulli_trial.
 have -> : (\sum_(i < n) btr P (X i))%R = (\sum_(s <- map (btr P \o X) (iota 0 n)) s)%R.
   by rewrite big_map -[in RHS](subn0 n) big_mkord.
 have -> : (\sum_(s <- [seq (btr P \o X) i | i <- iota 0 n]) s)%R t = (\sum_(s <- [seq (btr P \o X) i | i <- iota 0 n]) s t)%R.
-(* Set Printing Coercions. *)
-(*   rewrite /= [X in X _]sumrfctE. *)
-  admit.
+  by rewrite sumrfctE'.
 rewrite big_map.
 by apply: sumr_ge0 => i _/=; rewrite /bool_to_real/= ler0n.
-Admitted.
+Qed.
 
 (* this seems to be provable like in https://www.cs.purdue.edu/homes/spa/courses/pg17/mu-book.pdf page 65 *)
 Axiom taylor_ln_le : forall (delta : R), ((1 + delta) * ln (1 + delta) >= delta + delta^+2 / 3)%R.
 
-Lemma expR_prod (X : seq {RV P >-> R}) (f : {RV P >-> R} -> R) :
+Lemma expR_prod d' {U : measurableType d'} (X : seq {mfun U >-> R}) (f : {mfun U >-> R} -> R) :
   (\prod_(x <- X) expR (f x) = expR (\sum_(x <- X) f x))%R.
 Proof.
 elim: X => [|h t ih]; first by rewrite !big_nil expR0.
@@ -2386,33 +2410,28 @@ Proof.
 rewrite /= => t0 bX.
 set X := bernoulli_trial n X_.
 set mu := 'E_P[X].
-(* have -> : @mmt_gen_fun _ _ _ P X t = (\prod_(Xi <- X_) fine (mmt_gen_fun Xi t))%:E. *)
-(*   rewrite -[LHS]fineK; last rewrite (binomial_mmt_gen_fun _ bX)//. *)
-(*   apply: congr1; apply: bX.2.1 => //. *)
-(* under eq_big_seq => Xi XiX. *)
-(*   have -> : @mmt_gen_fun _ _ _ P Xi t = (1 + p%:num * (expR t - 1))%:E. *)
-(*     rewrite /mmt_gen_fun. *)
-(*     rewrite bernoulli_mmt_gen_fun//; last exact: bX.1. *)
-(*     apply: congr1. *)
-(*     by rewrite mulrBr mulr1 addrCA. *)
-(*   over. *)
-(* rewrite lee_fin /=. *)
-(* apply: (le_trans (@ler_prod _ _ _ _ _ (fun x => expR (p%:num * (expR t - 1)))%R _)). *)
-(*   move=> Xi _. *)
-(*   rewrite addr_ge0 ?mulr_ge0 ?subr_ge0 ?andTb//; last first. *)
-(*     rewrite -expR0 ler_expR//. *)
-(*   by rewrite expR_ge1Dx ?mulr_ge0// subr_ge0 -expR0 ler_expR. *)
-(* rewrite expR_prod -mulr_suml. *)
-(* move: t0; rewrite le_eqVlt => /predU1P[<-|t0]. *)
-(*   by rewrite expR0 subrr !mulr0. *)
-(* rewrite ler_expR ler_pmul2r; last first. *)
-(*   by rewrite subr_gt0 -expR0 ltr_expR. *)
-(* rewrite /mu big_seq expectation_sum; last first. *)
-(*   move=> Xi XiX; apply: integrable_bernoulli; exact: bX.1. *)
-(* rewrite big_seq -sum_fine. *)
-(*   by apply: ler_sum => Xi XiX; rewrite bernoulli_expectation //=; exact: bX.1. *)
-(* move=> Xi XiX. rewrite bernoulli_expectation //=; exact: bX.1. *)
-(* Qed. *)
+have /andP[p0 p1] := p01.
+have -> /= : @mmt_gen_fun _ _ _ P X t = (\prod_(i < n) fine (mmt_gen_fun (btr P (X_ i)) t))%:E.
+  rewrite -[LHS]fineK; last rewrite (binomial_mmt_gen_fun _ bX)//.
+  apply: congr1.
+  move: bX => []bRV.
+  rewrite /X /bernoulli_trial /mmt_gen_fun.
+  admit.
+under eq_big_seq => /=i iX.
+  have -> : @mmt_gen_fun _ _ _ P (btr P (X_ i)) t = (1 + p * (expR t - 1))%:E.
+    rewrite /mmt_gen_fun.
+    rewrite bernoulli_mmt_gen_fun//; last exact: bX.1.
+    apply: congr1.
+    by rewrite mulrBr mulr1 addrCA.
+  over.
+rewrite lee_fin /=.
+apply: (le_trans (@ler_prod _ _ _ _ _ (fun x => expR (p * (expR t - 1)))%R _)).
+  move=> iX _.
+  rewrite addr_ge0 ?mulr_ge0 ?subr_ge0 ?andTb//; last first.
+    rewrite -expR0 ler_expR//.
+  by rewrite expR_ge1Dx ?mulr_ge0// subr_ge0 -expR0 ler_expR.
+rewrite /mu expectation_bernoulli_trial// /fine/= big_const iter_mulr.
+by rewrite cardT/= size_enum_ord -expRM_natl mulr1 mulrA.
 Admitted.
 
 Lemma expR_powR (x y : R) : (expR (x * y) = (expR x) `^ y)%R.
@@ -2494,23 +2513,6 @@ Proof. by apply/funext => x /=; rewrite ger0_norm ?expR_ge0. Qed.
 
 From mathcomp Require Import derive.
 
-Lemma le01_expR_ge1Dx (x : R) : (-1 <= x <= 0 -> 1 + x <= expR x)%R.
-Proof.
-move=> /andP [N1x x0].
-pose f : R^o -> R := (expR \- (cst 1 \+ id))%R.
-rewrite -subr_ge0 (_ : 0%R = f 0%R); last by rewrite /f !fctE/= expR0 addr0 subrr.
-pose f' : R^o -> R := (expR \- (cst 0 \+ cst 1))%R.
-move: N1x; rewrite le_eqVlt => /predU1P[<-|N1x].
-  by rewrite /f !fctE /= expR0 addr0 subrr subr0 expR_ge0.
-move: x0; rewrite le_eqVlt => /predU1P[<-//|x0].
-have [c cx] : exists2 c, c \in `]x, 0%R[ & (f 0 - f x)%R = (f' c * (0 - x))%R.
-  apply: MVT => //.
-  admit.
-rewrite -[leRHS]/(f x) -subr_le0 sub0r /f' => ->; apply: mulr_le0_ge0.
-  by rewrite /=subr_le0 add0r -expR0 ler_expR; move: cx; rewrite in_itv => /andP[_ /ltW].
-by rewrite ler_oppr oppr0 ltW.
-Admitted.
-
 (* Rajani thm 2.6 / mu-book thm 4.5.(2) *)
 Theorem thm26 (X : {RV P >-> bool}^nat) (delta : R) n :
   is_bernoulli_trial n X -> (0 < delta < 1)%R ->
@@ -2550,13 +2552,10 @@ apply: (@le_trans _ _ (((expR (- delta) / ((1 - delta) `^ (1 - delta))) `^ (fine
     rewrite !lnK ?posrE ?subr_gt0//.
     rewrite expR_powR powRrM powRAC.
     rewrite ge0_ler_powR ?ler0n// ?nnegrE ?powR_ge0//.
-      admit.
-      (* by rewrite addr_ge0 ?mulr_ge0// subr_ge0// ltW. *)
+      by rewrite addr_ge0 ?mulr_ge0// subr_ge0// ltW.
     rewrite addrAC subrr sub0r -expR_powR.
     rewrite addrCA -{2}(mulr1 p) -mulrBr addrAC subrr sub0r mulrC mulNr.
-    apply: le01_expR_ge1Dx.
-    rewrite ler_oppl opprK mulr_ile1//=; [|exact: ltW..].
-    by rewrite ler_oppl oppr0 mulr_ge0// ltW.
+    by apply: expR_ge1Dx.
   rewrite !lnK ?posrE ?subr_gt0//.
   rewrite -addrAC subrr sub0r -mulrA [X in (_ / X)%R]expR_powR lnK ?posrE ?subr_gt0//.
   rewrite -[in leRHS]powR_inv1 ?powR_ge0// powRM// ?expR_ge0 ?invr_ge0 ?powR_ge0//.
