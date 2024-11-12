@@ -2390,6 +2390,26 @@ case: ifP => //= aQ.
 by rewrite expRD ih.
 Qed.
 
+Lemma sumr_map U d' (V : measurableType d') (l : seq U) Q (f : U -> {mfun V >-> R}) (x : V) :
+  ((\sum_(i <- l | Q i) f i) x = \sum_(i <- l | Q i) f i x)%R.
+Proof.
+elim: l; first by rewrite !big_nil.
+move=> a l ih.
+rewrite !big_cons.
+case: ifP => aQ//=.
+by rewrite -ih.
+Qed.
+
+Lemma prodr_map U d' (V : measurableType d') (l : seq U) Q (f : U -> {mfun V >-> R}) (x : V) :
+  ((\prod_(i <- l | Q i) f i) x = \prod_(i <- l | Q i) f i x)%R.
+Proof.
+elim: l; first by rewrite !big_nil.
+move=> a l ih.
+rewrite !big_cons.
+case: ifP => aQ//=.
+by rewrite -ih.
+Qed.
+
 Lemma bernoulli_trial_mmt_gen_fun (X_ : {RV P >-> bool}^nat) n (t : R) :
   is_bernoulli_trial n X_ ->
   let X := bernoulli_trial n X_ in
@@ -2400,10 +2420,10 @@ rewrite /bernoulli_trial/mmt_gen_fun.
 transitivity ('E_P[\prod_(i < n) (expR \o t \o* (btr P (X_ i)))])%R.
   congr ('E_P[_]).
   apply: funext => x/=.
-  have -> : ((\sum_(i < n) btr P (X_ i)) x = (\sum_(i < n) btr P (X_ i) x))%R.
-    admit.
+  rewrite sumr_map.
   rewrite mulr_suml.
   rewrite expR_sum.
+  (* rewrite prodr_map. *)
   admit.
 transitivity (\prod_(i < n) 'E_P[expR \o t \o* (btr P (X_ i))]).
   (* pose mmt_X (i : 'I_n) : {RV P >-> R} := mmt_gen_fun (btr P (X_ i)) t. *)
