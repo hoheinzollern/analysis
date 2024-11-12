@@ -2414,10 +2414,16 @@ by [].
 Admitted.
 
 Lemma bernoulli_mmt_gen_fun (X : {RV P >-> bool}) (t : R) :
-  bernoulli_RV X -> 'E_P[expR \o t \o* btr P X] = (p * expR t + (1-p))%:E.
+  bernoulli_RV X -> mmt_gen_fun (btr P X : {RV P >-> R}) t = (p * expR t + (1-p))%:E.
 Proof.
-move=> bX.
-
+move=> bX. rewrite/mmt_gen_fun.
+transitivity ((expR (t * 1))%:E * P [set x | X x == true] + (expR (t * 0))%:E * P [set x | X x == false]).
+  (* something from dRV *)
+  admit.
+rewrite mulr1 mulr0 expR0 mul1e.
+have -> : P [set x | X x == true] = p%:E. admit.
+have -> : P [set x | X x == false] = (1-p)%:E. admit.
+by rewrite -EFinM -EFinD mulrC.
 Admitted.
 
 Lemma binomial_mmt_gen_fun (X_ : {RV P >-> bool}^nat) n (t : R) :
@@ -2437,6 +2443,15 @@ rewrite -[LHS]fineK; last first.
 (* under eq_bigr => Xi XiX do rewrite (bernoulli_mmt_gen_fun _ (bX1 _ _))//=. *)
 Admitted.
 
+Lemma prod_EFin U l Q (f : U -> R) : \prod_(i <- l | Q i) ((f i)%:E) = (\prod_(i <- l | Q i) f i)%:E.
+Proof.
+elim: l; first by rewrite !big_nil.
+move=> a l ih.
+rewrite !big_cons.
+case: ifP => //= aQ.
+by rewrite EFinM ih.
+Qed.
+
 Lemma lm23 (X_ : {RV P >-> bool}^nat) (t : R) n :
   (0 <= t)%R ->
   is_bernoulli_trial n X_ ->
@@ -2448,20 +2463,14 @@ rewrite /= => t0 bX.
 set X := bernoulli_trial n X_.
 set mu := 'E_P[X].
 have /andP[p0 p1] := p01.
-have -> /= : @mmt_gen_fun _ _ _ P X t = (\prod_(i < n) fine (mmt_gen_fun (btr P (X_ i)) t))%:E.
-  rewrite -[LHS]fineK; last rewrite (binomial_mmt_gen_fun _ bX)//.
-  apply: congr1.
-  move: bX => []bRV.
-  rewrite /X /bernoulli_trial /mmt_gen_fun.
-  admit.
+rewrite bernoulli_trial_mmt_gen_fun//.
 under eq_big_seq => /=i iX.
   have -> : @mmt_gen_fun _ _ _ P (btr P (X_ i)) t = (1 + p * (expR t - 1))%:E.
-    rewrite /mmt_gen_fun.
     rewrite bernoulli_mmt_gen_fun//; last exact: bX.1.
     apply: congr1.
     by rewrite mulrBr mulr1 addrCA.
   over.
-rewrite lee_fin /=.
+rewrite prod_EFin lee_fin /=.
 apply: (le_trans (@ler_prod _ _ _ _ _ (fun x => expR (p * (expR t - 1)))%R _)).
   move=> iX _.
   rewrite addr_ge0 ?mulr_ge0 ?subr_ge0 ?andTb//; last first.
@@ -2469,7 +2478,7 @@ apply: (le_trans (@ler_prod _ _ _ _ _ (fun x => expR (p * (expR t - 1)))%R _)).
   by rewrite expR_ge1Dx ?mulr_ge0// subr_ge0 -expR0 ler_expR.
 rewrite /mu expectation_bernoulli_trial// /fine/= big_const iter_mulr.
 by rewrite cardT/= size_enum_ord -expRM_natl mulr1 mulrA.
-Admitted.
+Qed.
 
 Lemma expR_powR (x y : R) : (expR (x * y) = (expR x) `^ y)%R.
 Proof. by rewrite /powR gt_eqF ?expR_gt0// expRK mulrC. Qed.
