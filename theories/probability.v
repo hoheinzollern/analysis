@@ -1082,6 +1082,7 @@ apply: (le_trans (@le_integral_comp_abse _ _ _ P _ measurableT (EFin \o X)
 Qed.
 
 Definition mmt_gen_fun (X : {RV P >-> R}) (t : R) := 'E_P[expR \o t \o* X].
+Definition nth_mmt (X : {RV P >-> R}) (n : nat) := 'E_P[X^+n].
 
 Lemma chernoff (X : {RV P >-> R}) (r a : R) : (0 < r)%R ->
   P [set x | X x >= a]%R <= mmt_gen_fun X r * (expR (- (r * a)))%:E.
@@ -2380,8 +2381,43 @@ elim: X => [|h t ih]; first by rewrite !big_nil expR0.
 by rewrite !big_cons ih expRD.
 Qed.
 
+Lemma expR_sum U l Q (f : U -> R) : (expR (\sum_(i <- l | Q i) f i) = \prod_(i <- l | Q i) expR (f i))%R.
+Proof.
+elim: l; first by rewrite !big_nil expR0.
+move=> a l ih.
+rewrite !big_cons.
+case: ifP => //= aQ.
+by rewrite expRD ih.
+Qed.
+
+Lemma bernoulli_trial_mmt_gen_fun (X_ : {RV P >-> bool}^nat) n (t : R) :
+  is_bernoulli_trial n X_ ->
+  let X := bernoulli_trial n X_ in
+  mmt_gen_fun X t = \prod_(i < n) mmt_gen_fun (btr P (X_ i)) t.
+Proof.
+move=> bX /=.
+rewrite /bernoulli_trial/mmt_gen_fun.
+transitivity ('E_P[\prod_(i < n) (expR \o t \o* (btr P (X_ i)))])%R.
+  congr ('E_P[_]).
+  apply: funext => x/=.
+  have -> : ((\sum_(i < n) btr P (X_ i)) x = (\sum_(i < n) btr P (X_ i) x))%R.
+    admit.
+  rewrite mulr_suml.
+  rewrite expR_sum.
+  admit.
+transitivity (\prod_(i < n) 'E_P[expR \o t \o* (btr P (X_ i))]).
+  (* pose mmt_X (i : 'I_n) : {RV P >-> R} := mmt_gen_fun (btr P (X_ i)) t. *)
+  (* have : independent_RVs P `I_n mmt_X. *)
+    (* TODO: need a lemma for this *)
+  admit.
+by [].
+Admitted.
+
 Lemma bernoulli_mmt_gen_fun (X : {RV P >-> bool}) (t : R) :
   bernoulli_RV X -> 'E_P[expR \o t \o* btr P X] = (p * expR t + (1-p))%:E.
+Proof.
+move=> bX.
+
 Admitted.
 
 Lemma binomial_mmt_gen_fun (X_ : {RV P >-> bool}^nat) n (t : R) :
@@ -2391,8 +2427,9 @@ Lemma binomial_mmt_gen_fun (X_ : {RV P >-> bool}^nat) n (t : R) :
 Proof.
 rewrite /is_bernoulli_trial /independent_RVs /bernoulli_trial.
 move=> [bX1 [bX2 bX3]] /=.
+rewrite/mmt_gen_fun.
 rewrite -[LHS]fineK; last first.
-  rewrite /mmt_gen_fun unlock /expectation.
+  rewrite unlock /expectation.
   apply: integral_fune_fin_num => //.
   admit.
 (* rewrite bX2 big_seq. *)
