@@ -2238,10 +2238,10 @@ Context d (T : measurableType d) (R : realType) (P : probability T R).
 Variable p : R.
 Hypothesis p01 : (0 <= p <= 1)%R.
 
-Definition bernoulli_RV (X : {RV P >-> bool}) :=
+Definition bernoulli_RV (X : {dRV P >-> bool}) :=
   distribution P X = bernoulli p.
 
-Lemma bernoulli_RV1 (X : {RV P >-> bool}) : bernoulli_RV X ->
+Lemma bernoulli_RV1 (X : {dRV P >-> bool}) : bernoulli_RV X ->
   P [set i | X i == 1%R] == p%:E.
 Proof.
 move=> [[/(congr1 (fun f => f [set 1%:R]))]].
@@ -2255,7 +2255,7 @@ rewrite /preimage/=.
 by apply/seteqP; split => [x /eqP H//|x /eqP].
 Qed.
 
-Lemma bernoulli_RV2 (X : {RV P >-> bool}) : bernoulli_RV X ->
+Lemma bernoulli_RV2 (X : {dRV P >-> bool}) : bernoulli_RV X ->
   P [set i | X i == 0%R] == (`1-p)%:E.
 Proof.
 move=> [[/(congr1 (fun f => f [set 0%:R]))]].
@@ -2269,7 +2269,7 @@ rewrite /preimage/=.
 by apply/seteqP; split => [x /eqP H//|x /eqP].
 Qed.
 
-Lemma bernoulli_expectation (X : {RV P >-> bool}) :
+Lemma bernoulli_expectation (X : {dRV P >-> bool}) :
   bernoulli_RV X -> 'E_P[btr P X] = p%:E.
 Proof.
 move=> bX.
@@ -2283,7 +2283,7 @@ rewrite integral_bernoulli//=.
 by rewrite -!EFinM -EFinD mulr0 addr0 mulr1.
 Qed.
 
-Lemma integrable_bernoulli (X : {RV P >-> bool}) :
+Lemma integrable_bernoulli (X : {dRV P >-> bool}) :
   bernoulli_RV X -> P.-integrable [set: T] (EFin \o btr P X).
 Proof.
 move=> bX.
@@ -2295,7 +2295,7 @@ have -> : \int[P]_x `|(EFin \o btr P X) x| = 'E_P[btr P X].
 by rewrite bernoulli_expectation// ltry.
 Qed.
 
-Lemma bool_RV_sqr (X : {RV P >-> bool}) :
+Lemma bool_RV_sqr (X : {dRV P >-> bool}) :
   ((btr P X ^+ 2) = btr P X :> (T -> R))%R.
 Proof.
 apply: funext => x /=.
@@ -2303,7 +2303,7 @@ rewrite /GRing.exp /btr/bool_to_real /GRing.mul/=.
 by case: (X x) => /=; rewrite ?mulr1 ?mulr0.
 Qed.
 
-Lemma bernoulli_variance (X : {RV P >-> bool}) :
+Lemma bernoulli_variance (X : {dRV P >-> bool}) :
   bernoulli_RV X -> 'V_P[btr P X] = (p * (`1-p))%:E.
 Proof.
 move=> b.
@@ -2313,13 +2313,13 @@ rewrite [X in 'E_P[X]]bool_RV_sqr !bernoulli_expectation//.
 by rewrite expe2 -EFinD onemMr.
 Qed.
 
-Definition is_bernoulli_trial n (X : {RV P >-> bool}^nat) :=
+Definition is_bernoulli_trial n (X : {dRV P >-> bool}^nat) :=
   (forall i, (i < n)%nat -> bernoulli_RV (X i)) /\ independent_RVs P `I_n X.
 
-Definition bernoulli_trial n (X : {RV P >-> bool}^nat) : {RV P >-> R} :=
+Definition bernoulli_trial n (X : {dRV P >-> bool}^nat) : {RV P >-> R} :=
   (\sum_(i<n) (btr P (X i)))%R. (* TODO: add HB instance measurablefun sum*)
 
-Lemma expectation_bernoulli_trial (X : {RV P >-> bool}^nat) n :
+Lemma expectation_bernoulli_trial (X : {dRV P >-> bool}^nat) n :
   is_bernoulli_trial n X -> 'E_P[@bernoulli_trial n X] = (n%:R * p)%:E.
 Proof.
 move=> bRV. rewrite /bernoulli_trial.
@@ -2362,7 +2362,7 @@ Lemma sumrfctE' (s : seq {mfun T >-> R}) x :
   ((\sum_(f <- s) f) x = sumrfct s x)%R.
 Proof. by rewrite/sumrfct; elim/big_ind2 : _ => //= u a v b <- <-. Qed.
 
-Lemma bernoulli_trial_ge0 (X : {RV P >-> bool}^nat) n : is_bernoulli_trial n X ->
+Lemma bernoulli_trial_ge0 (X : {dRV P >-> bool}^nat) n : is_bernoulli_trial n X ->
   (forall t, 0 <= bernoulli_trial n X t)%R.
 Proof.
 move=> [bRV Xn] t.
@@ -2414,7 +2414,7 @@ case: ifP => aQ//=.
 by rewrite -ih.
 Qed.
 
-Lemma independent_mmt_gen_fun (X : {RV P >-> bool}^nat) n t :
+Lemma independent_mmt_gen_fun (X : {dRV P >-> bool}^nat) n t :
   let mmtX (i : nat) : {RV P >-> R} := expR \o t \o* (btr P (X i)) in
   independent_RVs P `I_n X -> independent_RVs P `I_n mmtX.
 Admitted.
@@ -2424,7 +2424,7 @@ Lemma expectation_prod_independent_RVs (X : {RV P >-> R}^nat) n :
   'E_P[\prod_(i < n) (X i)] = \prod_(i < n) 'E_P[X i].
 Admitted.
 
-Lemma bernoulli_trial_mmt_gen_fun (X_ : {RV P >-> bool}^nat) n (t : R) :
+Lemma bernoulli_trial_mmt_gen_fun (X_ : {dRV P >-> bool}^nat) n (t : R) :
   is_bernoulli_trial n X_ ->
   let X := bernoulli_trial n X_ in
   mmt_gen_fun X t = \prod_(i < n) mmt_gen_fun (btr P (X_ i)) t.
@@ -2442,7 +2442,7 @@ transitivity ('E_P[\prod_(i < n) mmtX i])%R.
 exact: expectation_prod_independent_RVs.
 Qed.
 
-Lemma bernoulli_mmt_gen_fun (X : {RV P >-> bool}) (t : R) :
+Lemma bernoulli_mmt_gen_fun (X : {dRV P >-> bool}) (t : R) :
   bernoulli_RV X -> mmt_gen_fun (btr P X : {RV P >-> R}) t = (p * expR t + (1-p))%:E.
 Proof.
 move=> bX. rewrite/mmt_gen_fun.
@@ -2457,7 +2457,7 @@ Admitted.
 Lemma iter_mule (n : nat) (x y : \bar R) : iter n ( *%E x) y = (x ^+ n * y)%E.
 Proof. by elim: n => [|n ih]; rewrite ?mul1e// [LHS]/= ih expeS muleA. Qed.
 
-Lemma binomial_mmt_gen_fun (X_ : {RV P >-> bool}^nat) n (t : R) :
+Lemma binomial_mmt_gen_fun (X_ : {dRV P >-> bool}^nat) n (t : R) :
   is_bernoulli_trial n X_ ->
   let X := bernoulli_trial n X_ : {RV P >-> R} in
   mmt_gen_fun X t = ((p * expR t + (1-p))`^(n%:R))%:E.
@@ -2480,7 +2480,7 @@ case: ifP => //= aQ.
 by rewrite EFinM ih.
 Qed.
 
-Lemma lm23 (X_ : {RV P >-> bool}^nat) (t : R) n :
+Lemma lm23 (X_ : {dRV P >-> bool}^nat) (t : R) n :
   (0 <= t)%R ->
   is_bernoulli_trial n X_ ->
   let X := bernoulli_trial n X_ : {RV P >-> R} in
@@ -2499,7 +2499,7 @@ Qed.
 Lemma expR_powR (x y : R) : (expR (x * y) = (expR x) `^ y)%R.
 Proof. by rewrite /powR gt_eqF ?expR_gt0// expRK mulrC. Qed.
 
-Lemma end_thm24 (X_ : {RV P >-> bool}^nat) n (t delta : R) :
+Lemma end_thm24 (X_ : {dRV P >-> bool}^nat) n (t delta : R) :
   is_bernoulli_trial n X_ ->
   (0 < delta)%R ->
   let X := @bernoulli_trial n X_ in
@@ -2519,7 +2519,7 @@ rewrite -EFinM lee_fin -powRM ?expR_ge0// ge0_ler_powR ?nnegrE//.
 Qed.
 
 (* theorem 2.4 Rajani / thm 4.4.(2) mu-book *)
-Theorem thm24 (X_ : {RV P >-> bool}^nat) n (delta : R) :
+Theorem thm24 (X_ : {dRV P >-> bool}^nat) n (delta : R) :
   is_bernoulli_trial n X_ ->
   (0 < delta)%R ->
   let X := @bernoulli_trial n X_ in
@@ -2542,7 +2542,7 @@ exact: (end_thm24 _ bX).
 Qed.
 
 (* theorem 2.5 *)
-Theorem poisson_ineq (X : {RV P >-> bool}^nat) (delta : R) n :
+Theorem poisson_ineq (X : {dRV P >-> bool}^nat) (delta : R) n :
   is_bernoulli_trial n X ->
   let X' := @bernoulli_trial n X in
   let mu := 'E_P[X'] in
@@ -2574,7 +2574,7 @@ Lemma norm_expR : normr \o expR = (expR : R -> R).
 Proof. by apply/funext => x /=; rewrite ger0_norm ?expR_ge0. Qed.
 
 (* Rajani thm 2.6 / mu-book thm 4.5.(2) *)
-Theorem thm26 (X : {RV P >-> bool}^nat) (delta : R) n :
+Theorem thm26 (X : {dRV P >-> bool}^nat) (delta : R) n :
   is_bernoulli_trial n X -> (0 < delta < 1)%R ->
   let X' := @bernoulli_trial n X : {RV P >-> R} in
   let mu := 'E_P[X'] in
@@ -2642,7 +2642,7 @@ apply: emeasurable_fun_le => //; apply: measurableT_comp => //.
 Qed.
 
 (* Rajani -> corollary 2.7 / mu-book -> corollary 4.7 *)
-Corollary cor27 (X : {RV P >-> bool}^nat) (delta : R) n :
+Corollary cor27 (X : {dRV P >-> bool}^nat) (delta : R) n :
   is_bernoulli_trial n X -> (0 < delta < 1)%R ->
   (0 < n)%nat ->
   (0 < p)%R ->
@@ -2688,7 +2688,7 @@ rewrite mulr2n EFinD lee_add//=.
 Qed.
 
 (* Rajani thm 3.1 / mu-book thm 4.7 *)
-Theorem sampling (X : {RV P >-> bool}^nat) n (theta delta : R) :
+Theorem sampling (X : {dRV P >-> bool}^nat) n (theta delta : R) :
   let X_sum := bernoulli_trial n X in
   let X' x := (X_sum x) / n%:R in
   (0 < p)%R ->
