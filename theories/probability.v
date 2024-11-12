@@ -2400,7 +2400,7 @@ case: ifP => aQ//=.
 by rewrite -ih.
 Qed.
 
-Lemma prodr_map U d' (V : measurableType d') (l : seq U) Q (f : U -> V -> R) (x : V) :
+Lemma prodr_map U d' (V : measurableType d') (l : seq U) Q (f : U -> {mfun V >-> R}) (x : V) :
   ((\prod_(i <- l | Q i) f i) x = \prod_(i <- l | Q i) f i x)%R.
 Proof.
 elim: l; first by rewrite !big_nil.
@@ -2410,13 +2410,14 @@ case: ifP => aQ//=.
 by rewrite -ih.
 Qed.
 
-Lemma independent_btr (X : {RV P >-> bool}^nat) n :
-  independent_RVs P `I_n X -> independent_RVs P `I_n (fun i => btr P (X i)).
+Lemma independent_mmt_gen_fun (X : {RV P >-> bool}^nat) n t :
+  let mmtX (i : nat) : {RV P >-> R} := expR \o t \o* (btr P (X i)) in
+  independent_RVs P `I_n X -> independent_RVs P `I_n mmtX.
 Admitted.
 
-Lemma independent_mmt_gen_fun (X : {RV P >-> R}^nat) n t :
-  let mmtX (i : nat) : {RV P >-> R} := expR \o t \o* (X i) in
-  independent_RVs P `I_n X -> independent_RVs P `I_n mmtX.
+Lemma expectation_prod_independent_RVs (X : {RV P >-> R}^nat) n :
+  independent_RVs P `I_n X ->
+  'E_P[\prod_(i < n) (X i)] = \prod_(i < n) 'E_P[X i].
 Admitted.
 
 Lemma bernoulli_trial_mmt_gen_fun (X_ : {RV P >-> bool}^nat) n (t : R) :
@@ -2424,21 +2425,18 @@ Lemma bernoulli_trial_mmt_gen_fun (X_ : {RV P >-> bool}^nat) n (t : R) :
   let X := bernoulli_trial n X_ in
   mmt_gen_fun X t = \prod_(i < n) mmt_gen_fun (btr P (X_ i)) t.
 Proof.
-move=> bX /=.
+move=> []bRVX iRVX /=.
 rewrite /bernoulli_trial/mmt_gen_fun.
-transitivity ('E_P[\prod_(i < n) (expR \o t \o* (btr P (X_ i)))])%R.
+pose mmtX (i : nat) : {RV P >-> R} := expR \o t \o* (btr P (X_ i)).
+have iRV_mmtX : independent_RVs P `I_n mmtX.
+  exact: independent_mmt_gen_fun.
+transitivity ('E_P[\prod_(i < n) mmtX i])%R.
   congr ('E_P[_]).
   apply: funext => x/=.
   rewrite sumr_map mulr_suml expR_sum prodr_map.
   exact: eq_bigr.
-transitivity (\prod_(i < n) 'E_P[expR \o t \o* (btr P (X_ i))]).
-  pose mmtX (i : nat) : {RV P >-> R} := expR \o t \o* (btr P (X_ i)).
-  have iRV_mmtX : independent_RVs P `I_n mmtX.
-    (* TODO: need a lemma for this *)
-    admit. 
-  admit.
-by [].
-Admitted.
+exact: expectation_prod_independent_RVs.
+Qed.
 
 Lemma bernoulli_mmt_gen_fun (X : {RV P >-> bool}) (t : R) :
   bernoulli_RV X -> mmt_gen_fun (btr P X : {RV P >-> R}) t = (p * expR t + (1-p))%:E.
@@ -2483,28 +2481,16 @@ Lemma lm23 (X_ : {RV P >-> bool}^nat) (t : R) n :
   (0 <= t)%R ->
   is_bernoulli_trial n X_ ->
   let X := bernoulli_trial n X_ : {RV P >-> R} in
-  let mu := 'E_P[X] in
-  mmt_gen_fun X t <= (expR (fine mu * (expR t - 1)))%:E.
+  mmt_gen_fun X t <= (expR (fine 'E_P[X] * (expR t - 1)))%:E.
 Proof.
-rewrite /= => t0 bX.
-set X := bernoulli_trial n X_.
-set mu := 'E_P[X].
+move=> t0 bX/=.
 have /andP[p0 p1] := p01.
-rewrite bernoulli_trial_mmt_gen_fun//.
-under eq_big_seq => /=i iX.
-  have -> : @mmt_gen_fun _ _ _ P (btr P (X_ i)) t = (1 + p * (expR t - 1))%:E.
-    rewrite bernoulli_mmt_gen_fun//; last exact: bX.1.
-    apply: congr1.
-    by rewrite mulrBr mulr1 addrCA.
-  over.
-rewrite prod_EFin lee_fin /=.
-apply: (le_trans (@ler_prod _ _ _ _ _ (fun x => expR (p * (expR t - 1)))%R _)).
-  move=> iX _.
-  rewrite addr_ge0 ?mulr_ge0 ?subr_ge0 ?andTb//; last first.
-    rewrite -expR0 ler_expR//.
-  by rewrite expR_ge1Dx ?mulr_ge0// subr_ge0 -expR0 ler_expR.
-rewrite /mu expectation_bernoulli_trial// /fine/= big_const iter_mulr.
-by rewrite cardT/= size_enum_ord -expRM_natl mulr1 mulrA.
+rewrite binomial_mmt_gen_fun// lee_fin.
+rewrite expectation_bernoulli_trial//.
+rewrite addrCA -{2}(mulr1 p) -mulrN -mulrDr.
+rewrite -mulrA (mulrC (n%:R)) expRM ge0_ler_powR// ?nnegrE ?expR_ge0//.
+  by rewrite addr_ge0// mulr_ge0// subr_ge0 -expR0 ler_expR.
+exact: expR_ge1Dx.
 Qed.
 
 Lemma expR_powR (x y : R) : (expR (x * y) = (expR x) `^ y)%R.
