@@ -2446,22 +2446,22 @@ have -> : P [set x | X x == false] = (1-p)%:E. admit.
 by rewrite -EFinM -EFinD mulrC.
 Admitted.
 
+Lemma iter_mule (n : nat) (x y : \bar R) : iter n ( *%E x) y = (x ^+ n * y)%E.
+Proof. by elim: n => [|n ih]; rewrite ?mul1e// [LHS]/= ih expeS muleA. Qed.
+
 Lemma binomial_mmt_gen_fun (X_ : {RV P >-> bool}^nat) n (t : R) :
   is_bernoulli_trial n X_ ->
   let X := bernoulli_trial n X_ : {RV P >-> R} in
   mmt_gen_fun X t = ((p * expR t + (1-p))`^(n%:R))%:E.
 Proof.
-rewrite /is_bernoulli_trial /independent_RVs /bernoulli_trial.
-move=> [bX1 [bX2 bX3]] /=.
-rewrite/mmt_gen_fun.
-rewrite -[LHS]fineK; last first.
-  rewrite unlock /expectation.
-  apply: integral_fune_fin_num => //.
-  admit.
-(* rewrite bX2 big_seq. *)
-(* apply: congr1. *)
-(* under eq_bigr => Xi XiX do rewrite (bernoulli_mmt_gen_fun _ (bX1 _ _))//=. *)
-Admitted.
+move: p01 => /andP[p0 p1] bX/=.
+rewrite bernoulli_trial_mmt_gen_fun//.
+under eq_bigr => i _.
+  rewrite bernoulli_mmt_gen_fun; last exact: bX.1.
+  over.
+rewrite big_const iter_mule mule1 cardT size_enum_ord -EFin_expe powR_mulrn//.
+by rewrite addr_ge0// ?subr_ge0// mulr_ge0// expR_ge0.
+Qed.
 
 Lemma prod_EFin U l Q (f : U -> R) : \prod_(i <- l | Q i) ((f i)%:E) = (\prod_(i <- l | Q i) f i)%:E.
 Proof.
