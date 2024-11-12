@@ -2446,8 +2446,7 @@ transitivity ((expR (t * 1))%:E * P [set x | X x == true] + (expR (t * 0))%:E * 
   (* something from dRV *)
   admit.
 rewrite mulr1 mulr0 expR0 mul1e.
-have -> : P [set x | X x == true] = p%:E; first by apply/eqP; rewrite bernoulli_RV1.
-have -> : P [set x | X x == false] = (1-p)%:E; first by apply/eqP; rewrite bernoulli_RV2.
+rewrite (eqP (bernoulli_RV1 bX)) (eqP (bernoulli_RV2 bX)).
 by rewrite -EFinM -EFinD mulrC.
 Admitted.
 
