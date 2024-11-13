@@ -98,6 +98,69 @@ Import numFieldTopology.Exports.
 Local Open Scope classical_set_scope.
 Local Open Scope ring_scope.
 
+Section move_to_somewhere.
+
+Lemma mulr_funEcomp (R : semiRingType) (T : Type) (x : R) (f : T -> R) :
+  x \o* f = *%R^~ x \o f.
+Proof. by []. Qed.
+
+Lemma bounded_image (T : Type) (K : numFieldType)
+  (V : pseudoMetricNormedZmodType K) (E : T -> V) (A : set T) :
+  [bounded E x | x in A] = [bounded y | y in E @` A].
+Proof.
+rewrite /bounded_near !nearE.
+congr (+oo _); apply: funext=> M.
+apply: propext; split => /=.
+  by move=> H x [] y Ay <-; exact: H.
+move=> + x Ax => /(_ (E x)); apply.
+by exists x.
+Qed.
+
+Lemma finite_bounded (K : realFieldType) (V : pseudoMetricNormedZmodType K)
+  (A : set V) : finite_set A -> bounded_set A.
+Proof.
+move=> fA.
+exists (\big[Order.max/0]_(y <- fset_set A) normr y).
+split=> //.
+  apply: (big_ind (fun x => x \is Num.real))=> //.
+  by move=> *; exact: max_real.
+move=> x ltx v Av /=.
+apply/ltW/(le_lt_trans _ ltx)/le_bigmax_seq=> //.
+by rewrite in_fset_set// inE.
+Qed.
+
+Arguments sub_countable [T U].
+Arguments card_le_finite [T U].
+(* naming inconsistency: there is also `sub_finite_set`:
+   sub_finite_set :
+     forall [T : Type] [A B : set T], A `<=` B -> finite_set B -> finite_set A *)
+
+Lemma countable_range_comp (T0 T1 T2 : Type) (f : T0 -> T1) (g : T1 -> T2) :
+  countable (range f) \/ countable (range g) -> countable (range (g \o f)).
+Proof.
+rewrite -(image_comp f g).
+case.
+  move=> cf; apply: (sub_countable _ (range f))=> //.
+  exact: card_image_le.
+move=> cg; apply: (sub_countable _ (range g))=> //.
+exact/subset_card_le/image_subset.
+Qed.
+
+Lemma finite_range_comp (T0 T1 T2 : Type) (f : T0 -> T1) (g : T1 -> T2) :
+  finite_set (range f) \/ finite_set (range g) -> finite_set (range (g \o f)).
+Proof.
+rewrite -(image_comp f g).
+case.
+  move=> cf; apply: (card_le_finite _ (range f))=> //.
+  exact: card_image_le.
+move=> cg; apply: (card_le_finite _ (range g))=> //.
+exact/subset_card_le/image_subset.
+Qed.
+
+End move_to_somewhere.
+Arguments countable_range_comp [T0 T1 T2].
+Arguments finite_range_comp [T0 T1 T2].
+
 Definition random_variable (d d' : _) (T : measurableType d) (R : realType) (U : measurableType d')
   (P : probability T R) := {mfun T >-> U}.
 
@@ -730,6 +793,19 @@ move=> iRVX J JleA x_.
 apply: (iRVX _).2 => //.
 Qed.
 
+(*
+Lemma mutually_independent_RV' (I : choiceType) (A : set I)
+  (X : I -> {RV P >-> R}) (S : I -> set R) :
+  mutually_independent_RV A X -> 
+  (forall i, A i -> measurable (S i)) ->
+  mutually_independent P A (fun i => X i @^-1` S i).
+Proof.
+move=> miX mS.
+split; first by move=> i Ai; exact/measurable_sfunP/(mS i Ai).
+move=> B BA.
+Abort.
+*)
+
 Lemma inde_expectation (I : choiceType) (A : set I) (X : I -> {RV P >-> R}) :
   mutually_independent_RV A X ->
     forall B : {fset I}, [set` B] `<=` A ->
@@ -1237,12 +1313,13 @@ Section dRV_comp.
 Context d1 d2 d3 (T1 : measurableType d1) (T2 : measurableType d2) (T3 : measurableType d3).
 Context (R : realType) (P : probability T1 R) (X : {dRV P >-> T2}) (f : {mfun T2 >-> T3}).
 
-Lemma countable_range_comp : countable (range (f \o X)).
-Proof.
-Admitted.
+Let countable_range_comp_dRV : countable (range (f \o X)).
+Proof. apply: countable_range_comp; left; exact: countable_range. Qed.
 
-(* HB.instance Definition _ := *)
-(*   MeasurableFun_isDiscrete.Build _ _ _ _ _ _ countable_range_comp. *)
+(*
+HB.instance Definition _ :=
+   MeasurableFun_isDiscrete.Build _ _ _ _ _  countable_range_comp_dRV.
+*)
 
 Definition dRV_comp (* : {dRV P >-> T3} *) := f \o X.
 
@@ -2481,13 +2558,39 @@ transitivity ('E_P[\prod_(i < n) mmtX i])%R.
 exact: expectation_prod_independent_RVs.
 Qed.
 
+Arguments sub_countable [T U].
+Arguments card_le_finite [T U].
+
 Lemma bernoulli_mmt_gen_fun (X : {dRV P >-> bool}) (t : R) :
   bernoulli_RV X -> mmt_gen_fun (btr P X : {RV P >-> R}) t = (p * expR t + (1-p))%:E.
 Proof.
 move=> bX. rewrite/mmt_gen_fun.
 pose mmtX : {RV P >-> R} := expR \o t \o* (btr P X).
 transitivity ((expR (t * 1))%:E * P [set x | X x == true] + (expR (t * 0))%:E * P [set x | X x == false]).
-  (* rewrite dRV_expectation. *)
+  set Y := expR \o _.
+  have cntY: countable (range Y).
+    rewrite /Y mulr_funEcomp /btr /bool_to_real.
+    apply: countable_range_comp; left.
+    apply: countable_range_comp; left.
+    apply: countable_range_comp; left.
+    apply: countable_range_comp; left.
+    apply: (sub_countable _ [set: bool])=> //.
+    exact: subset_card_le.
+  pose dY:= discreteMeasurableFun.Pack (discreteMeasurableFun.Class (MeasurableFun_isDiscrete.Build _ _ _ _ _ cntY)).
+  have->: Y = dY by [].
+  rewrite dRV_expectation; last first.
+    rewrite /dY /=.
+    apply: measurable_bounded_integrable=> //.
+      by rewrite /= probability_setT ltry.
+    rewrite bounded_image.
+    apply: finite_bounded.
+    rewrite mulr_funEcomp.
+    apply: (finite_range_comp _ expR); left.
+    apply: finite_range_comp; left.
+    apply: finite_range_comp; left.
+    apply: finite_range_comp; left.
+    apply: (card_le_finite _ [set: bool])=> //.
+    exact: subset_card_le.
   admit.
 rewrite mulr1 mulr0 expR0 mul1e.
 rewrite (eqP (bernoulli_RV1 bX)) (eqP (bernoulli_RV2 bX)).
