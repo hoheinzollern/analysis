@@ -1509,6 +1509,8 @@ move=> iX.
 have := @dRV_expectation_comp _ _ T R R P (@measurable_set1 R) X.
 Admitted.
 
+(* check that expecation_bernoulli is recoverable by bernoulli_pmf *)
+
 Definition pmf (X : {RV P >-> R}) (r : R) : R := fine (P (X @^-1` [set r])).
 
 Lemma expectation_pmf (X : {dRV P >-> R}) :
@@ -2992,7 +2994,7 @@ Qed.
 Lemma independent_mmt_gen_fun (X : {dRV P >-> bool}^nat) n t :
   let mmtX (i : nat) : {RV P >-> R} := expR \o t \o* (btr P (X i)) in
   independent_RVs P `I_n X -> independent_RVs P `I_n mmtX.
-Admitted.
+Admitted. (* from Reynald's PR, independent_RVs2_comp, "when applying a function, the sigma algebra only gets smaller" *)
 
 Lemma expectation_prod_independent_RVs (X : {RV P >-> R}^nat) n :
   independent_RVs P `I_n X ->
