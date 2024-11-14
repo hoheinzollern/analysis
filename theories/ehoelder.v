@@ -184,7 +184,7 @@ rewrite setIidr; last first.
   apply subsetT.
 rewrite [X in measurable X]
   (_ : (poweR^~ r @^-1` B) = 
-  if (r == 0%R) then 
+  if (r == 0%R) then
     (if 1 \in B then [set : \bar R] else set0) 
   else
     EFin @` ( @powR R ^~ r @^-1` (fine @` (B `\` [set -oo; +oo])))  
@@ -205,12 +205,12 @@ case: ifPn => [/eqP ->|r0].
   by case: ifPn => // /[swap] /= -> /=; rewrite (negbTE r0)=>/set_mem.
 case: ifPn => [|_]; first by case: ifPn => //.
 repeat apply : measurableU.
-apply: measurable_image_EFin.
-rewrite -[X in measurableR X] setTI.
-apply: @measurable_powR => //.
-exact: measurable_image_fine.
-exact: measurableI.
-by case: ifP.
+- apply: measurable_image_EFin.
+  rewrite -[X in measurableR X] setTI.
+  apply: @measurable_powR => //.
+  exact: measurable_image_fine.
+- exact: measurableI.
+- by case: ifP.
 Qed.
 
 
