@@ -2908,7 +2908,7 @@ Definition bernoulli_RV (X : {dRV P >-> bool}) :=
   distribution P X = bernoulli p.
 
 Lemma bernoulli_RV1 (X : {dRV P >-> bool}) : bernoulli_RV X ->
-  P [set i | X i == 1%R] == p%:E.
+  P [set i | X i == 1%R] = p%:E.
 Proof.
 move=> [[/(congr1 (fun f => f [set 1%:R]))]].
 rewrite bernoulliE//.
@@ -2922,7 +2922,7 @@ by apply/seteqP; split => [x /eqP H//|x /eqP].
 Qed.
 
 Lemma bernoulli_RV2 (X : {dRV P >-> bool}) : bernoulli_RV X ->
-  P [set i | X i == 0%R] == (`1-p)%:E.
+  P [set i | X i == 0%R] = (`1-p)%:E.
 Proof.
 move=> [[/(congr1 (fun f => f [set 0%:R]))]].
 rewrite bernoulliE//.
@@ -3139,9 +3139,9 @@ under eq_integral.
 rewrite integral_cst//.
 rewrite /A /B /preimage /=.
 under eq_set do rewrite (propext (rwP eqP)).
-rewrite (eqP (bernoulli_RV1 bX)).
+rewrite (bernoulli_RV1 bX).
 under eq_set do rewrite (propext (rwP eqP)).
-rewrite (eqP (bernoulli_RV2 bX)).
+rewrite (bernoulli_RV2 bX).
 rewrite -EFinD; congr (_ + _)%:E; rewrite mulrC//.
 by rewrite expR0 mulr1.
 Qed.
