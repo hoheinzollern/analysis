@@ -161,6 +161,95 @@ move=> cg; apply: (card_le_finite _ (range g))=> //.
 exact/subset_card_le/image_subset.
 Qed.
 
+(* compatible generalization of lebesgue_integral.measurable_sfunP *)
+Lemma measurable_sfunP d1 d2 (aT : measurableType d1)
+  (rT : measurableType d2) (f : {mfun aT >-> rT}) (Y : set rT) :
+  measurable Y -> measurable (f @^-1` Y).
+Proof. by move=> mY; rewrite -[f @^-1` _]setTI; exact: measurable_funP. Qed.
+
+(* compatible generalizations of two lemmas from sequences.v *)
+Lemma ereal_nondecreasing_series (R : realDomainType) (u_ : sequence \bar R)
+  N (P : pred nat) :
+  (forall n : nat, P n -> (0%R <= u_ n)%E) ->
+  {homo (fun n : nat => \sum_(N <= i < n | P i) u_ i) :
+    n m / (n <= m)%N >-> (n <= m)%E}.
+Proof. by move=> u_ge0 n m nm; rewrite lee_sum_nneg_natr// => k _ /u_ge0. Qed.
+
+Lemma nneseries_lim_ge (R : realType) (u_ : sequence \bar R) m (P : pred nat)
+  (k : nat) :
+  (forall n : nat, P n -> (0%R <= u_ n)%E) ->
+  ((\sum_(m <= i < k | P i) u_ i)%R <= \big[+%R/0%R]_(m <= i <oo | P i) u_ i)%E.
+Proof.
+Proof.
+move/ereal_nondecreasing_series/ereal_nondecreasing_cvgn/cvg_lim => -> //.
+by apply: ereal_sup_ubound; exists k.
+Qed.
+
+(* generalizations with an additional predicate (m <= i)%N as in big_geq_mkord *)
+Lemma lee_sum_fset_nat_geq (R : realDomainType) (f : sequence \bar R)
+  (F : {fset nat}) (m n : nat) (P : pred nat) :
+  (forall i : nat, P i -> (0%R <= f i)%E) ->
+  [set` F] `<=` `I_n ->
+  ((\sum_(i <- F | P i && (m <= i)%N) f i)%R
+   <= (\sum_(m <= i < n | P i) f i)%R)%E.
+Proof.
+move=> f0 Fn.
+rewrite big_geq_mkord/= -(big_mkord (fun i => P i && (m <= i)%N)).
+apply: lee_sum_fset_nat=> //.
+by move=> ? /andP [] *; exact: f0.
+Qed.
+Arguments lee_sum_fset_nat_geq {R f} F m n P.
+
+Lemma lee_sum_fset_lim_geq (R : realType) (f : sequence \bar R)
+  (F : {fset nat}) m (P : pred nat) :
+  (forall i : nat, P i -> (0%R <= f i)%E) ->
+  ((\sum_(i <- F | P i && (m <= i)%N) f i)%R
+   <= \big[+%R/0%R]_(m <= i <oo | P i) f i)%E.
+Proof.
+move=> f0; pose n := (\max_(k <- F) k).+1.
+rewrite (le_trans (lee_sum_fset_nat_geq F m n _ _ _))//; last exact: nneseries_lim_ge.
+move=> k /= kF; rewrite /n big_seq_fsetE/=.
+by rewrite -[k]/(val [`kF]%fset) ltnS leq_bigmax.
+Qed.
+Arguments lee_sum_fset_lim_geq {R f} F m P.
+
+Lemma nneseries_esum_geq (R : realType) (a : nat -> \bar R) m (P : pred nat) :
+  (forall n : nat, P n -> (0%R <= a n)%E) ->
+  \big[+%R/0]_(m <= i <oo | P i) a i = \esum_(i in [set x | P x && (m <= x)%N]) a i.
+Proof.
+move=> a0; apply/eqP; rewrite eq_le; apply/andP; split.
+  apply: (lime_le (is_cvg_nneseries_cond a0)); apply: nearW => n.
+  apply: ereal_sup_ubound; exists [set` [fset val i | i in 'I_n & P i && (m <= i)%N]%fset].
+    split; first exact: finite_fset.
+    by move=> /= k /imfsetP[/= i]; rewrite inE => + ->.
+  rewrite fsbig_finite//= set_fsetK big_imfset/=; last first.
+    by move=> ? ? ? ? /val_inj.
+  by rewrite big_filter big_enum_cond/= big_geq_mkord.
+apply: ub_ereal_sup => _ [/= F [finF PF] <-].
+rewrite fsbig_finite//= -(big_rmcond_in (fun i=> P i && (m <= i)%N))/=.
+  exact: lee_sum_fset_lim_geq.
+by move=> k; rewrite in_fset_set// inE => /PF ->.
+Qed.
+
+Lemma nneseriesID (R : realType) m (a P : pred nat) (f : nat -> \bar R):
+  (forall k : nat, P k -> (0%R <= f k)%E) ->
+  \big[+%R/0]_(m <= k <oo | P k) f k =
+  (\big[+%R/0%R]_(m <= k <oo | P k && a k) f k)%E
+  + (\big[+%R/0%R]_(m <= k <oo | P k && ~~ a k) f k)%E.
+Proof.
+move=> nn.
+rewrite nneseries_esum_geq//.
+rewrite (esumID a)/=; last by move=> ? /andP [] *; exact: nn.
+have->: [set x | P x && (m <= x)%N] `&` (fun x : nat => a x) =
+        [set x | (P x && a x) && (m <= x)%N].
+  by apply: funext=> x /=; rewrite (propext (rwP andP)) andbAC.
+have->: [set x | P x && (m <= x)%N] `&` ~` (fun x : nat => a x) =
+        [set x | (P x && ~~ a x) && (m <= x)%N].
+  apply: funext=> x /=.
+  by rewrite (propext (rwP negP)) (propext (rwP andP)) andbAC.
+by rewrite -!nneseries_esum_geq//; move=> ? /andP [] *; exact: nn.
+Qed.
+
 End move_to_somewhere.
 Arguments countable_range_comp [T0 T1 T2].
 Arguments finite_range_comp [T0 T1 T2].
@@ -3027,36 +3116,35 @@ Lemma bernoulli_mmt_gen_fun (X : {dRV P >-> bool}) (t : R) :
 Proof.
 move=> bX. rewrite/mmt_gen_fun.
 pose mmtX : {RV P >-> R} := expR \o t \o* (btr P X).
-transitivity ((expR (t * 1))%:E * P [set x | X x == true] + (expR (t * 0))%:E * P [set x | X x == false]).
-  set Y := expR \o _.
-  have cntY: countable (range Y).
-    rewrite /Y mulr_funEcomp /btr /bool_to_real.
-    apply: countable_range_comp; left.
-    apply: countable_range_comp; left.
-    apply: countable_range_comp; left.
-    apply: countable_range_comp; left.
-    apply: (sub_countable _ [set: bool])=> //.
-    exact: subset_card_le.
-  pose dY:= discreteMeasurableFun.Pack (discreteMeasurableFun.Class (MeasurableFun_isDiscrete.Build _ _ _ _ _ cntY)).
-  have->: Y = dY by [].
-  rewrite dRV_expectation; last first.
-    rewrite /dY /=.
-    apply: measurable_bounded_integrable=> //.
-      by rewrite /= probability_setT ltry.
-    rewrite bounded_image.
-    apply: finite_bounded.
-    rewrite mulr_funEcomp.
-    apply: (finite_range_comp _ expR); left.
-    apply: finite_range_comp; left.
-    apply: finite_range_comp; left.
-    apply: finite_range_comp; left.
-    apply: (card_le_finite _ [set: bool])=> //.
-    exact: subset_card_le.
-  admit.
-rewrite mulr1 mulr0 expR0 mul1e.
-rewrite (eqP (bernoulli_RV1 bX)) (eqP (bernoulli_RV2 bX)).
-by rewrite -EFinM -EFinD mulrC.
-Admitted.
+set A := X @^-1` [set true].
+set B := X @^-1` [set false].
+have mA: measurable A by exact: measurable_sfunP.
+have mB: measurable B by exact: measurable_sfunP.
+have dAB: [disjoint A & B]
+  by rewrite /disj_set /A /B preimage_true preimage_false setICr.
+have TAB: setT = A `|` B by rewrite -preimage_setU -setT_bool preimage_setT.
+rewrite unlock.
+rewrite TAB integral_setU_EFin -?TAB//.
+under eq_integral.
+  move=> x /=.
+  rewrite /A inE /bool_to_real /= => ->.
+  rewrite mul1r.
+  over.
+rewrite integral_cst//.
+under eq_integral.
+  move=> x /=.
+  rewrite /B inE /bool_to_real /= => ->.
+  rewrite mul0r.
+  over.
+rewrite integral_cst//.
+rewrite /A /B /preimage /=.
+under eq_set do rewrite (propext (rwP eqP)).
+rewrite (eqP (bernoulli_RV1 bX)).
+under eq_set do rewrite (propext (rwP eqP)).
+rewrite (eqP (bernoulli_RV2 bX)).
+rewrite -EFinD; congr (_ + _)%:E; rewrite mulrC//.
+by rewrite expR0 mulr1.
+Qed.
 
 Lemma iter_mule (n : nat) (x y : \bar R) : iter n ( *%E x) y = (x ^+ n * y)%E.
 Proof. by elim: n => [|n ih]; rewrite ?mul1e// [LHS]/= ih expeS muleA. Qed.
