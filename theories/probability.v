@@ -3426,3 +3426,17 @@ by rewrite mulrAC.
 Qed.
 
 End bernoulli.
+
+Section discrete_time_markov_chain.
+Local Open Scope ereal_scope.
+Context (R : realType) (P : probability nat R) (X : {RV P >-> nat}^nat).
+
+Definition joint_events n x := \bigcap_(i < n) [set j | X i j = x i].
+
+Definition discrete_markov_property :=
+  forall n x,
+    P (joint_events n.+1 x) > 0 ->
+    ' P [ [set i | X (n.+1) i = x (n.+1)] | joint_events n.+1 x ] = 
+      ' P [ [set i | X (n.+1) i = x (n.+1)] | [set i | X n i = x n] ].
+
+End discrete_time_markov_chain.
