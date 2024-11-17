@@ -1391,8 +1391,7 @@ apply: cvgeM.
 - apply: mule_def_fin => //.
   apply: integral_fune_fin_num => //.
   exact: integrableS _ _ _ f_int.
-- suff: semi_sigma_additive nu; first exact.
-  exact: nu_sigma_additive.
+- exact: nu_sigma_additive.
 - exact: cvg_cst.
 Qed.
 
@@ -1416,3 +1415,29 @@ HB.instance Definition _ :=
   @Measure_isProbability.Build _ _ R wgt wgt_setT.
 
 End weighted.
+
+From mathcomp Require Import matrix.
+
+Section vector_expectation.
+Context d (T : measurableType d) (R : realType).
+
+Local Open Scope ereal_scope.
+
+Definition matrix_expectation m n (P : probability T R) (X : 'M[{RV P >-> R}]_(m, n)) :=
+  \matrix_(i < m, j < n) 'E_P[X i j].
+
+Notation "'mE_ P [ X ]" := (@matrix_expectation _ _ P X).
+
+
+Definition mulmxfun {m n p} (A : 'M[{mfun T >-> R}]_(m, n)) (B : 'M[{mfun T >-> R}]_(n, p)) F G z : 'M[{mfun T >-> R}]_(m, p) :=
+  \matrix_(i, k) \big[F/z]_j (G (A i j) (B j k))%R.
+
+
+Context m n (P : probability T R) (X : 'M[{RV P >-> R}]_(m, n)) (Y : 'M[{RV P >-> R}]_(m, n)).
+(* Definition x : {RV P >-> R} := [the {RV P >-> R} of (X 0%O 0%O \-cst (fine 'E_P[X 0%O 0%O]))%R]. *)
+Definition A : 'M[{RV P >-> R}]_(m,n) := (\matrix_(i, j) [the {RV P >-> R} of (X i j \-cst (fine 'E_P[X i j]))])%R.
+Definition B : 'M[{RV P >-> R}]_(m,n) := (\matrix_(i, j) [the {RV P >-> R} of (Y i j \-cst (fine 'E_P[Y i j]))])%R.
+Definition matrix_covariance :=
+  'mE_P[ mulmxfun A B^T (GRing.add_fun) (GRing.mul_fun) (cst 0) ]%R.
+
+End vector_expectation.
