@@ -3440,3 +3440,12 @@ Definition discrete_markov_property :=
       ' P [ [set i | X (n.+1) i = x (n.+1)] | [set i | X n i = x n] ].
 
 End discrete_time_markov_chain.
+
+Section markov_decision_process.
+Context d d' (S : measurableType d) (A : measurableType d') (R : realType).
+
+Definition Tr := [the measurableType (d, d').-prod of (S * A)%type].
+
+Context (P : Tr -> probability S R).
+
+End markov_decision_process.
