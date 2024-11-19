@@ -1009,6 +1009,25 @@ Qed.
 
 End independent_RVs_lemmas.
 
+Lemma measurable_fun_prod d [T : measurableType d] [R : realType] [D : set T] [I : eqType]
+    (s : seq I) [h : I -> T -> R] :
+  (forall n : I, n \in s -> measurable_fun D (h n)) ->
+  measurable_fun D (fun x => (\prod_(i <- s) h i x)%R).
+Proof.
+elim: s.
+  move=> mh.
+  under eq_fun do rewrite big_nil//=.
+  exact: measurable_cst.
+move=> x y ih mh.
+under eq_fun do rewrite big_cons//=.
+apply: measurable_funM => //.
+  apply: mh.
+  by rewrite mem_head.
+apply: ih => n ny.
+apply: mh.
+by rewrite inE orbC ny.
+Qed.
+
 Section product_expectation.
 Context {R : realType} d (T : measurableType d).
 Variable P : probability T R.
@@ -1295,6 +1314,177 @@ transitivity ('E_P[X^\+ - X^\-] * 'E_P[Y^\+ - Y^\-]).
   by rewrite -expectationB//= -expectationB.
 by congr *%E; congr ('E_P[_]); rewrite [RHS]funrposneg.
 Qed.
+
+(*Lemma independent_RVsS n (X : {RV P >-> R}^nat) :
+  independent_RVs P n.+1 X -> independent_RVs P n X.
+Proof.
+move=> [/= mPnX PnX].
+rewrite /independent_RVs /mutual_independence/=; split.
+  by move=> i ni A /mPnX; rewrite ltnS//; apply; exact: ltnW.
+by move=> J Jn E JE; apply: PnX => // i /Jn/= /ltnW.
+Qed.
+*)
+Lemma prodE (s : seq nat) (X : {RV P >-> R}^nat) (t : T) :
+  (\prod_(i <- s) X i t)%R = ((\prod_(j <- s) X j)%R t).
+Proof.
+by elim/big_ind2 : _ => //= {}X x {}Y y -> ->.
+Qed.
+
+Lemma set_cons2 (I : eqType) (x y : I) : [set` [:: x; y]] = [set x ; y].
+Proof.
+apply/seteqP; split => z /=; rewrite !inE.
+  move=> /orP[|] /eqP ->; auto.
+by move=> [|] ->; rewrite eqxx// orbT.
+Qed.
+
+Lemma independent_RVsD1 (I : {fset nat}) i0 (X : {RV P >-> R}^nat) :
+  independent_RVs P [set` I] X -> independent_RVs P [set` (I `\ i0)%fset] X.
+Proof.
+move=> H.
+split => [/= i|/= J JIi0 E EK].
+  rewrite !inE => /andP[ii0 iI].
+  by apply H.
+apply H => //.
+by move=> /= x /JIi0 /=; rewrite !inE => /andP[].
+Qed.
+
+Lemma independent_integrable_prod (I : {fset nat}) (X : {RV P >-> R}^nat) :
+  independent_RVs P [set` I] X ->
+  (forall i, i \in I -> P.-integrable setT (EFin \o X i)) ->
+  P.-integrable setT (EFin \o (\prod_(i <- I) X i)%R).
+Proof.
+apply: (@finSet_rect _ (fun I => independent_RVs P [set` I] X ->
+  (forall i : nat, i \in I -> P.-integrable [set: T] (EFin \o X i)) ->
+  P.-integrable [set: T] (EFin \o (\prod_(i <- I) X i)%R))) => /=.
+move=> {}I ih indeX iX.
+have [->{I ih indeX iX}|/fset0Pn[i0 i0I]] := eqVneq I fset0.
+  rewrite big_nil/=.
+  apply/integrableP; split => //=.
+    exact/measurable_EFinP.
+  under eq_integral.
+    move=> x _.
+    rewrite (_ : _%:E = cst 1 x)//=; last first.
+      by rewrite normr1.
+    over.
+  rewrite integral_cst// mul1e.
+  by rewrite [ltLHS]probability_setT ltry.
+have IE := fsetD1K i0I.
+rewrite -IE big_fsetU1/=; last by rewrite !inE/= eqxx.
+rewrite (_ : _ \o _ = (EFin \o X i0) \* (EFin \o (\prod_(j <- (I `\ i0)%fset) X j)%R))//.
+apply: independent_integrableM; last 2 first.
+  exact: iX.
+  apply: ih => //.
+    by rewrite fproperD1.
+  by apply: independent_RVsD1 => //.
+  move=> i iIi0.
+  apply: iX.
+  by move: iIi0; rewrite !inE => /andP[].
+have [|/fset0Pn[i1]] := eqVneq (I `\ i0)%fset fset0.
+  move=> Ii00.
+  have IE' : I = [fset i0]%fset by rewrite -IE Ii00 fsetU0.
+  rewrite Ii00 big_nil.
+  move: indeX.
+  rewrite IE' set_fset1.
+  rewrite /independent_RVs2 => indeX.
+  split => /=.
+    move=> [|]/= _.
+      move=> A [/= B mB] <-.
+      rewrite setTI.
+      rewrite preimage_cst.
+      by case: ifPn.
+    move=> A [/= B mB] <-.
+    have := measurable_funP (X i0).
+    exact.
+  move=> J + E EJ.
+  rewrite setT_bool => JT.
+  have [/eqP| | |] := subset_set2 JT.
+  - rewrite set_seq_eq0 => /eqP ->.
+    by rewrite !big_nil probability_setT.
+  - move=> J0.
+    rewrite -bigcap_fset J0 bigcap_set1.
+    by rewrite -(set_fsetK J) J0 fset_set1 big_seq_fset1.
+  - move=> J1.
+    rewrite -bigcap_fset J1 bigcap_set1.
+    by rewrite -(set_fsetK J) J1 fset_set1 big_seq_fset1.
+  - move=> JE.
+    clear indeX.
+    rewrite -bigcap_fset JE !bigcap_setU1 bigcap_set1.
+    rewrite -(set_fsetK J) JE !fset_setU1// fset_set1.
+    rewrite !big_fsetU1 ?inE//= big_seq_fset1.
+    have : g_sigma_algebra_mapping (X i0) (E false).
+      have /= := EJ false.
+      rewrite inE.
+      apply.
+      by rewrite -(set_fsetK J) JE in_fset_set// !inE/=; right.
+    case => B mB <-.
+    have : g_sigma_algebra_mapping (1%R : {RV P >-> R}) (E true).
+      have /= := EJ true.
+      rewrite inE.
+      apply.
+      by rewrite -(set_fsetK J) JE in_fset_set// !inE/=; left.
+    case => C mC <-.
+    rewrite !setTI.
+    rewrite !preimage_cst.
+    case: ifPn => C1.
+      by rewrite !setTI probability_setT mul1e.
+    by rewrite set0I measure0 mul0e.
+rewrite !inE => /andP[i10 i1I].
+split => /=.
+  move=> [|]/= _.
+  move=> A [/= B mB] <-.
+  have : measurable_fun [set: T] (fun x : T => (\prod_(i <- (I `\ i0)%fset) X i x)%R).
+    by apply: measurable_fun_prod => //=.
+  move=> /(_ measurableT _ mB).
+  congr (_ _).
+  by rewrite !setTI; apply/seteqP; split => t/=; rewrite prodE.
+  move=> A [/= B mB] <-.
+  have := measurable_funP (X i0).
+  exact.
+move=> J + E EJ.
+rewrite setT_bool => JT.
+have [/eqP| | |] := subset_set2 JT.
+- rewrite set_seq_eq0 => /eqP ->.
+  by rewrite !big_nil probability_setT.
+- move=> J0.
+  rewrite -bigcap_fset J0 bigcap_set1.
+  by rewrite -(set_fsetK J) J0 fset_set1 big_seq_fset1.
+- move=> J1.
+  rewrite -bigcap_fset J1 bigcap_set1.
+  by rewrite -(set_fsetK J) J1 fset_set1 big_seq_fset1.
+- move=> JE.
+  rewrite -bigcap_fset JE !bigcap_setU1 bigcap_set1.
+  rewrite -(set_fsetK J) JE !fset_setU1// fset_set1.
+  rewrite !big_fsetU1 ?inE//= big_seq_fset1.
+  have Efalse : g_sigma_algebra_mapping (X i0) (E false).
+    have /= := EJ false.
+    rewrite inE.
+    apply.
+    by rewrite -(set_fsetK J) JE in_fset_set// !inE/=; right.
+  have Etrue : g_sigma_algebra_mapping
+      ((\prod_(j <- (I `\ i0)%fset) X j)%R : {RV P >-> R}) (E true).
+    have /= := EJ true.
+    rewrite inE.
+    apply.
+    by rewrite -(set_fsetK J) JE in_fset_set// !inE/=; left.
+  case: indeX => /= [_] indeX.
+  pose J' := [fset i0; i1]%fset.
+  have J'I : [set` J'] `<=` [set` I].
+    move=> z/=.
+    by rewrite !inE => /orP[|] /eqP ->//.
+  pose E' i := if i == i0 then E false else E true.
+  have E'J i : i \in J' -> E' i \in g_sigma_algebra_mapping (X i).
+    rewrite !inE => /orP[|]/eqP ->.
+      by rewrite /E' eqxx.
+    rewrite /E' (negbTE i10).
+    admit.
+  have := indeX _ J'I _ E'J.
+  rewrite /J'.
+  rewrite !big_fsetU1 ?inE//=; last 2 first.
+    by rewrite eq_sym.
+    by rewrite eq_sym.
+  rewrite !big_seq_fset1.
+  by rewrite /E' eqxx (negbTE i10) setIC muleC.
+Abort.
 
 End product_expectation.
 
