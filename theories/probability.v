@@ -1009,6 +1009,11 @@ Qed.
 
 End independent_RVs_lemmas.
 
+Definition preimage_classes I (d : I -> measure_display)
+    (Tn : forall k, semiRingOfSetsType (d k)) (T : Type) (fn : forall k, T -> Tn k) :=
+  <<s \bigcup_k preimage_class setT (fn k) measurable >>.
+Arguments preimage_classes {I} d Tn {T} fn.
+
 Lemma measurable_fun_prod d [T : measurableType d] [R : realType] [D : set T] [I : eqType]
     (s : seq I) [h : I -> T -> R] :
   (forall n : I, n \in s -> measurable_fun D (h n)) ->
@@ -1466,24 +1471,63 @@ have [/eqP| | |] := subset_set2 JT.
     rewrite inE.
     apply.
     by rewrite -(set_fsetK J) JE in_fset_set// !inE/=; left.
-  case: indeX => /= [_] indeX.
-  pose J' := [fset i0; i1]%fset.
+  clear EJ.
+  have ? : d.-measurable (E true).
+    move: Etrue.
+    move=> [/= B mB] <-.
+    have : (forall n : Datatypes_nat__canonical__choice_Choice,
+      n \in (I `\ i0)%fset -> measurable_fun [set: T] (X n)).
+      move=> n ?.
+      by apply: measurable_funP.
+    move=> /(@measurable_fun_prod _ _ _ setT _ (I `\ i0)%fset X).
+    move=> /(_ measurableT _ mB).
+    rewrite (_ : (fun x : T => (\prod_(i <- (I `\ i0)%fset) X i x)%R) =
+                 (\prod_(j <- (I `\ i0)%fset) X j)%R); last first.
+      apply/funext => t.
+      by rewrite -prodE.
+    done.
+  case: indeX => /= H indeX.
+  pose J' := I.
   have J'I : [set` J'] `<=` [set` I].
-    move=> z/=.
-    by rewrite !inE => /orP[|] /eqP ->//.
-  pose E' i := if i == i0 then E false else E true.
+    by [].
+  case: Efalse => /= B mB; rewrite setTI => Efalse.
+  case: Etrue => /= C mC; rewrite setTI => Etrue.
+  pose E' (i : nat) := if i == i0 then X i0 @^-1` B else X i @^-1` C.
   have E'J i : i \in J' -> E' i \in g_sigma_algebra_mapping (X i).
-    rewrite !inE => /orP[|]/eqP ->.
-      by rewrite /E' eqxx.
-    rewrite /E' (negbTE i10).
-    admit.
+    rewrite inE.
+    rewrite /J' -IE !inE => /orP[/eqP ->|].
+    exists B => //.
+    by rewrite setTI /E' eqxx.
+    move/andP => [ii0 iI].
+    rewrite /E' (negbTE ii0).
+    exists C => //.
+    by rewrite setTI.
   have := indeX _ J'I _ E'J.
   rewrite /J'.
-  rewrite !big_fsetU1 ?inE//=; last 2 first.
-    by rewrite eq_sym.
-    by rewrite eq_sym.
-  rewrite !big_seq_fset1.
-  by rewrite /E' eqxx (negbTE i10) setIC muleC.
+  rewrite -IE.
+  rewrite !big_fsetU1/=; last 2 first.
+    by rewrite !inE eqxx.
+    by rewrite !inE eqxx.
+  rewrite (_ : E' i0 = E false); last first.
+    by rewrite /E' eqxx -Efalse.
+  rewrite (_ : \big[setI/[set: T]]_(i <- (I `\ i0)%fset) E' i =
+               \big[setI/[set: T]]_(i <- (I `\ i0)%fset) (X i @^-1` C)); last first.
+    rewrite big_seq [RHS]big_seq.
+    apply/eq_bigr => /= i; rewrite !inE => /andP[ii0 _].
+    by rewrite /E' (negbTE ii0).
+  rewrite (_ : \prod_(i <- (I `\ i0)%fset) P (E' i) =
+               \prod_(i <- (I `\ i0)%fset) P (X i @^-1` C)); last first.
+    rewrite big_seq [RHS]big_seq.
+    apply/eq_bigr => /= i; rewrite !inE => /andP[ii0 _].
+    by rewrite /E' (negbTE ii0).
+  rewrite -indeX; last 2 first.
+    by move=> z/=; rewrite !inE/= => /andP[].
+    move=> i ii0.
+    rewrite inE.
+    exists C => //.
+    by rewrite setTI.
+  rewrite K.
+  by rewrite setIC muleC.
 Abort.
 
 End product_expectation.
