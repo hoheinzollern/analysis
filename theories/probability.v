@@ -76,22 +76,23 @@ Import numFieldTopology.Exports.
 Local Open Scope classical_set_scope.
 Local Open Scope ring_scope.
 
-Definition random_variable (d : _) (T : measurableType d) (R : realType)
-  (P : probability T R) := {mfun T >-> R}.
+Definition random_variable (d d' : _) (T : measurableType d)
+  (T' : measurableType d') (R : realType) (P : probability T R) := {mfun T >-> T'}.
 
-Notation "{ 'RV' P >-> R }" := (@random_variable _ _ R P) : form_scope.
+Notation "{ 'RV' P >-> T }" := (@random_variable _ _ _ T _ P) : form_scope.
 
 Lemma notin_range_measure d (T : measurableType d) (R : realType)
     (P : {measure set T -> \bar R}) (X : T -> R) r :
   r \notin range X -> P (X @^-1` [set r]) = 0%E.
 Proof. by rewrite notin_setE => hr; rewrite preimage10. Qed.
 
-Lemma probability_range d (T : measurableType d) (R : realType)
-  (P : probability T R) (X : {RV P >-> R}) : P (X @^-1` range X) = 1%E.
+Lemma probability_range d d' (T : measurableType d) (T' : measurableType d')
+    (R : realType) (P : probability T R) (X : {RV P >-> T'}) :
+  P (X @^-1` range X) = 1%E.
 Proof. by rewrite preimage_range probability_setT. Qed.
 
-Definition distribution d (T : measurableType d) (R : realType)
-    (P : probability T R) (X : {mfun T >-> R}) :=
+Definition distribution d d' (T : measurableType d) (T' : measurableType d')
+    (R : realType) (P : probability T R) (X : {mfun T >-> T'}) :=
   pushforward P (@measurable_funP _ _ _ _ X).
 
 Section distribution_is_probability.
@@ -122,14 +123,15 @@ End distribution_is_probability.
 
 Section transfer_probability.
 Local Open Scope ereal_scope.
-Context d (T : measurableType d) (R : realType) (P : probability T R).
+Context d d' (T : measurableType d) (T' : measurableType d') (R : realType).
+Variable (P : probability T R).
 
-Lemma probability_distribution (X : {RV P >-> R}) r :
+Lemma probability_distribution (X : {RV P >-> T'}) r :
   P [set x | X x = r] = distribution P X [set r].
 Proof. by []. Qed.
 
-Lemma integral_distribution (X : {RV P >-> R}) (f : R -> \bar R) :
-    measurable_fun [set: R] f -> (forall y, 0 <= f y) ->
+Lemma integral_distribution (X : {RV P >-> T'}) (f : T' -> \bar R) :
+    measurable_fun [set: T'] f -> (forall y, 0 <= f y) ->
   \int[distribution P X]_y f y = \int[P]_x (f \o X) x.
 Proof. by move=> mf f0; rewrite ge0_integral_pushforward. Qed.
 
@@ -1033,6 +1035,28 @@ apply: mh.
 by rewrite inE orbC ny.
 Qed.
 
+Section pairRV.
+Context d d' {T : measurableType d} {T' : measurableType d'} {R : realType}
+  (P : probability T R).
+
+Definition pairRV (X Y : {RV P >-> T'}) : T * T -> T' * T' :=
+  (fun x => (X x.1, Y x.2)).
+
+Lemma pairM (X Y : {RV P >-> T'}) : measurable_fun setT (pairRV X Y).
+Proof.
+rewrite /pairRV.
+apply/prod_measurable_funP; split => //=.
+  rewrite (_ : (fst \o (fun x : T * T => (X x.1, Y x.2))) = (fun x => X x.1))//.
+  by apply/measurableT_comp => //=.
+rewrite (_ : (snd \o (fun x : T * T => (X x.1, Y x.2))) = (fun x => Y x.2))//.
+by apply/measurableT_comp => //=.
+Qed.
+
+HB.instance Definition _ (X Y : {RV P >-> T'}) :=
+  @isMeasurableFun.Build _ _ _ _ (pairRV X Y) (pairM X Y).
+
+End pairRV.
+
 Section product_expectation.
 Context {R : realType} d (T : measurableType d).
 Variable P : probability T R.
@@ -1067,18 +1091,29 @@ by exists B2 => //; rewrite setTI.
 by exists B1 => //; rewrite setTI.
 Qed.
 
+Lemma tmp1 (X Y : {RV P >-> R}) (B1 B2 : set R) :
+  measurable B1 -> measurable B2 ->
+  independent_RVs2 P X Y ->
+  P (X @^-1` B1 `&` Y @^-1` B2) = (P \x P) (pairRV X Y @^-1` (B1 `*` B2)).
+Proof.
+move=> mB1 mB2 XY.
+rewrite (_ : ((fun x : T * T => (X x.1, Y x.2)) @^-1` (B1 `*` B2)) =
+             (X @^-1` B1) `*` (Y @^-1` B2)); last first.
+  by apply/seteqP; split => [[x1 x2]|[x1 x2]]//.
+rewrite product_measure1E; last 2 first.
+  rewrite -[_ @^-1` _]setTI.
+  by apply: (measurable_funP X).
+  rewrite -[_ @^-1` _]setTI.
+  by apply: (measurable_funP Y).
+by rewrite tmp0//.
+Qed.
+
 Let phi (x : R * R) := (x.1 * x.2)%R.
 Let mphi : measurable_fun setT phi.
 Proof.
 rewrite /= /phi.
 by apply: measurable_funM.
 Qed.
-
-Lemma tmp (X Y : {RV P >-> R}) :
-  independent_RVs2 P X Y ->
-  distribution P (X * Y)%R = pushforward (distribution P X \x distribution P Y) mphi.
-Proof.
-Admitted.
 
 Lemma PP : (P \x P) setT = 1.
 Proof.
@@ -1097,61 +1132,73 @@ Qed.
 
 HB.instance Definition _ := @Measure_isProbability.Build _ _ R (P \x P) PP.
 
-Definition mulRV (X Y : {RV P >-> R}) := (fun x => X x.1 * Y x.2)%R.
-
-Lemma pairM (X Y : {RV P >-> R}) : measurable_fun setT (mulRV X Y).
-Proof.
-apply/measurable_funM => //.
-  by apply/measurableT_comp.
-by apply/measurableT_comp.
-Qed.
-
-HB.instance Definition _ (X Y : {RV P >-> R}) :=
-  @isMeasurableFun.Build _ _ _ _ (mulRV X Y) (pairM X Y).
-
 Lemma integrable_expectationM (X Y : {RV P >-> R}) :
   independent_RVs2 P X Y ->
   P.-integrable setT (EFin \o X) -> P.-integrable setT (EFin \o Y) ->
-  `|'E_(P \x P) [mulRV X Y]| < +oo.
+  'E_(P \x P) [(fun x => `|X x.1 * Y x.2|)%R] < +oo
+(*  `|'E_(P) [(fun x => X x * Y x)%R]| < +oo *) .
 Proof.
 move=> indeXY iX iY.
-apply: (@le_lt_trans _ _ 'E_(P \x P)[(fun x => `|X x.1 * Y x.2|%R)]).
+(*apply: (@le_lt_trans _ _ 'E_(P \x P)[(fun x => `|(X x.1 * Y x.2)|%R)]
+   (* 'E_(P)[(fun x => `|(X x * Y x)|%R)] *)  ).
   rewrite unlock/=.
   rewrite (le_trans (le_abse_integral _ _ _))//.
   apply/measurable_EFinP/measurable_funM.
     by apply/measurableT_comp => //.
-  by apply/measurableT_comp => //.
+  by apply/measurableT_comp => //.*)
 rewrite unlock.
 rewrite [ltLHS](_ : _ =
+    \int[distribution (P \x P) (pairRV X Y)%R]_x `|x.1 * x.2|%:E); last first.
+  rewrite integral_distribution//=; last first.
+    apply/measurable_EFinP => //=.
+    by apply/measurableT_comp => //=.
+(*  admit. (* NG *)*)
+rewrite [ltLHS](_ : _ =
     \int[distribution P X \x distribution P Y]_x `|x.1 * x.2|%:E); last first.
-  transitivity (\int[(distribution (P \x P) (mulRV X Y))]_x (normr x)%:E).
-    rewrite integral_distribution//=.
-    exact/measurable_EFinP.
-  transitivity (
-    \int[pushforward (distribution P X \x distribution P Y) mphi]_x (normr x)%:E
-  ); last first.
-    rewrite ge0_integral_pushforward//=.
-    exact/measurable_EFinP.
-  apply: eq_measure_integral => /= A mA _.
-  rewrite /product_measure1/= /pushforward/=.
-  rewrite integral_distribution//=.
-  admit.
+  apply: eq_measure_integral => //= A mA _.
+  apply/esym.
+  apply: product_measure_unique => //= A1 A2 mA1 mA2.
+  rewrite /pushforward/=.
+  rewrite -tmp1//.
+  by rewrite tmp0//.
 rewrite fubini_tonelli1//=; last first.
   by apply/measurable_EFinP => /=; apply/measurableT_comp => //=.
 rewrite /fubini_F/= -/mu.
-rewrite [ltLHS](_ : _ = \int[distribution P X]_x `|x|%:E * \int[distribution P Y]_y `|y|%:E); last first.
-  admit.
-move/integrableP : iX => [mX].
-rewrite -(@integral_distribution _ _ _ _ _ (EFin \o normr))//; last 2 first.
+rewrite [ltLHS](_ : _ = \int[distribution P X]_x `|x|%:E *
+                        \int[distribution P Y]_y `|y|%:E); last first.
+  rewrite -ge0_integralZr//=; last 2 first.
+    exact/measurable_EFinP.
+    by apply: integral_ge0 => //.
+  apply: eq_integral => x _.
+  rewrite -ge0_integralZl//=.
+    by under eq_integral do rewrite normrM.
   exact/measurable_EFinP.
-  by move=> y; rewrite /= lee_fin.
-move=> iX.
-move/integrableP : iY => [mY].
-rewrite -(@integral_distribution _ _ _ _ _ (EFin \o normr))//; last 2 first.
-  exact/measurable_EFinP.
-  by move=> y; rewrite /= lee_fin.
-move=> iY.
+rewrite integral_distribution//=; last exact/measurable_EFinP.
+rewrite integral_distribution//=; last exact/measurable_EFinP.
 rewrite lte_mul_pinfty//.
+  by apply: integral_ge0 => //.
+  apply: integral_fune_fin_num => //=.
+  by move/integrable_abse : iX => //.
+apply: integral_fune_lt_pinfty => //.
+by move/integrable_abse : iY => //.
+Qed.
+
+Lemma expectation_prod (X Y : {RV P >-> R}) :
+  independent_RVs2 P X Y ->
+  P.-integrable setT (EFin \o X) -> P.-integrable setT (EFin \o Y) ->
+  'E_(P \x P) [(fun x => X x.1 * Y x.2)%R] = 'E_P [X] * 'E_P [Y].
+Proof.
+move=> indeXY iX iY.
+rewrite unlock.
+rewrite -fubini1//=; last first.
+  apply/integrableP; split.
+    admit.
+  have := integrable_expectationM indeXY iX iY.
+  rewrite unlock.
+  apply: le_lt_trans.
+  rewrite le_eqVlt; apply/orP; left.
+  by apply/eqP/eq_integral => y _//.
+rewrite /fubini_F/=.
 Admitted.
 
 End product_expectation.
