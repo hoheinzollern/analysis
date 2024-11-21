@@ -60,6 +60,8 @@ From mathcomp Require Import lebesgue_integral kernel.
 Reserved Notation "'{' 'RV' P >-> R '}'"
   (at level 0, format "'{' 'RV'  P  '>->'  R '}'").
 Reserved Notation "''E_' P [ X ]" (format "''E_' P [ X ]", at level 5).
+  (at level 0, format "'{' 'RV'  P  '>->'  R '}'").
+Reserved Notation "''E_' P [ f . X ]" (format "''E_' P [ f . X ]", at level 5).
 Reserved Notation "''V_' P [ X ]" (format "''V_' P [ X ]", at level 5).
 Reserved Notation "{ 'dmfun' aT >-> T }"
   (at level 0, format "{ 'dmfun'  aT  >->  T }").
@@ -137,21 +139,22 @@ Proof. by move=> mf f0; rewrite ge0_integral_pushforward. Qed.
 
 End transfer_probability.
 
-HB.lock Definition expectation {d} {T : measurableType d} {R : realType}
-  (P : probability T R) (X : T -> R) := (\int[P]_w (X w)%:E)%E.
+HB.lock Definition expectation {d d'} {T : measurableType d} {T' : measurableType d'} {R : realType}
+  (P : probability T R) (X : T -> T') (f : T' -> \bar R) := (\int[P]_w (f \o X) w)%E.
 Canonical expectation_unlockable := Unlockable expectation.unlock.
 Arguments expectation {d T R} P _%_R.
-Notation "''E_' P [ X ]" := (@expectation _ _ _ P X) : ereal_scope.
+Notation "''E_' P [ X ]" := (@expectation _ _ _ _ _ P X EFin) : ereal_scope.
+Notation "''E_' P [ f . X ]" := (@expectation _ _ _ _ _ P X f) : ereal_scope.
 
 Section expectation_lemmas.
 Local Open Scope ereal_scope.
-Context d (T : measurableType d) (R : realType) (P : probability T R).
+Context d d' (T : measurableType d) (U : measurableType d') (R : realType) (P : probability T R).
 
-Lemma expectation_def (X : {RV P >-> R}) : 'E_P[X] = (\int[P]_w (X w)%:E)%E.
+Lemma expectation_def (X : {RV P >-> U}) f : 'E_P[f . X] = (\int[P]_w (f \o X) w)%E.
 Proof. by rewrite unlock. Qed.
 
-Lemma expectation_fin_num (X : {RV P >-> R}) : P.-integrable setT (EFin \o X) ->
-  'E_P[X] \is a fin_num.
+Lemma expectation_fin_num (X : {RV P >-> U}) : P.-integrable setT (f \o X) ->
+  'E_P[f . X] \is a fin_num.
 Proof. by move=> ?; rewrite unlock integral_fune_fin_num. Qed.
 
 Lemma expectation_cst r : 'E_P[cst r] = r%:E.
@@ -160,26 +163,26 @@ Proof. by rewrite unlock/= integral_cst//= probability_setT mule1. Qed.
 Lemma expectation_indic (A : set T) (mA : measurable A) : 'E_P[\1_A] = P A.
 Proof. by rewrite unlock integral_indic// setIT. Qed.
 
-Lemma integrable_expectation (X : {RV P >-> R})
-  (iX : P.-integrable [set: T] (EFin \o X)) : `| 'E_P[X] | < +oo.
+Lemma integrable_expectation (X : {RV P >-> U}) f
+  (iX : P.-integrable [set: T] (f \o X)) : `| 'E_P[f . X] | < +oo.
 Proof.
 move: iX => /integrableP[? Xoo]; rewrite (le_lt_trans _ Xoo)// unlock.
 exact: le_trans (le_abse_integral _ _ _).
 Qed.
 
-Lemma expectationMl (X : {RV P >-> R}) (iX : P.-integrable [set: T] (EFin \o X))
-  (k : R) : 'E_P[k \o* X] = k%:E * 'E_P [X].
+Lemma expectationMl (X : {RV P >-> U}) (iX : P.-integrable [set: T] (f \o X))
+  (k : R) : 'E_P[k \o* f \o X] = k%:E * 'E_P [f . X].
 Proof. by rewrite unlock muleC -integralZr. Qed.
 
-Lemma expectation_ge0 (X : {RV P >-> R}) :
-  (forall x, 0 <= X x)%R -> 0 <= 'E_P[X].
+Lemma expectation_ge0 (X : {RV P >-> U}) f :
+  (forall x, 0 <= (f \o X) x)%R -> 0 <= 'E_P[f . X].
 Proof.
 by move=> ?; rewrite unlock integral_ge0// => x _; rewrite lee_fin.
 Qed.
 
-Lemma expectation_le (X Y : T -> R) :
+Lemma expectation_le (X Y : T -> U) f :
     measurable_fun [set: T] X -> measurable_fun [set: T] Y ->
-    (forall x, 0 <= X x)%R -> (forall x, 0 <= Y x)%R ->
+    (forall x, 0 <= (f \o X) x) -> (forall x, 0 <= (f \o Y) x) ->
   {ae P, (forall x, X x <= Y x)%R} -> 'E_P[X] <= 'E_P[Y].
 Proof.
 move=> mX mY X0 Y0 XY; rewrite unlock ae_ge0_le_integral => //.
