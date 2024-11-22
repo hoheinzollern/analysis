@@ -110,14 +110,13 @@ Proof. by []. Qed.
 
 Lemma bounded_image (T : Type) (K : numFieldType)
   (V : pseudoMetricNormedZmodType K) (E : T -> V) (A : set T) :
-  [bounded E x | x in A] = [bounded y | y in E @` A].
+  [bounded y | y in E @` A] = [bounded E x | x in A].
 Proof.
 rewrite /bounded_near !nearE.
 congr (+oo _); apply: funext=> M.
 apply: propext; split => /=.
-  by move=> H x [] y Ay <-; exact: H.
-move=> + x Ax => /(_ (E x)); apply.
-by exists x.
+  by move=> + x Ax => /(_ (E x)); apply; exists x.
+by move=> H x [] y Ay <-; exact: H.
 Qed.
 
 Lemma finite_bounded (K : realFieldType) (V : pseudoMetricNormedZmodType K)
@@ -249,6 +248,67 @@ have->: [set x | P x && (m <= x)%N] `&` ~` (fun x : nat => a x) =
   by rewrite (propext (rwP negP)) (propext (rwP andP)) andbAC.
 by rewrite -!nneseries_esum_geq//; move=> ? /andP [] *; exact: nn.
 Qed.
+
+(* TODO: prove antitone variants and replace derive.ler0_derive1_nincr *)
+Lemma derivable1_mono [R : realType] (a b : itv_bound R) (f : R -> R) (x y : R) :
+  x \in Interval a b -> y \in Interval a b ->
+  {in Interval a b, forall x, derivable f x 1} ->
+  (forall t : R, forall Ht : t \in `]x, y[, 0 < 'D_1 f t) ->
+  x < y -> f x < f y.
+Proof.
+rewrite !itv_boundlr=> /andP [ax xb] /andP [ay yb].
+move=> derivable_f df_pos xy.
+have HMVT1: ({within `[x, y], continuous f})%classic.
+  apply: derivable_within_continuous=> z /[!itv_boundlr] /andP [xz zy].
+  apply: derivable_f.
+  by rewrite itv_boundlr (le_trans ax xz) (le_trans zy yb).
+have HMVT0: forall z : R, z \in `]x, y[ -> is_derive z 1 f ('D_1 f z).
+  move=> z /[!itv_boundlr] /andP [xz zy].
+  apply/derivableP/derivable_f.
+  rewrite itv_boundlr.
+  rewrite (le_trans (le_trans ax (lexx x : BLeft x <= BRight x)%O) xz).
+  by rewrite (le_trans (le_trans zy (lexx y : BLeft y <= BRight y)%O) yb).
+rewrite -subr_gt0.
+have[z xzy ->]:= MVT xy HMVT0 HMVT1.
+by rewrite mulr_gt0// ?df_pos// subr_gt0.
+Qed.
+
+Lemma derivable1_homo [R : realType] (a b : itv_bound R) (f : R -> R) (x y : R) :
+  x \in Interval a b -> y \in Interval a b ->
+  {in Interval a b, forall x, derivable f x 1} ->
+  (forall t:R, forall Ht : t \in `]x, y[, 0 <= 'D_1 f t) ->
+  x <= y -> f x <= f y.
+Proof.
+rewrite !itv_boundlr=> /andP [ax xb] /andP [ay yb].
+move=> derivable_f df_nneg xy.
+have HMVT1: ({within `[x, y], continuous f})%classic.
+  apply: derivable_within_continuous=> z /[!itv_boundlr] /andP [xz zy].
+  apply: derivable_f.
+  by rewrite itv_boundlr (le_trans ax xz) (le_trans zy yb).
+have HMVT0: forall z : R, z \in `]x, y[ -> is_derive z 1 f ('D_1 f z).
+  move=> z /[!itv_boundlr] /andP [xz zy].
+  apply/derivableP/derivable_f.
+  rewrite itv_boundlr.
+  rewrite (le_trans (le_trans ax (lexx x : BLeft x <= BRight x)%O) xz).
+  by rewrite (le_trans (le_trans zy (lexx y : BLeft y <= BRight y)%O) yb).
+rewrite -subr_ge0.
+move: xy; rewrite le_eqVlt=> /orP [/eqP-> | xy]; first by rewrite subrr.
+have[z xzy ->]:= MVT xy HMVT0 HMVT1.
+by rewrite mulr_ge0// ?df_nneg// subr_ge0 ltW.
+Qed.
+
+Lemma memB_itv (R : numDomainType) (b0 b1 : bool) (x y z : R) :
+  (y - z \in Interval (BSide b0 x) (BSide b1 y)) =
+  (x + z \in Interval (BSide (~~ b1) x) (BSide (~~ b0) y)).
+rewrite !in_itv /= /Order.lteif !if_neg.
+by rewrite gerBl gtrBl lerDl ltrDl lerBrDr ltrBrDr andbC.
+Qed.
+
+(* generalizes mem_1B_itvcc *)
+Lemma memB_itv0 (R : numDomainType) (b0 b1 : bool) (x y : R) :
+  (y - x \in Interval (BSide b0 0) (BSide b1 y)) =
+  (x \in Interval (BSide (~~ b1) 0) (BSide (~~ b0) y)).
+Proof. by rewrite memB_itv add0r. Qed.
 
 End move_to_somewhere.
 Arguments countable_range_comp [T0 T1 T2].
@@ -3292,8 +3352,45 @@ rewrite -mulrN -mulrA [in leRHS]mulrC expR_powR ge0_ler_powR// ?nnegrE.
   rewrite expRK//.
   rewrite /powR (*TODO: lemma ln of powR*) gt_eqF ?subr_gt0// expRK.
   (* requires analytical argument: see p.66 of mu's book *)
-  admit.
-Admitted.
+  Local Open Scope ring_scope.
+  rewrite -(@ler_pM2r _ 2)// -mulrA mulVf// mulr1 mulrDl.
+  rewrite -subr_le0 mulNr opprK.
+  rewrite addrC !addrA.
+  have->: delta ^+ 2 - delta * 2 = (1 - delta)^+2 - 1.
+    rewrite sqrrB expr1n mul1r [RHS]addrC !addrA addNr add0r addrC -mulNrn.
+    by rewrite -(mulr_natr (- delta) 2) mulNr.
+  rewrite addrAC subr_le0.
+  set f := fun (x : R) => x ^+ 2 + - (x * ln x) * 2.
+  have @idf (x : R) : 0 < x -> {df | is_derive x 1 f df}.
+    move=> x0; evar (df : (R : Type)); exists df.
+    apply: is_deriveD; first by [].
+    apply: is_deriveM; last by [].
+    apply: is_deriveN.
+    apply: is_deriveM; first by [].
+    exact: is_derive1_ln.
+  suff: forall x : R, x \in `]0, 1[ -> f x <= 1.
+    by apply; rewrite memB_itv0 in_itv /= delta0 delta1.
+  move=> x x01.
+  have->: 1 = f 1 by rewrite /f expr1n ln1 mulr0 oppr0 mul0r addr0.
+  have:= subset_itv_oo_oc x01 => /derivable1_homo; apply.
+  - by rewrite in_itv /= ltr01 lexx.
+  - move=> y /[!in_itv] /= /andP [] + _.
+    by case/idf=> ? /@ex_derive.
+  - move=> t /[!in_itv] /= /andP [] xt t1.
+    move: x01; rewrite in_itv=> /= /andP [] x0 _.
+    have t0 := lt_trans x0 xt.
+    Local Arguments derive_val {R V W a v f df}.
+    rewrite (derive_val (svalP (idf _ t0))) /=.
+    clear idf.
+    rewrite exp_derive derive_cst derive_id .
+    rewrite scaler0 add0r /GRing.scale /= !mulr1 expr1.
+    rewrite -mulrDr mulr_ge0// divff ?lt0r_neq0//.
+    rewrite opprD addrA subr_ge0 -ler_expR.
+    have:= t0; rewrite -lnK_eq => /eqP ->.
+    by rewrite -[leLHS]addr0 -(subrr 1) addrCA expR_ge1Dx.
+  - by move: x01; rewrite in_itv=> /= /andP [] _ /ltW.
+Qed.
+Local Open Scope ereal_scope.
 
 Lemma measurable_fun_le D (f g : T -> R) : d.-measurable D -> measurable_fun D f ->
   measurable_fun D g -> measurable (D `&` [set x | f x <= g x]%R).
