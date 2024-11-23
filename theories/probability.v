@@ -249,52 +249,58 @@ have->: [set x | P x && (m <= x)%N] `&` ~` (fun x : nat => a x) =
 by rewrite -!nneseries_esum_geq//; move=> ? /andP [] *; exact: nn.
 Qed.
 
-(* TODO: prove antitone variants and replace derive.ler0_derive1_nincr *)
-Lemma derivable1_mono [R : realType] (a b : itv_bound R) (f : R -> R) (x y : R) :
-  x \in Interval a b -> y \in Interval a b ->
-  {in Interval a b, forall x, derivable f x 1} ->
-  (forall t : R, forall Ht : t \in `]x, y[, 0 < 'D_1 f t) ->
-  x < y -> f x < f y.
+Lemma subset_itvW_bound (d : Order.disp_t) (T : porderType d)
+  (x y z u : itv_bound T) :
+  (x <= y)%O -> (z <= u)%O -> [set` Interval y z] `<=` [set` Interval x u].
 Proof.
-rewrite !itv_boundlr=> /andP [ax xb] /andP [ay yb].
-move=> derivable_f df_pos xy.
-have HMVT1: ({within `[x, y], continuous f})%classic.
-  apply: derivable_within_continuous=> z /[!itv_boundlr] /andP [xz zy].
-  apply: derivable_f.
-  by rewrite itv_boundlr (le_trans ax xz) (le_trans zy yb).
-have HMVT0: forall z : R, z \in `]x, y[ -> is_derive z 1 f ('D_1 f z).
-  move=> z /[!itv_boundlr] /andP [xz zy].
-  apply/derivableP/derivable_f.
-  rewrite itv_boundlr.
-  rewrite (le_trans (le_trans ax (lexx x : BLeft x <= BRight x)%O) xz).
-  by rewrite (le_trans (le_trans zy (lexx y : BLeft y <= BRight y)%O) yb).
-rewrite -subr_gt0.
-have[z xzy ->]:= MVT xy HMVT0 HMVT1.
-by rewrite mulr_gt0// ?df_pos// subr_gt0.
+move=> xy zu.
+by apply: (@subset_trans _ [set` Interval x z]);
+  [exact: subset_itvr | exact: subset_itvl].
 Qed.
 
-Lemma derivable1_homo [R : realType] (a b : itv_bound R) (f : R -> R) (x y : R) :
-  x \in Interval a b -> y \in Interval a b ->
-  {in Interval a b, forall x, derivable f x 1} ->
-  (forall t:R, forall Ht : t \in `]x, y[, 0 <= 'D_1 f t) ->
-  x <= y -> f x <= f y.
+Lemma gtr0_derive1_homo (R : realType) (f : R -> R) (a b : R) (sa sb : bool) :
+  (forall x : R, x \in `]a, b[ -> derivable f x 1) ->
+  (forall x : R, x \in `]a, b[ -> 0 < 'D_1 f x) ->
+  {within [set` (Interval (BSide sa a) (BSide sb b))], continuous f} ->
+  {in (Interval (BSide sa a) (BSide sb b)) &, {homo f : x y / x < y >-> x < y}}.
 Proof.
-rewrite !itv_boundlr=> /andP [ax xb] /andP [ay yb].
-move=> derivable_f df_nneg xy.
-have HMVT1: ({within `[x, y], continuous f})%classic.
-  apply: derivable_within_continuous=> z /[!itv_boundlr] /andP [xz zy].
-  apply: derivable_f.
-  by rewrite itv_boundlr (le_trans ax xz) (le_trans zy yb).
-have HMVT0: forall z : R, z \in `]x, y[ -> is_derive z 1 f ('D_1 f z).
-  move=> z /[!itv_boundlr] /andP [xz zy].
-  apply/derivableP/derivable_f.
-  rewrite itv_boundlr.
-  rewrite (le_trans (le_trans ax (lexx x : BLeft x <= BRight x)%O) xz).
-  by rewrite (le_trans (le_trans zy (lexx y : BLeft y <= BRight y)%O) yb).
+move=> df dfgt0 cf x y + + xy.
+rewrite !itv_boundlr /= => /andP [] ax ? /andP [] ? yb.
+have HMVT1: {within `[x, y], continuous f}%classic.
+  exact/(continuous_subspaceW _ cf)/subset_itvW_bound.
+have zab z : z \in `]x, y[ -> z \in `]a, b[.
+  apply: subset_itvW_bound.
+    by move: ax; clear; case: sa; rewrite !bnd_simp// => /ltW.
+  by move: yb; clear; case: sb; rewrite !bnd_simp// => /ltW.
+have HMVT0 z : z \in `]x, y[ -> is_derive z 1 f ('D_1 f z).
+  by move=> zxy; exact/derivableP/df/zab.
+rewrite -subr_gt0.
+have[z zxy ->]:= MVT xy HMVT0 HMVT1.
+rewrite mulr_gt0// ?subr_gt0// dfgt0//.
+exact: zab.
+Qed.
+
+Lemma ger0_derive1_homo (R : realType) (f : R -> R) (a b : R) (sa sb : bool) :
+  (forall x : R, x \in `]a, b[ -> derivable f x 1) ->
+  (forall x : R, x \in `]a, b[ -> 0 <= 'D_1 f x) ->
+  {within [set` (Interval (BSide sa a) (BSide sb b))], continuous f} ->
+  {in (Interval (BSide sa a) (BSide sb b)) &, {homo f : x y / x <= y >-> x <= y}}.
+Proof.
+move=> df dfge0 cf x y + + xy.
+rewrite !itv_boundlr /= => /andP [] ax ? /andP [] ? yb.
+have HMVT1: {within `[x, y], continuous f}%classic.
+  exact/(continuous_subspaceW _ cf)/subset_itvW_bound.
+have zab z : z \in `]x, y[ -> z \in `]a, b[.
+  apply: subset_itvW_bound.
+    by move: ax; clear; case: sa; rewrite !bnd_simp// => /ltW.
+  by move: yb; clear; case: sb; rewrite !bnd_simp// => /ltW.
+have HMVT0 z : z \in `]x, y[ -> is_derive z 1 f ('D_1 f z).
+  by move=> zxy; exact/derivableP/df/zab.
 rewrite -subr_ge0.
-move: xy; rewrite le_eqVlt=> /orP [/eqP-> | xy]; first by rewrite subrr.
-have[z xzy ->]:= MVT xy HMVT0 HMVT1.
-by rewrite mulr_ge0// ?df_nneg// subr_ge0 ltW.
+move: (xy); rewrite le_eqVlt=> /orP [/eqP-> | xy']; first by rewrite subrr.
+have[z zxy ->]:= MVT xy' HMVT0 HMVT1.
+rewrite mulr_ge0// ?subr_ge0// dfge0//.
+exact: zab.
 Qed.
 
 Lemma memB_itv (R : numDomainType) (b0 b1 : bool) (x y z : R) :
@@ -3372,13 +3378,10 @@ rewrite -mulrN -mulrA [in leRHS]mulrC expR_powR ge0_ler_powR// ?nnegrE.
     by apply; rewrite memB_itv0 in_itv /= delta0 delta1.
   move=> x x01.
   have->: 1 = f 1 by rewrite /f expr1n ln1 mulr0 oppr0 mul0r addr0.
-  have:= subset_itv_oo_oc x01 => /derivable1_homo; apply.
-  - by rewrite in_itv /= ltr01 lexx.
-  - move=> y /[!in_itv] /= /andP [] + _.
+  apply: (@ger0_derive1_homo _ f 0 1 false false)=> //.
+  - move=> t /[!in_itv] /= /andP [] + _.
     by case/idf=> ? /@ex_derive.
-  - move=> t /[!in_itv] /= /andP [] xt t1.
-    move: x01; rewrite in_itv=> /= /andP [] x0 _.
-    have t0 := lt_trans x0 xt.
+  - move=> t /[!in_itv] /= /andP [] t0 t1.
     Local Arguments derive_val {R V W a v f df}.
     rewrite (derive_val (svalP (idf _ t0))) /=.
     clear idf.
@@ -3388,6 +3391,10 @@ rewrite -mulrN -mulrA [in leRHS]mulrC expR_powR ge0_ler_powR// ?nnegrE.
     rewrite opprD addrA subr_ge0 -ler_expR.
     have:= t0; rewrite -lnK_eq => /eqP ->.
     by rewrite -[leLHS]addr0 -(subrr 1) addrCA expR_ge1Dx.
+  - apply: derivable_within_continuous => t /[!in_itv] /= /andP [] + _.
+    by case/idf=> ? /@ex_derive.
+  - by apply: (subset_itvW_bound _ _ x01); rewrite bnd_simp.
+  - by rewrite in_itv /= ltr01 lexx.
   - by move: x01; rewrite in_itv=> /= /andP [] _ /ltW.
 Qed.
 Local Open Scope ereal_scope.
