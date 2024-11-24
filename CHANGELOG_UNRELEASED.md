@@ -88,11 +88,36 @@
     `wedge_compact`, `wedge_connected`.
 
 - in `boolp.`:
-  + lemma `existT_inj`
+  + lemma `existT_inj2`
 - in file `order_topology.v`
   + new lemmas `min_continuous`, `min_fun_continuous`, `max_continuous`, and
     `max_fun_continuous`.
 
+- in file `boolp.v`,
+  + new lemmas `uncurryK`, and `curryK`
+- in file `weak_topology.v`,
+  + new lemma `continuous_comp_weak`
+- in file `function_spaces.v`,
+  + new definition `eval`
+  + new lemmas `continuous_curry_fun`, `continuous_curry_cvg`, 
+    `eval_continuous`, and `compose_continuous`
+
+- in file `wedge_sigT.v`,
++ new definitions `wedge_fun`, and `wedge_prod`.
++ new lemmas `wedge_fun_continuous`, `wedge_lift_funE`, 
+  `wedge_fun_comp`, `wedge_prod_pointE`, `wedge_prod_inj`, 
+  `wedge_prod_continuous`, `wedge_prod_open`, `wedge_hausdorff`, and 
+  `wedge_fun_joint_continuous`.
+
+- in `boolp.v`:
+  + lemmas `existT_inj1`, `surjective_existT`
+
+- in file `homotopy_theory/path.v`,
+  + new definitions `reparameterize`, `mk_path`, and `chain_path`.
+  + new lemmas `path_eqP`, and `chain_path_cts_point`.
+- in file `homotopy_theory/wedge_sigT.v`,
+  + new definition `bpwedge_shared_pt`.
+  + new notations `bpwedge`, and `bpwedge_lift`.
 - in `constructive_ereal.v`:
   + notation `\prod_( i <- r | P ) F` for extended real numbers and its variants
 
@@ -193,7 +218,13 @@
     `setX_of_sigTK`, `setX_of_sigT_continuous`, and `sigT_of_setX_continuous`.
 
 - in `tvs.v`:
-  + HB.structure `Tvs`
+  + HB structures `NbhsNmodule`, `NbhsZmodule`, `NbhsLmodule`, `TopologicalNmodule`,
+    `TopologicalZmodule`
+  + notation `topologicalLmoduleType`, HB structure `TopologicalLmodule`
+  + HB structures `UniformZmodule`, `UniformLmodule`
+  + definition `convex`
+  + mixin `Uniform_isTvs`
+  + type `tvsType`, HB.structure `Tvs`
   + HB.factory `TopologicalLmod_isTvs`
   + lemma `nbhs0N`
   + lemma `nbhsN`
@@ -201,8 +232,6 @@
   + lemma `nbhsB`
   + lemma `nbhs0Z`
   + lemma `nbhZ`
-  + HB.Instance of a Tvs od R^o
-  + HB.Instance of a Tvs on a product of Tvs
   
 - in `lebesgue_integrale.v`
   + change implicits of `measurable_funP`
