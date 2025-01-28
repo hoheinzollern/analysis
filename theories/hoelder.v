@@ -172,6 +172,26 @@ Proof. by move=> r0; rewrite poweR_Lnorm. Qed.
 Lemma oppr_Lnorm f p : 'N_p[\- f]%R = 'N_p[f].
 Proof. by rewrite -[RHS]oppe_Lnorm. Qed.
 
+Lemma opp_Lnorm f p :
+  'N_p[-%R \o f] = 'N_p[f].
+Proof.
+rewrite unlock /Lnorm.
+case: p => /= [r||//].
+  case: eqP => _. congr (mu _).
+    rewrite !preimage_setI.
+    congr (_ `&` _).
+    rewrite -!preimage_setC.
+    congr (~` _).
+    rewrite /preimage.
+    apply: funext => x/=.
+    rewrite -{1}oppr0.
+    apply: propext. split; last by move=> ->.
+    by move/oppr_inj.
+  by under eq_integral => x _ do rewrite normrN.
+rewrite compA (_ : normr \o -%R = normr)//.
+apply: funext => x/=; exact: normrN.
+Qed.
+
 End Lnorm_properties.
 #[deprecated(since="mathcomp-analysis 1.10.0", note="renamed to `Lnormr_ge0`")]
 Notation Lnorm_ge0 := Lnormr_ge0 (only parsing).
@@ -645,6 +665,19 @@ move=> mf mg _; rewrite unlock /Lnorm.
 case: ifPn => mugt0; last by rewrite adde0 lexx.
 exact: ess_sup_normD.
 Qed.
+
+Lemma minkowski' f g p :
+  measurable_fun setT f -> measurable_fun setT g -> (1 <= p)%R ->
+  'N_p%:E[f] <= 'N_p%:E[f \+ g] + 'N_p%:E[g].
+Proof.
+move=> mf mg p1.
+rewrite (_ : f = ((f \+ g) \+ (-%R \o g))%R); last admit.
+rewrite [X in _ <= 'N__[X] + _](_ : ((f \+ g \- g) \+ g)%R = (f \+ g)%R); last admit.
+rewrite (_ : 'N__[g] = 'N_p%:E[-%R \o g]); last admit.
+apply: minkowski => //.
+  apply: measurable_funD => //.
+apply: measurableT_comp => //.
+Admitted.
 
 End minkowski.
 #[deprecated(since="mathcomp-analysis 1.10.0",
