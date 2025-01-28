@@ -172,7 +172,7 @@ Proof. by move=> r0; rewrite poweR_Lnorm. Qed.
 Lemma oppr_Lnorm f p : 'N_p[\- f]%R = 'N_p[f].
 Proof. by rewrite -[RHS]oppe_Lnorm. Qed.
 
-Lemma opp_Lnorm f p :
+Lemma oppr_Lnorm f p :
   'N_p[-%R \o f] = 'N_p[f].
 Proof.
 rewrite unlock /Lnorm.
@@ -671,13 +671,16 @@ Lemma minkowski' f g p :
   'N_p%:E[f] <= 'N_p%:E[f \+ g] + 'N_p%:E[g].
 Proof.
 move=> mf mg p1.
-rewrite (_ : f = ((f \+ g) \+ (-%R \o g))%R); last admit.
-rewrite [X in _ <= 'N__[X] + _](_ : ((f \+ g \- g) \+ g)%R = (f \+ g)%R); last admit.
-rewrite (_ : 'N__[g] = 'N_p%:E[-%R \o g]); last admit.
+rewrite (_ : f = ((f \+ g) \+ (-%R \o g))%R); last first.
+  by apply: funext => x /=; rewrite -addrA subrr addr0.
+rewrite [X in _ <= 'N__[X] + _](_ : ((f \+ g \- g) \+ g)%R = (f \+ g)%R); last first.
+  by apply: funext => x /=; rewrite -addrA [X in _ + _ + X]addrC subrr addr0.
+rewrite (_ : 'N__[g] = 'N_p%:E[-%R \o g]); last first.
+  by rewrite oppr_Lnorm.
 apply: minkowski => //.
   apply: measurable_funD => //.
 apply: measurableT_comp => //.
-Admitted.
+Qed.
 
 End minkowski.
 #[deprecated(since="mathcomp-analysis 1.10.0",
