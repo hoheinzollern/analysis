@@ -1867,6 +1867,12 @@ move=> A mA; rewrite nuf ?inE//; apply: ae_eq_integral => //.
 - exact/measurable_funTS.
 - exact/measurable_funTS.
 - exact: (@ae_eq_subset _ _ _ _ mu setT A f f' (@subsetT _ A)).
+(* FIXME
+- move: ff'.
+  have := @ae_eq_subset _ _ _ mu setT A f f'.
+  apply: ae_eq_subset.
+- exact: ae_eq_subset ff'.
+*)
 Qed.
 
 End radon_nikodym_sigma_finite.

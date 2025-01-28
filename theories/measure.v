@@ -4147,8 +4147,7 @@ Notation "{ 'ae' m , P }" := {near almost_everywhere m, P} : type_scope.
 Notation "\forall x \ae mu , P" := (\forall x \near almost_everywhere mu, P)
   (format "\forall  x  \ae  mu ,  P",
   x name, P at level 200, at level 200): type_scope.
-Definition ae_eq d (T : semiRingOfSetsType d) (R : realType) (mu : {measure set T -> \bar R})
-  (V : T -> Type) D (f g : forall x, V x) := (\forall x \ae mu, D x -> f x = g x).
+Notation ae_eq mu D f g := (\forall x \ae mu, D x -> f x = g x).
 Notation "f = g %[ae mu 'in' D ]" := (\forall x \ae mu, D x -> f x = g x)
   (format "f  =  g  '%[ae'  mu  'in'  D ]", g at next level, D at level 200, at level 70).
 Notation "f = g %[ae mu ]" := (f = g %[ae mu in setT ])
@@ -4200,6 +4199,16 @@ Lemma ae_eq_refl U (f : T -> U) : ae_eq f f. Proof. exact/aeW. Qed.
 Hint Resolve ae_eq_refl : core.
 
 Lemma ae_eq_comp U V (j : U -> V) f g :
+
+Local Open Scope ereal_scope.
+Context d (T : sigmaRingType d) (R : realType) (U V : Type).
+Variables (mu : {measure set T -> \bar R}) (D : set T).
+Local Notation ae_eq f g := (\forall x \ae mu, D x -> f x = g x).
+
+Lemma ae_eq0 (f g : T -> U) : measurable D -> mu D = 0 -> f = g %[ae mu in D].
+Proof. by move=> mD D0; exists D; split => // t/= /not_implyP[]. Qed.
+
+Lemma ae_eq_comp (j : U -> V) f g :
   ae_eq f g -> ae_eq (j \o f) (j \o g).
 Proof. by move->. Qed.
 
@@ -4217,6 +4226,9 @@ Unshelve. all: by end_near. Qed.
 
 Lemma ae_eq_sym U (f g : T -> U) : ae_eq f g -> ae_eq g f.
 Proof. by symmetry. Qed.
+
+Implicit Types (f g : T -> U).
+Lemma ae_eq_refl f : ae_eq f f. Proof. exact/aeW. Qed.
 
 Lemma ae_eq_trans U (f g h : T -> U) : ae_eq f g -> ae_eq g h -> ae_eq f h.
 Proof. by apply transitivity. Qed.
@@ -5392,7 +5404,11 @@ End absolute_continuity.
 Notation "m1 `<< m2" := (measure_dominates m1 m2).
 
 Section absolute_continuity_lemmas.
+<<<<<<< HEAD
 Context d (T : measurableType d) (R : realType) (U : Type).
+=======
+Context d (T : measurableType d) (R : realType).
+>>>>>>> f0425654 (ae improvements)
 Implicit Types (m : {measure set T -> \bar R}) (f g : T -> U).
 
 Lemma measure_dominates_ae_eq m1 m2 f g E : measurable E ->
