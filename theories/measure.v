@@ -4162,7 +4162,6 @@ move=> aP; have -> : P = setT by rewrite predeqE => t; split.
 by apply/negligibleP; [rewrite setCT|rewrite setCT measure0].
 Qed.
 
-<<<<<<< HEAD
 Instance ae_eq_equiv d (T : ringOfSetsType d) R mu V D :
   Equivalence (@ae_eq d T R mu V D).
 Proof.
@@ -4206,9 +4205,8 @@ Local Open Scope ereal_scope.
 Context d (T : sigmaRingType d) (R : realType) (U V : Type).
 Variables (mu : {measure set T -> \bar R}) (D : set T).
 Local Notation ae_eq f g := (\forall x \ae mu, D x -> f x = g x).
-=======
-Require Import -(notations) Setoid.
->>>>>>> a9760ef4 (improvements)
+
+(*Require Import -(notations) Setoid.*)
 
 Declare Scope signature_scope.
 Delimit Scope signature_scope with signature.
@@ -5469,3 +5467,70 @@ Lemma measure_dominates_ae_eq m1 m2 f g E : measurable E ->
 Proof. by move=> mE m21 [A [mA A0 ?]]; exists A; split => //; exact: m21. Qed.
 
 End absolute_continuity_lemmas.
+
+Section essential_supremum.
+Context d {T : semiRingOfSetsType d} {R : realType}.
+Variable mu : {measure set T -> \bar R}.
+Implicit Types f : T -> R.
+
+Definition ess_sup f :=
+  ereal_inf (EFin @` [set r | mu (f @^-1` `]r, +oo[) = 0]).
+
+Definition ess_inf f := -ess_sup (-f).
+
+Lemma ess_infE f : ess_inf f f = ereal_sup (EFin @` [set r | mu (f @^-1` `]r, +oo[) = 0]).
+
+Lemma ess_sup_ge0 f : 0 < mu [set: T] -> (forall t, 0 <= f t)%R ->
+  0 <= ess_sup f.
+Proof.
+move=> muT f0; apply: lb_ereal_inf => _ /= [r /eqP rf <-]; rewrite leNgt.
+apply/negP => r0; apply/negP : rf; rewrite gt_eqF// (_ : _ @^-1` _ = setT)//.
+by apply/seteqP; split => // x _ /=; rewrite in_itv/= (lt_le_trans _ (f0 x)).
+Qed.
+
+Lemma ess_sup_cst r : (0 < mu setT)%E -> (ess_sup (cst r) = r%:E)%E.
+Proof.
+rewrite /ess_sup => mu0.
+under eq_set do rewrite preimage_cst/=.
+rewrite ereal_inf_EFin.
+- congr (_%:E).
+  rewrite [X in inf X](_ : _ = `[r, +oo[%classic); last first.
+    apply/seteqP; split => /=x/=.
+      case: ifPn => [_|]; first by move: mu0=> /[swap] ->; rewrite ltNge lexx.
+      by rewrite set_itvE notin_setE/= ltNge in_itv andbT/= => /negP /negPn.
+    rewrite in_itv/= => /andP[x0 _].
+    by rewrite ifF// set_itvE; apply/negP; rewrite in_setE/= ltNge => /negP.
+  by rewrite inf_itv.
+- exists r => x/=; case: ifPn => [_|].
+    by move: mu0 => /[swap] ->; rewrite ltNge lexx.
+  by rewrite set_itvE notin_setE//= ltNge => /negP/negbNE.
+by exists r => /=; rewrite ifF//; rewrite set_itvE;
+  rewrite memNset //=; apply/negP; rewrite -real_leNgt ?num_real.
+Qed.
+
+Lemma ess_sup_ger f (r : R) : (forall x, f x <= r)%R -> (ess_sup f <= r%:E).
+Proof.
+move=> fr.
+rewrite /ess_sup.
+apply: ereal_inf_le.
+apply/exists2P.
+exists r%:E => /=; split => //.
+apply/exists2P.
+exists r; split => //.
+rewrite preimage_itvoy.
+suffices -> : [set x | r < f x]%R = set0 by [].
+apply/seteqP; split => x //=.
+rewrite lt_neqAle => /andP[rneqfx rlefx].
+move: (fr x) => fxler.
+have: (f x <= r <= f x)%R by rewrite rlefx fxler.
+by move/le_anti; move: rneqfx => /[swap] -> /eqP.
+Qed.
+
+Lemma ess_sup_eq0 f : ess_sup (normr \o f) = 0 -> f = 0%R %[ae mu].
+Admitted.
+
+Lemma ess_supM (f : T -> R) (a : R) : (0 <= a)%R -> (\forall x \ae mu, 0 <= f x)%R ->
+  (ess_sup (cst a \* f)%R = a%:E * ess_sup f)%E.
+Admitted.
+
+End essential_supremum.
