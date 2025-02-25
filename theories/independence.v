@@ -48,6 +48,7 @@ Context {R : realType} d {T : measurableType d} (P : probability T R)
   {I0 : choiceType}.
 Local Open Scope ereal_scope.
 
+(* NB: not used *)
 Definition g_sigma_family (I : set I0) (F : I0 -> set_system T)
     : set_system T :=
   <<s \bigcup_(i in I) F i >>.
@@ -482,13 +483,20 @@ Qed.
 
 End mutual_independence_properties.
 
-Section g_sigma_algebra_preimage_lemmas.
-Context d {T : measurableType d} {R : realType}.
+(* NB: g_sigma_algebra_preimage is in measure.v *)
+Section g_sigma_algebra_preimage_comp.
+Context {d1} {T1 : measurableType d1} {d2} {T2 : measurableType d2}
+  {d3} {T3 : measurableType d3}.
 
-Lemma g_sigma_algebra_preimage_comp (X : {mfun T >-> R}) (f : R -> R) :
+Lemma g_sigma_algebra_preimage_comp (X : {mfun T1 >-> T2}) (f : T2 -> T3) :
   measurable_fun setT f ->
   g_sigma_algebra_preimage (f \o X)%R `<=` g_sigma_algebra_preimage X.
 Proof. exact: preimage_set_system_compS. Qed.
+End g_sigma_algebra_preimage_comp.
+Arguments g_sigma_algebra_preimage_comp {d1 T1 d2 T2 d3 T3 X} f.
+
+Section g_sigma_algebra_preimage_lemmas.
+Context d {T : measurableType d} {R : realType}.
 
 Lemma g_sigma_algebra_preimage_funrpos (X : {mfun T >-> R}) :
   g_sigma_algebra_preimage X^\+%R `<=` d.-measurable.
@@ -503,7 +511,6 @@ by move=> A/= -[B mB] <-; have := measurable_funrneg (measurable_funP X); exact.
 Qed.
 
 End g_sigma_algebra_preimage_lemmas.
-Arguments g_sigma_algebra_preimage_comp {d T R X} f.
 
 Section independent_RVs.
 Context {R : realType} d (T : measurableType d).
@@ -525,6 +532,125 @@ Definition independent_RVs2 (X Y : {mfun T >-> T'}) :=
   independent_RVs P [set: bool] (fun b => if b then Y else X).
 
 End independent_RVs2.
+
+Section independent_RVs_comp.
+Context {R : realType} d d' (T : measurableType d) (T' : measurableType d').
+Variable P : probability T R.
+Local Open Scope ring_scope.
+
+Lemma independent_RVs_comp (I0 : choiceType)
+    (I : set I0) (X : I0 -> {mfun T >-> T'}) (f : {mfun T' >-> R}) :
+  independent_RVs P I X -> independent_RVs P I (fun i => f \o X i).
+Proof.
+move=> PIX; split.
+- move=> i Ii.
+  rewrite /g_sigma_algebra_preimage/= /preimage_set_system/= => _ [A mA <-].
+  by rewrite setTI; exact/measurable_sfunP.
+- move=> J JI E/= JEfX; apply PIX => // j jJ.
+  by have := JEfX _ jJ; rewrite !inE; exact: g_sigma_algebra_preimage_comp.
+Qed.
+
+End independent_RVs_comp.
+
+Section independent_RVs_scale.
+Context {R : realType} d (T : measurableType d).
+Variable P : probability T R.
+Local Open Scope ring_scope.
+
+Lemma independent_RVs_scale (I0 : choiceType)
+    (I : set I0) (X : I0 -> {mfun T >-> R}) k :
+  independent_RVs P I X -> independent_RVs P I (fun i => k \o* X i).
+Proof.
+move=> PIX; split.
+- move=> i Ii.
+  rewrite /g_sigma_algebra_preimage/= /preimage_set_system/= => _ [A mA <-].
+  by rewrite setTI; exact/measurable_sfunP.
+- move=> J JI E/= JEfX; apply PIX => // j jJ.
+  have := JEfX _ jJ; rewrite !inE.
+  rewrite mulr_funEcomp.
+  apply: g_sigma_algebra_preimage_comp.
+  exact: measurable_funM.
+Qed.
+
+End independent_RVs_scale.
+
+Section independent_RVs_lemmas.
+Context {R : realType} d d' (T : measurableType d) (T' : measurableType d').
+Variable P : probability T R.
+Local Open Scope ring_scope.
+
+Lemma independent_RVs2_comp (X Y : {RV P >-> R}) (f g : {mfun R >-> R}) :
+  independent_RVs2 P X Y -> independent_RVs2 P (f \o X) (g \o Y).
+Proof.
+move=> indeXY; split => /=.
+- move=> [] _ /= A.
+  + by rewrite /g_sigma_algebra_preimage/= /preimage_set_system/= => -[B mB <-];
+      exact/measurableT_comp.
+  + by rewrite /g_sigma_algebra_preimage/= /preimage_set_system/= => -[B mB <-];
+      exact/measurableT_comp.
+- move=> J _ E JE.
+  apply indeXY => //= i iJ; have := JE _ iJ.
+  by move: i {iJ} =>[|]//=; rewrite !inE => Eg;
+    exact: g_sigma_algebra_preimage_comp Eg.
+Qed.
+
+Lemma independent_RVs2_funrposneg (X Y : {RV P >-> R}) :
+  independent_RVs2 P X Y -> independent_RVs2 P X^\+ Y^\-.
+Proof.
+move=> indeXY; split=> [[|]/= _|J J2 E JE].
+- exact: g_sigma_algebra_preimage_funrneg.
+- exact: g_sigma_algebra_preimage_funrpos.
+- apply indeXY => //= i iJ; have := JE _ iJ.
+  move/J2 : iJ; move: i => [|]// _; rewrite !inE.
+  + apply: (@g_sigma_algebra_preimage_comp _ _ _ R _ R _ (fun x => maxr (- x) 0)%R).
+    exact: measurable_funrneg.
+  + apply: (@g_sigma_algebra_preimage_comp _ _ _ R _ R _ (fun x => maxr x 0)%R) => //.
+    exact: measurable_funrpos.
+Qed.
+
+Lemma independent_RVs2_funrnegpos (X Y : {RV P >-> R}) :
+  independent_RVs2 P X Y -> independent_RVs2 P X^\- Y^\+.
+Proof.
+move=> indeXY; split=> [/= [|]// _ |J J2 E JE].
+- exact: g_sigma_algebra_preimage_funrpos.
+- exact: g_sigma_algebra_preimage_funrneg.
+- apply indeXY => //= i iJ; have := JE _ iJ.
+  move/J2 : iJ; move: i => [|]// _; rewrite !inE.
+  + apply: (@g_sigma_algebra_preimage_comp _ _ _ R _ R _ (fun x => maxr x 0)%R).
+    exact: measurable_funrpos.
+  + apply: (@g_sigma_algebra_preimage_comp _ _ _ R _ R _ (fun x => maxr (- x) 0)%R).
+    exact: measurable_funrneg.
+Qed.
+
+Lemma independent_RVs2_funrnegneg (X Y : {RV P >-> R}) :
+  independent_RVs2 P X Y -> independent_RVs2 P X^\- Y^\-.
+Proof.
+move=> indeXY; split=> [/= [|]// _ |J J2 E JE].
+- exact: g_sigma_algebra_preimage_funrneg.
+- exact: g_sigma_algebra_preimage_funrneg.
+- apply indeXY => //= i iJ; have := JE _ iJ.
+  move/J2 : iJ; move: i => [|]// _; rewrite !inE.
+  + apply: (@g_sigma_algebra_preimage_comp _ _ _ R _ R _ (fun x => maxr (- x) 0)%R).
+    exact: measurable_funrneg.
+  + apply: (@g_sigma_algebra_preimage_comp _ _ _ R _ R _ (fun x => maxr (- x) 0)%R).
+    exact: measurable_funrneg.
+Qed.
+
+Lemma independent_RVs2_funrpospos (X Y : {RV P >-> R}) :
+  independent_RVs2 P X Y -> independent_RVs2 P X^\+ Y^\+.
+Proof.
+move=> indeXY; split=> [/= [|]//= _ |J J2 E JE].
+- exact: g_sigma_algebra_preimage_funrpos.
+- exact: g_sigma_algebra_preimage_funrpos.
+- apply indeXY => //= i iJ; have := JE _ iJ.
+  move/J2 : iJ; move: i => [|]// _; rewrite !inE.
+  + apply: (@g_sigma_algebra_preimage_comp _ _ _ R _ R _ (fun x => maxr x 0)%R).
+    exact: measurable_funrpos.
+  + apply: (@g_sigma_algebra_preimage_comp _ _ _ R _ R _ (fun x => maxr x 0)%R).
+    exact: measurable_funrpos.
+Qed.
+
+End independent_RVs_lemmas.
 
 Section independent_generators.
 Context {R : realType} d (T : measurableType d).
@@ -565,84 +691,6 @@ apply: (mutual_independence_finite_g_sigma _ _).1.
 Qed.
 
 End independent_generators.
-
-Section independent_RVs_lemmas.
-Context {R : realType} d d' (T : measurableType d) (T' : measurableType d').
-Variable P : probability T R.
-Local Open Scope ring_scope.
-
-Lemma independent_RVs2_comp (X Y : {RV P >-> R}) (f g : {mfun R >-> R}) :
-  independent_RVs2 P X Y -> independent_RVs2 P (f \o X) (g \o Y).
-Proof.
-move=> indeXY; split => /=.
-- move=> [] _ /= A.
-  + by rewrite /g_sigma_algebra_preimage/= /preimage_set_system/= => -[B mB <-];
-      exact/measurableT_comp.
-  + by rewrite /g_sigma_algebra_preimage/= /preimage_set_system/= => -[B mB <-];
-      exact/measurableT_comp.
-- move=> J _ E JE.
-  apply indeXY => //= i iJ; have := JE _ iJ.
-  by move: i {iJ} =>[|]//=; rewrite !inE => Eg;
-    exact: g_sigma_algebra_preimage_comp Eg.
-Qed.
-
-Lemma independent_RVs2_funrposneg (X Y : {RV P >-> R}) :
-  independent_RVs2 P X Y -> independent_RVs2 P X^\+ Y^\-.
-Proof.
-move=> indeXY; split=> [[|]/= _|J J2 E JE].
-- exact: g_sigma_algebra_preimage_funrneg.
-- exact: g_sigma_algebra_preimage_funrpos.
-- apply indeXY => //= i iJ; have := JE _ iJ.
-  move/J2 : iJ; move: i => [|]// _; rewrite !inE.
-  + apply: (g_sigma_algebra_preimage_comp (fun x => maxr (- x) 0)%R).
-    exact: measurable_funrneg.
-  + apply: (g_sigma_algebra_preimage_comp (fun x => maxr x 0)%R) => //.
-    exact: measurable_funrpos.
-Qed.
-
-Lemma independent_RVs2_funrnegpos (X Y : {RV P >-> R}) :
-  independent_RVs2 P X Y -> independent_RVs2 P X^\- Y^\+.
-Proof.
-move=> indeXY; split=> [/= [|]// _ |J J2 E JE].
-- exact: g_sigma_algebra_preimage_funrpos.
-- exact: g_sigma_algebra_preimage_funrneg.
-- apply indeXY => //= i iJ; have := JE _ iJ.
-  move/J2 : iJ; move: i => [|]// _; rewrite !inE.
-  + apply: (g_sigma_algebra_preimage_comp (fun x => maxr x 0)%R).
-    exact: measurable_funrpos.
-  + apply: (g_sigma_algebra_preimage_comp (fun x => maxr (- x) 0)%R).
-    exact: measurable_funrneg.
-Qed.
-
-Lemma independent_RVs2_funrnegneg (X Y : {RV P >-> R}) :
-  independent_RVs2 P X Y -> independent_RVs2 P X^\- Y^\-.
-Proof.
-move=> indeXY; split=> [/= [|]// _ |J J2 E JE].
-- exact: g_sigma_algebra_preimage_funrneg.
-- exact: g_sigma_algebra_preimage_funrneg.
-- apply indeXY => //= i iJ; have := JE _ iJ.
-  move/J2 : iJ; move: i => [|]// _; rewrite !inE.
-  + apply: (g_sigma_algebra_preimage_comp (fun x => maxr (- x) 0)%R).
-    exact: measurable_funrneg.
-  + apply: (g_sigma_algebra_preimage_comp (fun x => maxr (- x) 0)%R).
-    exact: measurable_funrneg.
-Qed.
-
-Lemma independent_RVs2_funrpospos (X Y : {RV P >-> R}) :
-  independent_RVs2 P X Y -> independent_RVs2 P X^\+ Y^\+.
-Proof.
-move=> indeXY; split=> [/= [|]//= _ |J J2 E JE].
-- exact: g_sigma_algebra_preimage_funrpos.
-- exact: g_sigma_algebra_preimage_funrpos.
-- apply indeXY => //= i iJ; have := JE _ iJ.
-  move/J2 : iJ; move: i => [|]// _; rewrite !inE.
-  + apply: (g_sigma_algebra_preimage_comp (fun x => maxr x 0)%R).
-    exact: measurable_funrpos.
-  + apply: (g_sigma_algebra_preimage_comp (fun x => maxr x 0)%R).
-    exact: measurable_funrpos.
-Qed.
-
-End independent_RVs_lemmas.
 
 Definition preimage_classes I0 (I : set I0) (d_ : forall i : I, measure_display)
     (T_ : forall k : I, semiRingOfSetsType (d_ k)) (T : Type)

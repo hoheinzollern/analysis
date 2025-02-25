@@ -13,6 +13,19 @@
 
 - new file `internal_Eqdep_dec.v` (don't use, internal, to be removed)
 
+- file `constructive_ereal.v`:
+  + definition `iter_mule`
+  + lemma `prodEFin`
+
+- file `exp.v`:
+  + lemma `expR_sum`
+
+- file `lebesgue_integral.v`:
+  + lemma `measurable_fun_le`
+
+- file `mathcomp_extra.v`:
+  + lemma `mulr_funEcomp`
+
 - in `numfun.v`:
   + defintions `funrpos`, `funrneg` with notations `^\+` and `^\-`
   + lemmas `funrpos_ge0`, `funrneg_ge0`, `funrposN`, `funrnegN`, `ge0_funrposE`,
@@ -37,27 +50,12 @@
   + definition `independent_RVs2`
   + lemmas `g_sigma_algebra_preimage_comp`, `g_sigma_algebra_preimage_funrpos`,
     `g_sigma_algebra_preimage_funrneg`
-  + lemmas `independent_RVs2_comp`, `independent_RVs2_funrposneg`,
+  + lemmas `independent_RVs2_comp`, `independent_RVs_comp`, `independent_RVs_scale`,
+    `independent_RVs2_funrposneg`,
     `independent_RVs2_funrnegpos`, `independent_RVs2_funrnegneg`,
     `independent_RVs2_funrpospos`
   + lemma `expectationM_ge0`, `integrable_expectationM`, `independent_integrableM`,
-    ` expectation_prod`
-
-- in `numfun.v`
-  + lemmas `funeposE`, `funenegE`, `funepos_comp`, `funeneg_comp`
-
-- in `classical_sets.v`:
-  + lemmas `xsectionE`, `ysectionE`
-
-- file `constructive_ereal.v`:
-  + definition `iter_mule`
-  + lemma `prodEFin`
-
-- file `exp.v`:
-  + lemma `expR_sum`
-
-- file `lebesgue_integral.v`:
-  + lemma `measurable_fun_le`
+    ` expectation_mul`
 
 - in `trigo.v`:
   + lemma `integral0oo_atan`
