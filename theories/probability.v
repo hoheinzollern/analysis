@@ -896,148 +896,7 @@ Qed.
 
 End discrete_distribution.
 
-Section independent_events.
-Context {R : realType} d {T : measurableType d}.
-Variable P : probability T R.
-Local Open Scope ereal_scope.
-
-Definition independent_events (I0 : choiceType) (I : set I0) (A : I0 -> set T) :=
-  forall J : {fset I0}, [set` J] `<=` I ->
-    P (\bigcap_(i in [set` J]) A i) = \prod_(i <- J) P (A i).
-
-End independent_events.
-
-Section mutual_independence.
-Context {R : realType} d {T : measurableType d}.
-Variable P : probability T R.
-Local Open Scope ereal_scope.
-
-Definition mutual_independence (I0 : choiceType) (I : set I0)
-    (F : I0 -> set (set T)) :=
-  (forall i : I0, I i -> F i `<=` @measurable _ T) /\
-  forall J : {fset I0},
-    [set` J] `<=` I ->
-    forall E : I0 -> set T,
-      (forall i : I0, i \in J -> E i \in F i) ->
-        P (\big[setI/setT]_(j <- J) E j) = \prod_(j <- J) P (E j).
-
-End mutual_independence.
-
-Section independent_RVs.
-Context {R : realType} d d' (T : measurableType d) (T' : measurableType d').
-Variable P : probability T R.
-
-Definition independent_RVs (I0 : choiceType)
-    (I : set I0) (X : I0 -> {mfun T >-> T'}) : Prop :=
-  mutual_independence P I (fun i => g_sigma_algebra_preimage (X i)).
-
-Definition independent_RVs2 (X Y : {mfun T >-> T'}) :=
-  independent_RVs [set: bool] [eta (fun=> cst point) with false |-> X, true |-> Y].
-
-End independent_RVs.
-
-Section g_sigma_algebra_mapping_lemmas.
-Context d {T : measurableType d} {R : realType}.
-
-Lemma g_sigma_algebra_mapping_comp (X : {mfun T >-> R}) (f : R -> R) :
-  measurable_fun setT f ->
-  g_sigma_algebra_preimage (f \o X)%R `<=` g_sigma_algebra_preimage X.
-Proof. exact: preimage_set_system_comp. Qed.
-
-Lemma g_sigma_algebra_mapping_funrpos (X : {mfun T >-> R}) :
-  g_sigma_algebra_preimage X^\+%R `<=` d.-measurable.
-Proof.
-by move=> A/= -[B mB] <-; have := measurable_funrpos (measurable_funP X); exact.
-Qed.
-
-Lemma g_sigma_algebra_mapping_funrneg (X : {mfun T >-> R}) :
-  g_sigma_algebra_preimage X^\-%R `<=` d.-measurable.
-Proof.
-by move=> A/= -[B mB] <-; have := measurable_funrneg (measurable_funP X); exact.
-Qed.
-
-End g_sigma_algebra_mapping_lemmas.
-Arguments g_sigma_algebra_mapping_comp {d T R X} f.
-
-Section independent_RVs_lemmas.
-Context {R : realType} d d' (T : measurableType d) (T' : measurableType d').
-Variable P : probability T R.
-Local Open Scope ring_scope.
-
-Lemma independent_RVs2_comp (X Y : {RV P >-> R}) (f g : {mfun R >-> R}) :
-  independent_RVs2 P X Y -> independent_RVs2 P (f \o X) (g \o Y).
-Proof.
-move=> indeXY; split => /=.
-- move=> [] _ /= A.
-  + by rewrite /g_sigma_algebra_preimage/= /preimage_set_system/= => -[B mB <-];
-      exact/measurableT_comp.
-  + by rewrite /g_sigma_algebra_preimage/= /preimage_set_system/= => -[B mB <-];
-      exact/measurableT_comp.
-- move=> J _ E JE.
-  apply indeXY => //= i iJ; have := JE _ iJ.
-  by move: i {iJ} =>[|]//=; rewrite !inE => Eg;
-    exact: g_sigma_algebra_mapping_comp Eg.
-Qed.
-
-Lemma independent_RVs2_funrposneg (X Y : {RV P >-> R}) :
-  independent_RVs2 P X Y -> independent_RVs2 P X^\+ Y^\-.
-Proof.
-move=> indeXY; split=> [[|]/= _|J J2 E JE].
-- exact: g_sigma_algebra_mapping_funrneg.
-- exact: g_sigma_algebra_mapping_funrpos.
-- apply indeXY => //= i iJ; have := JE _ iJ.
-  move/J2 : iJ; move: i => [|]// _; rewrite !inE.
-  + apply: (g_sigma_algebra_mapping_comp (fun x => maxr (- x) 0)%R).
-    exact: measurable_funrneg.
-  + apply: (g_sigma_algebra_mapping_comp (fun x => maxr x 0)%R) => //.
-    exact: measurable_funrpos.
-Qed.
-
-Lemma independent_RVs2_funrnegpos (X Y : {RV P >-> R}) :
-  independent_RVs2 P X Y -> independent_RVs2 P X^\- Y^\+.
-Proof.
-move=> indeXY; split=> [/= [|]// _ |J J2 E JE].
-- exact: g_sigma_algebra_mapping_funrpos.
-- exact: g_sigma_algebra_mapping_funrneg.
-- apply indeXY => //= i iJ; have := JE _ iJ.
-  move/J2 : iJ; move: i => [|]// _; rewrite !inE.
-  + apply: (g_sigma_algebra_mapping_comp (fun x => maxr x 0)%R).
-    exact: measurable_funrpos.
-  + apply: (g_sigma_algebra_mapping_comp (fun x => maxr (- x) 0)%R).
-    exact: measurable_funrneg.
-Qed.
-
-Lemma independent_RVs2_funrnegneg (X Y : {RV P >-> R}) :
-  independent_RVs2 P X Y -> independent_RVs2 P X^\- Y^\-.
-Proof.
-move=> indeXY; split=> [/= [|]// _ |J J2 E JE].
-- exact: g_sigma_algebra_mapping_funrneg.
-- exact: g_sigma_algebra_mapping_funrneg.
-- apply indeXY => //= i iJ; have := JE _ iJ.
-  move/J2 : iJ; move: i => [|]// _; rewrite !inE.
-  + apply: (g_sigma_algebra_mapping_comp (fun x => maxr (- x) 0)%R).
-    exact: measurable_funrneg.
-  + apply: (g_sigma_algebra_mapping_comp (fun x => maxr (- x) 0)%R).
-    exact: measurable_funrneg.
-Qed.
-
-Lemma independent_RVs2_funrpospos (X Y : {RV P >-> R}) :
-  independent_RVs2 P X Y -> independent_RVs2 P X^\+ Y^\+.
-Proof.
-move=> indeXY; split=> [/= [|]//= _ |J J2 E JE].
-- exact: g_sigma_algebra_mapping_funrpos.
-- exact: g_sigma_algebra_mapping_funrpos.
-- apply indeXY => //= i iJ; have := JE _ iJ.
-  move/J2 : iJ; move: i => [|]// _; rewrite !inE.
-  + apply: (g_sigma_algebra_mapping_comp (fun x => maxr x 0)%R).
-    exact: measurable_funrpos.
-  + apply: (g_sigma_algebra_mapping_comp (fun x => maxr x 0)%R).
-    exact: measurable_funrpos.
-Qed.
-
-End independent_RVs_lemmas.
-
-Section product_expectation.
+(*Section product_expectation.
 Context {R : realType} d (T : measurableType d).
 Variable P : probability T R.
 Local Open Scope ereal_scope.
@@ -1324,7 +1183,7 @@ transitivity ('E_P[X^\+ - X^\-] * 'E_P[Y^\+ - Y^\-]).
 by congr *%E; congr ('E_P[_]); rewrite [RHS]funrposneg.
 Qed.
 
-End product_expectation.
+End product_expectation.*)
 
 Section bernoulli_pmf.
 Context {R : realType} (p : R).
