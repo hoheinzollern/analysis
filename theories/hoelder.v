@@ -65,12 +65,10 @@ Local Open Scope ereal_scope.
 HB.lock Definition Lnorm {d} {T : measurableType d} {R : realType}
     (mu : {measure set T -> \bar R}) (p : \bar R) (f : T -> \bar R) :=
   match p with
-  | p%:E => (if p == 0%R then
-              (mu (f @^-1` (setT `\ 0%R)))
-            else
-              (\int[mu]_x (`|f x| `^ p)%:E) `^ p^-1)%E
-  | +oo%E => (if mu [set: T] > 0 then ess_sup mu (normr \o f) else 0)%E
-  | -oo%E => (if mu [set: T] > 0 then ess_inf mu (normr \o f) else 0)%E
+  | p%:E => (\int[mu]_x (`|f x| `^ p)%:E) `^ p^-1
+    (* (mu (f @^-1` (setT `\ 0%R))) when p = 0? *)
+  | +oo%E => if mu [set: T] > 0 then ess_sup mu (normr \o f) else 0
+  | -oo%E => if mu [set: T] > 0 then ess_inf mu (normr \o f) else 0
   end.
 Canonical locked_Lnorm := Unlockable Lnorm.unlock.
 Arguments Lnorm {d T R} mu p f.
@@ -141,8 +139,7 @@ Proof.
 rewrite unlock /Lnorm.
 case: p => [r||//].
 - rewrite lee_fin => r1.
-  have r0: r != 0%R by rewrite gt_eqF// (lt_le_trans _ r1).
-  rewrite gt_eqF ?(lt_le_trans _ r1)//.
+  have r0 : r != 0%R by rewrite gt_eqF// (lt_le_trans _ r1).
   under eq_integral => x _ do rewrite /= normr0 powR0//.
   by rewrite integral0 poweR0r// invr_neq0.
 case: ifPn => //mu0 _.
@@ -152,25 +149,17 @@ Qed.
 
 Lemma Lnorm1 f : 'N_1[f] = \int[mu]_x `|f x|%:E.
 Proof.
-rewrite unlock; move: p => [r/=|/=|//]; first exact: poweR_ge0.
-- by case: ifPn => // /ess_sup_ger; apply => t/=.
-- by case: ifPn => // muT0; apply/ess_infP/nearW => x /=.
+rewrite unlock invr1// poweRe1//.
+  by apply: eq_integral => t _; rewrite powRr1.
+by apply: integral_ge0 => t _; rewrite powRr1.
 Qed.
 
 Lemma Lnormr_eq0_eq0 (f : T -> R) p :
   measurable_fun setT f -> (0 < p)%E -> 'N_p[f] = 0 -> f = 0%R %[ae mu].
 Proof.
-rewrite unlock /Lnorm => mf.
-case: p => [r||//].
-- rewrite lte_fin => r0 /poweR_eq0_eq0 => /(_ (integral_ge0 _ _)) h.
-  have : \int[mu]_x (`|f x| `^ r)%:E = 0.
-    by apply: h => x _; rewrite lee_fin powR_ge0.
-  under eq_integral => x _ do rewrite -[_%:E]gee0_abs ?lee_fin ?powR_ge0//.
-  have mp : measurable_fun [set: T] (fun x : T => (`|f x| `^ r)%:E).
-(*rewrite unlock; move: p => [r/=|/=|//].
-  by case: ifPn => // r0; exact: poweR_ge0.
-by case: ifPn => // /ess_sup_ge0; apply => t/=.
-case: ifPn => // muT0.*)
+rewrite unlock; move: p => [r/=|/=|//]; first exact: poweR_ge0.
+- by case: ifPn => // /ess_sup_ger; apply => t/=.
+- by case: ifPn => // muT0; apply: ess_inf_ge0 => //=.
 Qed.
 
 Lemma eq_Lnorm p f g : f =1 g -> 'N_p[f] = 'N_p[g].
@@ -180,37 +169,22 @@ Lemma Lnorm_eq0_eq0 (f : T -> R) p :
   measurable_fun setT f -> (0 < p)%E -> 'N_p[f] = 0 -> f = 0%R %[ae mu].
 Proof.
 rewrite unlock /Lnorm => mf.
-case: p => [r r0||].
-- case: ifPn => _.
-    rewrite preimage_setI preimage_setT setTI -preimage_setC.
-(*    move=> /poweR_eq0_eq0 /negligibleP.
-    move/(_ (measurableC _)); rewrite -[X in d.-measurable X]setTI.
-    move/(_ (mf _ _ _)).
-    by case=> // A [mA muA0 fA]; exists A; split => // x/= ?; exact: fA.
-  move=> /poweR_eq0_eq0.
-  move=> /(_ (integral_ge0 _ _)) h.
-  have: (\int[mu]_x (`|f x| `^ r)%:E)%E = 0 by apply: h => x _; rewrite lee_fin powR_ge0.
+case: p => [r||//].
+- rewrite lte_fin => r0 /poweR_eq0_eq0 => /(_ (integral_ge0 _ _)) h.
+  have : \int[mu]_x (`|f x| `^ r)%:E = 0.
+    by apply: h => x _; rewrite lee_fin powR_ge0.
   under eq_integral => x _ do rewrite -[_%:E]gee0_abs ?lee_fin ?powR_ge0//.
-  have mp: measurable_fun [set: T] (fun x : T => (`|f x| `^ r)%:E).
+  have mp : measurable_fun [set: T] (fun x : T => (`|f x| `^ r)%:E).
     apply: measurableT_comp => //.
     apply (measurableT_comp (measurable_powR _)) => //.
     exact: measurableT_comp.
   move/(ae_eq_integral_abs _ measurableT mp).
   apply: filterS => x/= /[apply].
   by case=> /powR_eq0_eq0 /eqP; rewrite normr_eq0 => /eqP.
-- case: ifPn => [mu0 _|].
-    move=> /abs_sup_eq0_ae_eq/=.
-    by apply: filterS => x/= /(_ I) /eqP + _; rewrite eqe => /eqP.
+- case: ifPn => [mu0 _|]; first exact: ess_sup_eq0_ae.
   rewrite ltNge => /negbNE mu0 _ _.
   suffices mueq0: mu setT = 0 by exact: ae_eq0.
   by apply/eqP; rewrite eq_le mu0/=.
-(*    exact: ess_sup_eq0.
-  rewrite ltNge => /negbNE mu0 _ _.
-  suffices mueq0: mu setT = 0 by exact: ae_eq0.
-  move: mu0 (measure_ge0 mu setT) => mu0 mu1.
-  suffices: (mu setT <= 0 <= mu setT)%E by move/le_anti.
-  by rewrite mu0 mu1.
-by [].*)
 Qed.
 
 Lemma powR_Lnorm f r : r != 0%R ->
@@ -220,34 +194,22 @@ Proof. by move=> r0; rewrite poweR_Lnorm. Qed.
 Lemma oppr_Lnorm f p : 'N_p[\- f]%R = 'N_p[f].
 Proof. by rewrite -[RHS]oppe_Lnorm. Qed.
 
-Lemma oppr_Lnorm f p :
-  'N_p[\- f]%R = 'N_p[f].
+Lemma oppr_Lnorm f p : 'N_p[\- f]%R = 'N_p[f].
 Proof.
-rewrite unlock /Lnorm.
-case: p => /= [r||//].
-  case: eqP => _. (*congr ((mu _) `^ _).
-    rewrite !preimage_setI.
-    congr (_ `&` _).
-    rewrite -!preimage_setC.
-    congr (~` _).
-    rewrite /preimage.
-    apply: funext => x/=.
-    rewrite -{1}oppr0.
-    apply: propext. split; last by move=> ->.
-    by move/oppr_inj.
-  by under eq_integral => x _ do rewrite normrN.
-rewrite compA (_ : normr \o -%R = normr)//.
-apply: funext => x/=; exact: normrN.
-Qed.*) Admitted.
+rewrite unlock /Lnorm; case: p => /= [r||//].
+- by under eq_integral => x _ do rewrite normrN.
+- rewrite compA (_ : normr \o -%R = normr)//.
+  by apply: funext => x/=; exact: normrN.
+- rewrite compA (_ : normr \o -%R = normr)//.
+  by apply: funext => x/=; exact: normrN.
+Qed.
 
 Lemma Lnorm_cst1 r : ('N_r%:E[cst 1%R] = (mu setT)`^(r^-1)).
 Proof.
 rewrite unlock /Lnorm.
-case: ifPn => [_|].
-(*  by rewrite preimage_cst ifT// inE/=; split => //; apply/eqP; rewrite oner_neq0.
 under eq_integral => x _ do rewrite normr1 powR1 (_ : 1 = cst 1 x)%R// -indicT.
 by rewrite integral_indic// setTI.
-Qed.*) Admitted.
+Qed.
 
 End Lnorm_properties.
 #[deprecated(since="mathcomp-analysis 1.10.0", note="renamed to `Lnormr_ge0`")]
