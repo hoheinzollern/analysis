@@ -1808,10 +1808,22 @@ rewrite [X in mu X](_ : _ = [set r | (0 < `|f r|%:E)%E]); last first.
 by rewrite -f0 ess_sup_max// f0.
 Qed.
 
-Lemma ess_supMr f (r : R) : (0 <= r)%R -> (\forall x \ae mu, 0 <= f x)%R ->
+Lemma ess_supMl f (r : R) : mu setT > 0 -> (0 <= r)%R ->
   ess_sup mu (cst r \* f)%R = r%:E * ess_sup mu f.
 Proof.
-Admitted.
+move=> muT0; rewrite le_eqVlt => /predU1P[<-|r0].
+  rewrite mul0e (_ : _ \* f = cst 0)%R; first by rewrite ess_sup_cst.
+  by apply/funext => ?; rewrite /= mul0r.
+rewrite -ereal_infZl//.
+have rf s : (cst r \* f)%R @^-1` `]s, +oo[ = f%R @^-1` `]s / r, +oo[.
+  by apply/seteqP; split => [y|y]/=; rewrite !in_itv/= !andbT;
+    rewrite ltr_pdivrMr// mulrC.
+congr ereal_inf; apply/seteqP; split => [_ [s /= M <-]|_ [s /= M <-]]/=.
+- exists (s / r)%R; first by rewrite -rf.
+  by rewrite EFinM muleCA -EFinM divff ?mulr1// gt_eqF.
+- exists (r * s)%R; last by rewrite EFinM.
+  by rewrite rf mulrAC divff ?mul1r// gt_eqF.
+Qed.
 
 End essential_supremum.
 
