@@ -209,6 +209,7 @@ apply: (@iff_trans _ (g_sigma_preimage
   exact: mh.
 Qed.
 
+(* TODO: rename to measurable_cons *)
 Lemma measurable_fun_cons (f : T -> T1) n (g : T -> mtuple n T1) :
   measurable_fun setT f -> measurable_fun setT g ->
   measurable_fun setT (fun x : T => [the mtuple n.+1 T1 of (f x) :: (g x)]).
@@ -349,9 +350,12 @@ Context d (T : measurableType d) (R : realType) (P : probability T R).
 Local Open Scope ereal_scope.
 
 Lemma integral_mpro n (f : n.+1.-tuple T -> R) :
+  measurable_fun [set: mtuple n.+1 T] f ->
+  (\X_n.+1 P).-integrable [set: mtuple n.+1 T] (EFin \o f) ->
   \int[\X_n.+1 P]_w (f w)%:E =
   \int[pro2 P (\X_n P)]_w (f (w.1 :: w.2))%:E.
 Proof.
+move=> mf intf.
 set phi := fun (w : T * mtuple n T) => [the mtuple _ _ of w.1 :: w.2].
 have mphi : measurable_fun setT phi.
   admit.
@@ -527,8 +531,9 @@ pose build_mX2 := isMeasurableFun.Build _ _ _ _ _ mX2.
 pose Y2 : {mfun mtuple n.+1 T >-> R} := HB.pack X2 build_mX2.
 rewrite [X in 'E__[X]](_ : _ = Y2 \+ Y1)//.
 rewrite expectationD; last 2 first.
-  admit.
-  admit.
+  simpl in Y2.
+  admit. (* TODO (1): reduce the integrability of thead X to intX *)
+  admit. (* TODO (2): reduce \sum (behead X) (?) to intX *)
 congr (_ + _).
 - rewrite /Y2 /X2/= unlock /expectation.
   (* \int[\X_n.+1 P]_w (thead X (thead w))%:E = \int[P]_w (tnth X ord0 w)%:E *)
@@ -546,25 +551,26 @@ congr (_ + _).
     by rewrite /bump/= add1n/= inordK// ltnS.
   rewrite -IH; last first.
     move=> Xi XiX.
-    admit.
+    admit. (* TODO (3): looks like (2), for behead X *)
   transitivity ('E_\X_n P[(fun x : mtuple n T =>
       (\sum_(i < n) tnth (behead X) i (tnth x i))%R)]).
     rewrite unlock /expectation.
     transitivity (\int[(pro2 P (\X_n P))]_w (\sum_(i < n) tnth X (lift ord0 i) (tnth w.2 i))%:E).
       rewrite integral_mpro//.
-      apply: eq_integral => /= -[w1 w2] _.
-      rewrite -!sumEFin.
-      apply: eq_bigr => i _ /=.
-      by rewrite tnthS//.
+        apply: eq_integral => /= -[w1 w2] _.
+        rewrite -!sumEFin.
+        apply: eq_bigr => i _ /=.
+        by rewrite tnthS//.
+      admit. (* TODO: (2) *)
     rewrite /pro2.
     rewrite -fubini2'/=; last first.
-      admit.
+      admit. (* TODO(2'): (2) *)
     apply: eq_integral => t _.
     rewrite /fubini_G.
     transitivity (\sum_(i < n)
       (\int[P]_x (tnth X (lift ord0 i) (tnth (x, t).2 i))%:E)).
       (* TODO: prove ge0_integral_sum for integrable *)
-      admit.
+      admit. (* TODO: (2') *)
     rewrite -sumEFin.
     apply: eq_bigr => /= i _.
     rewrite integral_cst//.
