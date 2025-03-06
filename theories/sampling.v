@@ -602,11 +602,6 @@ rewrite expectationD; last 2 first.
   simpl in Y2.
   admit. (* TODO (1): reduce the integrability of thead X to intX *)
   (* TODO (2): reduce \sum (behead X) (?) to intX *)
-  rewrite (_ : _ \o _ = fun x => (\sum_(i < n)
-      (tnth X (lift ord0 i) (tnth x (lift ord0 i)))%:E)); last first.
-    by apply/funext => t/=; rewrite sumEFin.
-  apply: integrable_sum_ord => // i.
-  (* TODO: similar to (1)? integrability of tnth *)
   admit.
 congr (_ + _).
 - rewrite /Y2 /X2/= unlock /expectation.
@@ -774,7 +769,6 @@ case: ifP => //= aQ.
 by rewrite expRD ih.
 Qed.
 
-(* wrong lemma *)
 Lemma bernoulli_trial_mmt_gen_fun n (X_ : n.-tuple {RV P >-> bool}) (t : R) :
   is_bernoulli_trial X_ ->
   let X := bernoulli_trial X_ in
