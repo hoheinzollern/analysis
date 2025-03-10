@@ -1457,6 +1457,26 @@ apply: independent_RVs_scale => //=.
 exact: independent_RVs_btr.
 Qed.
 
+Lemma boundedM U (f g : U -> R) (A : set U) :
+  [bounded f x | x in A] ->
+  [bounded g x | x in A] ->
+  [bounded (f x * g x)%R | x in A].
+Proof.
+move=> bF bG.
+rewrite/bounded_near.
+case: bF => M1 [M1real M1f].
+case: bG => M2 [M2real M2g].
+near=> M.
+rewrite/globally/= => x xA.
+rewrite normrM.
+rewrite (@le_trans _ _ (`|M1 + 1| * `|M2 + 1|)%R)//.
+rewrite ler_pM//.
+  by rewrite M1f// (lt_le_trans _ (ler_norm _))// ltrDl.
+by rewrite M2g// (lt_le_trans _ (ler_norm _))// ltrDl.
+Unshelve. all: by end_near.
+Qed.
+
+
 Lemma expectation_prod_nondep n (X : n.-tuple {RV P >-> R}) M :
     (forall i t, (0 <= tnth X i t <= M)%R) ->
     (forall Xi, Xi \in X -> P.-integrable [set: T] (EFin \o Xi)) ->
@@ -1482,13 +1502,32 @@ rewrite -fubini1' /fubini_F/=; last first.
   - rewrite /product_measure1/=.
     apply: (@le_lt_trans _ _ 1); last exact: ltry.
     rewrite -(mule1 1) -{2}(@probability_setT _ _ _ P) -(integral_cst P _ 1)//.
-    apply: ge0_le_integral => //=. admit.
+    apply: ge0_le_integral => //=.
+      exact: measurable_fun_xsection.
     by move=> x _; apply: probability_le1; exact: measurable_xsection.
-  - admit.
-  admit.
+  - apply: measurable_funM => //=.
+      exact: measurableT_comp.
+    apply: measurable_prod => //=i ?.
+    apply: measurableT_comp => //=.
+    apply: (@measurableT_comp _ _ _ _ _ _ (fun x : mtuple n T => @tnth n T x i) _ snd) => //=.
+    exact: measurable_tnth.
+  apply: boundedM.
+    apply/ex_bound. exact: (@globally_properfilter _ _ point). (* TODO: need to automate globally_properfilter *)
+    exists M; rewrite /globally/= => x _.
+    have /andP[? ?] := boundedX ord0 x.1.
+    by rewrite ger0_norm.
+  apply/ex_bound; first exact: (@globally_properfilter _ _ point).
+  exists (M^+n)%R. rewrite /globally/= => x _.
+  rewrite normr_prod -[in leRHS](subn0 n) -prodr_const_nat.
+  rewrite big_mkord ler_prod => //=i _.
+  have /andP[? ?] := boundedX (lift ord0 i) (tnth x.2 i).
+  by rewrite normr_ge0/= ger0_norm.
 have ? : (mpro P (n:=n)).-integrable [set: mtuple n T]
     (fun x : mtuple n T => (\prod_(i < n) tnth X (lift ord0 i) (tnth x i))%:E).
-  apply: (bounded_RV_integrable (M^+n)%R) => //=. admit.
+  apply: (bounded_RV_integrable (M^+n)%R) => //=.
+    apply: measurable_prod => /=i _.
+    apply: measurableT_comp => //.
+    exact: measurable_tnth.
   move=> t. apply/andP. split.
     by rewrite prodr_ge0//= => i _; have /andP[] := boundedX (lift ord0 i) (tnth t i).
   by rewrite -[in leRHS](subn0 n) -prodr_const_nat big_mkord ler_prod.
@@ -1507,14 +1546,15 @@ under eq_fun => x.
 simpl.
 rewrite [LHS](_ : _ = 'E_(\X_n P)[ tuple_prod (behead_tuple X) ]); last first.
   by rewrite [in RHS]unlock /expectation [in RHS]/tuple_prod.
-rewrite IH; last by  move=> Xi XiX; apply: intX; rewrite mem_behead.
+rewrite IH; last 2 first.
+- by move=> i t; rewrite tnth_behead.
+- by move=> Xi XiX; apply: intX; rewrite mem_behead.
 apply: eq_bigr => /=i _.
 rewrite unlock /expectation.
 apply: eq_integral => x _.
 congr EFin.
 by rewrite [in RHS](tuple_eta X) tnthS.
-Admitted.
-
+Qed.
 
 
 Lemma expectation_prod_independent_RVs n (X : n.-tuple {RV P >-> R}) :
