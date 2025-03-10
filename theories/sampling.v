@@ -1636,18 +1636,18 @@ rewrite expectation_prod; last 3 first.
     have : measurable_fun setT (tnth X ord0) by [].
     exact.
   move=> J _ E JE.
-  have [|||] := set_bool [set` J].
-  - admit.
-  - admit.
-  - admit.
-  rewrite setT_bool => /eqP Jbool.
-  rewrite -bigcap_fset Jbool bigcap_setU1 bigcap_set1.
-  rewrite -(set_fsetK J) Jbool.
+  have [|||] := set_bool [set` J]; move=> /eqP h; rewrite -bigcap_fset -[in RHS](set_fsetK J) !h.
+  - by rewrite bigcap_set1 fset_set1 big_seq_fset1.
+  - by rewrite bigcap_set1 fset_set1 big_seq_fset1.
+  - by rewrite bigcap_set0 probability_setT fset_set0 big_seq_fset0.
+  rewrite setT_bool.
+  rewrite bigcap_setU1 bigcap_set1.
   rewrite fset_setU// !fset_set1 big_fsetU1 ?inE//= big_seq_fset1.
   case: iRVX => /=H1 H2.
+  
 
   admit.
-- admit.
+- by rewrite intX// mem_tnth.
 - admit.
 rewrite (_ : \prod_(i < n) tnth X (lift ord0 i) = \prod_(i < n) tnth (behead X) i)%R; last first.
   apply: eq_bigr => /=i _. rewrite tnth_behead (_ : inord i.+1 = lift ord0 i)//=.
