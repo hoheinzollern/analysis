@@ -1619,6 +1619,58 @@ rewrite unlock /expectation integral_mpro//.
 admit.
 Abort.
 
+Lemma finite_prod n (F : 'I_n -> \bar R) :
+  (forall i, 0 <= F i < +oo) -> \prod_(i < n) F i < +oo.
+Proof.
+move: F; elim: n => n; first by rewrite big_ord0 ltry.
+move=> ih F Foo.
+rewrite big_ord_recl lte_mul_pinfty//.
+- by have /andP[] := Foo ord0.
+- rewrite fin_numElt.
+  have /andP[F0 ->] := Foo ord0.
+  by rewrite (@lt_le_trans _ _ 0).
+by rewrite ih.
+Qed.
+
+Lemma expectation_prod_le n (F : n.-tuple {mfun T >-> R}) :
+  \int[P]_x (normr ((\prod_(i < n) tnth F i) x))%:E <= \prod_(i < n) \int[P]_x (normr (tnth F i x))%:E.
+Proof.
+move: F; elim: n => [F|].
+  rewrite !big_ord0.
+  under eq_fun => x do rewrite ger0_norm// (_ : (1 x)%:E = cst 1 x)//.
+  rewrite integral_cst// mul1e.
+  rewrite [X in X <= 1](_ : _ = 1)//.
+  exact: probability_setT.
+move=> n ih F.
+rewrite !big_ord_recl/=.
+rewrite [X in _ * X](_ : _ = \prod_(i < n) \int[P]_x (normr (tnth (behead_tuple F) i x))%:E); last first.
+  rewrite [in LHS](tuple_eta F).
+  apply: eq_bigr => i _.
+  apply: eq_integral => x _.
+  by rewrite tnthS.
+apply (@le_trans _ _ (
+  \int[P]_x (normr (tnth F ord0 x))%:E *
+    \int[P]_x (normr ((\prod_(i < n) tnth (behead_tuple F) i) x))%:E)); last first.
+  by apply: (lee_pmul _ _ (lexx _)) => //; rewrite integral_ge0.
+
+Admitted.
+
+Lemma integrable_prod n (F : n.-tuple {mfun T >-> R}) :
+    (forall i, P.-integrable [set: T] (EFin \o (tnth F i))) ->
+  P.-integrable [set: T] (EFin \o (\prod_(i < n) tnth F i)%R).
+Proof.
+move=> iF.
+apply/integrableP. split.
+  exact: measurableT_comp.
+apply: (@le_lt_trans _ _ (\prod_(i < n) (\int[P]_x `|tnth F i x|%:E))) => /=.
+  exact: expectation_prod_le.
+apply finite_prod => i.
+rewrite integral_ge0//=.
+have /integrableP[mF] := iF i.
+under eq_fun => x do rewrite abse_EFin.
+exact.
+Qed.
+
 Lemma expectation_prod_independent_RVs n (X : n.-tuple {RV P >-> R}) :
     independent_RVs P [set: 'I_n] (tnth X) ->
     (forall Xi, Xi \in X -> P.-integrable [set: T] (EFin \o Xi)) ->
@@ -1648,14 +1700,20 @@ rewrite expectation_prod; last 3 first.
 
   admit.
 - by rewrite intX// mem_tnth.
-- admit.
+- rewrite (_ : (\prod_(i < n) tnth X (lift ord0 i))%R = (\prod_(i < n) tnth (behead_tuple X) i)%R); last first.
+    by apply: eq_bigr => i _; rewrite [in LHS](tuple_eta X) tnthS.
+  apply: integrable_prod => i.
+  by rewrite intX// tnth_behead mem_tnth.
 rewrite (_ : \prod_(i < n) tnth X (lift ord0 i) = \prod_(i < n) tnth (behead X) i)%R; last first.
   apply: eq_bigr => /=i _. rewrite tnth_behead (_ : inord i.+1 = lift ord0 i)//=.
   by apply: val_inj; rewrite /=inordK// ltnS.
 rewrite IH//=.
+- congr (_ * _).
+  apply: eq_bigr=> i _.
+  congr expectation.
+  by rewrite [in RHS](tuple_eta X) tnthS.
 - admit.
-- admit.
-- admit.
+- by move=> Xi XiX; rewrite intX// mem_behead.
 Abort.
 
 End properties_of_independence.
