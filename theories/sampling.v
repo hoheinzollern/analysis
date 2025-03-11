@@ -1632,61 +1632,45 @@ rewrite big_ord_recl lte_mul_pinfty//.
 by rewrite ih.
 Qed.
 
-(* FIX: if all variables are in L2, then the product is bounded *)
-Lemma expectation_prod_le n (F : n.-tuple {mfun T >-> R}) :
-  \int[P]_x (normr ((\prod_(i < n) tnth F i) x))%:E <= \prod_(i < n) \int[P]_x (normr (tnth F i x))%:E.
+Lemma sub_independent_RVs d' [T' : measurableType d'] [I : choiceType] [A B : set I]
+  [X : I -> {RV P >-> T'}]:
+  A `<=` B -> independent_RVs P B X -> independent_RVs P A X.
 Proof.
-move: F; elim: n => [F|].
-  rewrite !big_ord0.
-  under eq_fun => x do rewrite ger0_norm// (_ : (1 x)%:E = cst 1 x)//.
-  rewrite integral_cst// mul1e.
-  rewrite [X in X <= 1](_ : _ = 1)//.
-  exact: probability_setT.
-move=> n ih F.
-rewrite !big_ord_recl/=.
-rewrite [X in _ * X](_ : _ = \prod_(i < n) \int[P]_x (normr (tnth (behead_tuple F) i x))%:E); last first.
-  rewrite [in LHS](tuple_eta F).
-  apply: eq_bigr => i _.
-  apply: eq_integral => x _.
-  by rewrite tnthS.
-apply (@le_trans _ _ (
-  \int[P]_x (normr (tnth F ord0 x))%:E *
-    \int[P]_x (normr ((\prod_(i < n) tnth (behead_tuple F) i) x))%:E)); last first.
-  by apply: (lee_pmul _ _ (lexx _)) => //; rewrite integral_ge0.
-
-Admitted.
-
-Lemma integrable_prod n (F : n.-tuple {mfun T >-> R}) :
-    (forall i, P.-integrable [set: T] (EFin \o (tnth F i))) ->
-  P.-integrable [set: T] (EFin \o (\prod_(i < n) tnth F i)%R).
-Proof.
-move=> iF.
-apply/integrableP. split.
-  exact: measurableT_comp.
-apply: (@le_lt_trans _ _ (\prod_(i < n) (\int[P]_x `|tnth F i x|%:E))) => /=.
-  exact: expectation_prod_le.
-apply finite_prod => i.
-rewrite integral_ge0//=.
-have /integrableP[mF] := iF i.
-under eq_fun => x do rewrite abse_EFin.
-exact.
+move=> AB [h1 h2]. split.
+  by move=> i Ai; apply: h1; exact: AB.
+move=> J JA E h3.
+by apply: h2 => //; apply: subset_trans; first apply: JA.
 Qed.
 
-Lemma expectation_prod_independent_RVs n (X : n.-tuple {RV P >-> R}) :
+Lemma expectation_prod_independent_RVs n (X : n.-tuple {RV P >-> R}) M:
     independent_RVs P [set: 'I_n] (tnth X) ->
+    (forall i t, (0 <= tnth X i t <= M)%R) ->
     (forall Xi, Xi \in X -> P.-integrable [set: T] (EFin \o Xi)) ->
   'E_P[ \prod_(i < n) (tnth X i) ] = \prod_(i < n) 'E_P[ (tnth X i) ].
 Proof.
 elim: n X => [X|n ih X].
   by rewrite !big_ord0 expectation_cst.
-move=> /=iRVs intX.
+move=> /=iRVs boundedX intX.
 
 rewrite [RHS]big_ord_recl/=.
 rewrite [X in _ * X](_ : _ = \prod_(i < n) ('E_P [ (tnth (behead_tuple X) i) ])); last first.
   by apply: eq_bigr => i _; congr expectation; apply funext => x; rewrite [in LHS](tuple_eta X) tnthS.
-rewrite -ih; last 2 first.
-- admit.
-- admit.
+rewrite -ih; last 3 first.
+- suffices: independent_RVs P [set` behead_tuple (ord_tuple n.+1)] (fun i => tnth X i).
+    rewrite /independent_RVs. move=> [/=h1 h2]. split => /=.
+      move=> i _.
+      have := h1 (lift ord0 i). rewrite {1}(tuple_eta X) tnthS. apply.
+      apply/tnthP. exists i.
+      rewrite tnth_behead/= tnth_ord_tuple.
+      by apply: ord_inj; rewrite lift0 inordK// ltnS.
+    move=> J JIn E h3.
+    have /=J' := ((@widen_ord n n.+1 (leqnSn n)) @` J)%fset.
+    have J'In1 : [set` J'] `<=` [set: 'I_n.+1] by exact: subsetT.
+    (* have := h2 J' J'In1. *)
+    admit.
+  exact: (@sub_independent_RVs _ _ _ _ [set: 'I_n.+1]).
+- by move=> i t; rewrite tnth_behead boundedX.
+- by move=> Xi XiX; rewrite intX// mem_behead.
 
 pose X1 := (fun x : mtuple n.+1 R => \prod_(i < n.+1) tnth x i)%R.
 pose X2 := (fun t : T => [the mtuple n.+1 R of [tuple of [seq tnth X i t | i <- ord_tuple n.+1]]])%R.
