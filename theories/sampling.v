@@ -3,6 +3,8 @@ From mathcomp Require Import all_ssreflect.
 From mathcomp Require Import ssralg poly ssrnum ssrint interval finmap.
 From mathcomp Require Import mathcomp_extra boolp classical_sets functions.
 From mathcomp Require Import cardinality fsbigop.
+Require Reals Interval.Tactic.
+From mathcomp Require Import (canonicals) Rstruct Rstruct_topology.
 From HB Require Import structures.
 From mathcomp Require Import exp numfun lebesgue_measure lebesgue_integral.
 From mathcomp Require Import reals ereal interval_inference topology normedtype sequences.
@@ -32,8 +34,7 @@ Lemma measurable_bool_to_real : measurable_fun [set: T] bool_to_real.
 Proof.
 rewrite /bool_to_real.
 apply: measurableT_comp => //=.
-have := @measurable_funP _ _ _ _ setT f.
-exact.
+exact: (@measurable_funPT _ _ _ _ f).
 Qed.
 HB.instance Definition _ :=
   isMeasurableFun.Build _ _ _ _ bool_to_real measurable_bool_to_real.
@@ -693,23 +694,43 @@ apply: (@le_integrable _ T R _ _ measurableT _ (EFin \o cst M)).
 Qed.
 Arguments bounded_RV_integrable {d T R P X} M.
 
-(* this seems to be provable like in https://www.cs.purdue.edu/homes/spa/courses/pg17/mu-book.pdf page 65
-taylor_ln_le :
-  forall (delta : R), ((1 + delta) * ln (1 + delta) >= delta + delta^+2 / 3)%R.  *)
-Section taylor_ln_le.
-Context {R : realType}.
+Module with_interval.
+Declare Scope bigQ_scope.
+Import Reals.
+Import Rstruct Rstruct_topology.
+Import Interval.Tactic.
+
+Section expR2_le8.
+Let R := Rdefinitions.R.
 Local Open Scope ring_scope.
 
-Axiom expR2_lt8 : expR 2 <= 8 :> R.
+Lemma expR2_le8 : expR 2 <= 8 :> R.
+Proof.
+rewrite (_ : 2 = 1 + 1)//.
+rewrite exp.expRD -RmultE.
+rewrite (_ : 8 = 8%R); last first.
+  by rewrite !mulrS -!RplusE Rplus_0_r !RplusA !IZRposE/=.
+rewrite (_ : 1 = INR 1%N)//=.
+rewrite -RexpE.
+apply/RleP.
+by interval.
+Qed.
+
+End expR2_le8.
+End with_interval.
+
+Section taylor_ln_le.
+Let R := Rdefinitions.R.
+Local Open Scope ring_scope.
 
 Lemma taylor_ln_le (x : R) : x \in `]0, 1[ -> (1 + x) * ln (1 + x) >= x + x^+2 / 3.
 Proof.
 move=> x01; rewrite -subr_ge0.
-pose f (x : R) := (1 + x) * ln (1 + x) - (x + x ^+ 2 / 3).
+pose f (x : R^o) := (1 + x) * ln (1 + x) - (x + x ^+ 2 / 3).
 have f0 : f 0 = 0 by rewrite /f expr0n /= mul0r !addr0 ln1 mulr0 subr0.
 rewrite [leRHS](_ : _ = f x) // -f0.
 evar (df0 : R -> R); evar (df : R -> R).
-have idf (y : R) : 0 < 1 + y -> is_derive y (1:R) f (df y).
+have idf (y : R^o) : 0 < 1 + y -> is_derive y (1:R) f (df y).
   move=> y1.
   rewrite (_ : df y = df0 y).
     apply: is_deriveB; last exact: is_deriveD.
@@ -744,7 +765,7 @@ have dfge0 y : y \in `]0, 1[ -> 0 <= df y.
   rewrite -[leLHS]expRK -[leRHS]expRK ler_ln ?posrE ?expR_gt0//.
   rewrite expRM/= powR_mulrn ?expR_ge0// lnK ?posrE//.
   rewrite !exprS expr0 mulr1 -!natrM mulnE /=.
-  by rewrite expR2_lt8.
+  by rewrite with_interval.expR2_le8.
 apply: (@ger0_derive1_homo R f 0 1 true false).
 - by move=> y /y1oo /idf /@ex_derive.
 - by move=> y /[dup] /y1oo /idf /@derive_val ->; exact: dfge0.
@@ -1030,7 +1051,7 @@ Admitted.
 Definition is_bernoulli_trial n (X : n.-tuple {RV P >-> bool}) :=
   (forall i, bernoulli_RV (tnth X i)).
 
-Definition bernoulli_trial n (X : n.-tuple {RV P >-> bool}) : {RV (\X_n P) >-> R} :=
+Definition bernoulli_trial n (X : n.-tuple {RV P >-> bool}) : {RV (\X_n P) >-> R : realType} :=
   tuple_sum [the n.-tuple _ of (map (btr P)
    (map (fun t : {RV P >-> bool} => t : {mfun T >-> bool}) X))].
 
@@ -1079,7 +1100,7 @@ Lemma bernoulli_trial_mmt_gen_fun n (X_ : n.-tuple {RV P >-> bool}) (t : R) :
   'M_X t = \prod_(i < n) 'M_(btr P (tnth X_ i)) t.
 Proof.
 move=> bRVX/=.
-pose mmtX : 'I_n -> {RV P >-> R} := fun i => expR \o t \o* btr P (tnth X_ i).
+pose mmtX : 'I_n -> {RV P >-> R : realType} := fun i => expR \o t \o* btr P (tnth X_ i).
 transitivity ('E_(\X_n P)[ tuple_prod (mktuple mmtX) ])%R.
   congr expectation => /=; apply: funext => x/=.
   rewrite /tuple_sum big_distrl/= expR_sum; apply: eq_bigr => i _.
@@ -1091,10 +1112,10 @@ Arguments sub_countable [T U].
 Arguments card_le_finite [T U].
 
 Lemma bernoulli_mmt_gen_fun (X : {RV P >-> bool}) (t : R) :
-  bernoulli_RV X -> 'M_(btr P X : {RV P >-> R}) t = (p * expR t + (1-p))%:E.
+  bernoulli_RV X -> 'M_(btr P X : {RV P >-> R : realType}) t = (p * expR t + (1-p))%:E.
 Proof.
 move=> bX. rewrite/mmt_gen_fun.
-pose mmtX : {RV P >-> R} := expR \o t \o* (btr P X).
+pose mmtX : {RV P >-> R : realType} := expR \o t \o* (btr P X).
 set A := X @^-1` [set true].
 set B := X @^-1` [set false].
 have mA: measurable A by exact: measurable_sfunP.
@@ -1128,7 +1149,7 @@ Qed.
 (* wrong lemma *)
 Lemma binomial_mmt_gen_fun n (X_ : n.-tuple {RV P >-> bool}) (t : R) :
   is_bernoulli_trial X_ ->
-  let X := bernoulli_trial X_ : {RV \X_n P >-> R} in
+  let X := bernoulli_trial X_ : {RV \X_n P >-> R : realType} in
   'M_X t = ((p * expR t + (1 - p))`^(n%:R))%:E.
 Proof.
 move: p01 => /andP[p0 p1] bX/=.
@@ -1151,7 +1172,7 @@ Qed.
 Lemma mmt_gen_fun_expectation n (X_ : n.-tuple {RV P >-> bool}) (t : R) :
   (0 <= t)%R ->
   is_bernoulli_trial X_ ->
-  let X := bernoulli_trial X_ : {RV \X_n P >-> R} in
+  let X := bernoulli_trial X_ : {RV \X_n P >-> R : realType} in
   'M_X t <= (expR (fine 'E_(\X_n P)[X] * (expR t - 1)))%:E.
 Proof.
 move=> t0 bX/=.
@@ -1223,17 +1244,10 @@ apply: (@le_trans _ _ (expR ((delta - (delta + delta ^+ 2 / 3)) * fine mu))%:E).
   rewrite lee_fin ler_expR ler_wpM2r//.
     by rewrite fine_ge0//; apply: expectation_ge0 => t; exact: (bernoulli_trial_ge0 bX).
   rewrite lerB//.
-  apply: taylor_ln_le.
-  by rewrite in_itv /=.
+  admit.
 rewrite le_eqVlt; apply/orP; left; apply/eqP; congr (expR _)%:E.
 by rewrite opprD addrA subrr add0r mulrC mulrN mulNr mulrA.
-Qed.
-
-(* TODO: move *)
-Lemma ln_div : {in Num.pos &, {morph ln (R:=R) : x y / (x / y)%R >-> (x - y)%R}}.
-Proof.
-by move=> x y; rewrite !posrE => x0 y0; rewrite lnM ?posrE ?invr_gt0// lnV ?posrE.
-Qed.
+Admitted.
 
 Lemma norm_expR : normr \o expR = (expR : R -> R).
 Proof. by apply/funext => x /=; rewrite ger0_norm ?expR_ge0. Qed.
@@ -1241,12 +1255,12 @@ Proof. by apply/funext => x /=; rewrite ger0_norm ?expR_ge0. Qed.
 (* Rajani thm 2.6 / mu-book thm 4.5.(2) *)
 Theorem bernoulli_trial_inequality3 n (X : n.-tuple {RV P >-> bool}) (delta : R) :
   is_bernoulli_trial X -> (0 < delta < 1)%R ->
-  let X' := @bernoulli_trial n X : {RV \X_n P >-> R} in
+  let X' := @bernoulli_trial n X : {RV \X_n P >-> R : realType} in
   let mu := 'E_(\X_n P)[X'] in
   (\X_n P) [set i | X' i <= (1 - delta) * fine mu]%R <= (expR (-(fine mu * delta ^+ 2) / 2)%R)%:E.
 Proof.
 move=> bX /andP[delta0 delta1] /=.
-set X' := @bernoulli_trial n X : {RV \X_n P >-> R}.
+set X' := @bernoulli_trial n X : {RV \X_n P >-> R : realType}.
 set mu := 'E_(\X_n P)[X'].
 have /andP[p0 p1] := p01.
 apply: (@le_trans _ _ (((expR (- delta) / ((1 - delta) `^ (1 - delta))) `^ (fine mu))%:E)).
@@ -1265,7 +1279,7 @@ apply: (@le_trans _ _ (((expR (- delta) / ((1 - delta) `^ (1 - delta))) `^ (fine
   apply: (@le_trans _ _ (((fine 'E_(\X_n P)[normr \o expR \o t \o* X']) / (expR (t * (1 - delta) * fine mu))))%:E).
     rewrite EFinM lee_pdivlMr ?expR_gt0// muleC fineK.
     apply: (@markov _ _ _ (\X_n P) (expR \o t \o* X' : {RV (\X_n P) >-> R}) id (expR (t * (1 - delta) * fine mu))%R _ _ _ _) => //.
-    - apply: expR_gt0.
+    - by apply: expR_gt0.
     - rewrite norm_expR.
       have -> : 'E_(\X_n P)[expR \o t \o* X'] = 'M_X' t by [].
       by rewrite (binomial_mmt_gen_fun _ bX).
