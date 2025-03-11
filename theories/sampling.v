@@ -1632,6 +1632,7 @@ rewrite big_ord_recl lte_mul_pinfty//.
 by rewrite ih.
 Qed.
 
+(* FIX: if all variables are in L2, then the product is bounded *)
 Lemma expectation_prod_le n (F : n.-tuple {mfun T >-> R}) :
   \int[P]_x (normr ((\prod_(i < n) tnth F i) x))%:E <= \prod_(i < n) \int[P]_x (normr (tnth F i x))%:E.
 Proof.
@@ -1676,17 +1677,66 @@ Lemma expectation_prod_independent_RVs n (X : n.-tuple {RV P >-> R}) :
     (forall Xi, Xi \in X -> P.-integrable [set: T] (EFin \o Xi)) ->
   'E_P[ \prod_(i < n) (tnth X i) ] = \prod_(i < n) 'E_P[ (tnth X i) ].
 Proof.
-elim: n X => [X|n IH X] /= iRVX intX.
+elim: n X => [X|n ih X].
   by rewrite !big_ord0 expectation_cst.
+move=> /=iRVs intX.
 
-rewrite !big_ord_recl.
+rewrite [RHS]big_ord_recl/=.
+rewrite [X in _ * X](_ : _ = \prod_(i < n) ('E_P [ (tnth (behead_tuple X) i) ])); last first.
+  by apply: eq_bigr => i _; congr expectation; apply funext => x; rewrite [in LHS](tuple_eta X) tnthS.
+rewrite -ih; last 2 first.
+- admit.
+- admit.
+
+pose X1 := (fun x : mtuple n.+1 R => \prod_(i < n.+1) tnth x i)%R.
+pose X2 := (fun t : T => [the mtuple n.+1 R of [tuple of [seq tnth X i t | i <- ord_tuple n.+1]]])%R.
+have mX1 : measurable_fun setT X1. admit.
+have mX2 : measurable_fun setT X2. admit.
+pose build_mX1 := isMeasurableFun.Build _ _ _ _ _ mX1.
+pose build_mX2 := isMeasurableFun.Build _ _ _ _ _ mX2.
+pose Y1 : {mfun mtuple n.+1 R >-> R} := HB.pack X1 build_mX1.
+pose Y2 : {mfun T >-> mtuple n.+1 R} := HB.pack X2 build_mX2.
+rewrite [X in 'E_P[X]](_ : _ = Y1 \o Y2)%R; last first. 
+  apply: funext => t.
+  rewrite /Y1/Y2/X1/X2/=.
+  under [RHS]eq_bigr => i _ do rewrite tnth_map tnth_ord_tuple.
+  admit.
+
+rewrite unlock/expectation -(@integral_pushforward _ _ _ _ _ _ _ _ (EFin \o Y1))//=; last first.
+- admit.
+- exact: measurableT_comp.
+pose X3 := (fun t : T => (tnth X ord0 t,[the mtuple n R of [tuple of [seq tnth (behead_tuple X) i t | i <- ord_tuple n]]]))%R.
+have mX3 : measurable_fun setT X3. admit.
+pose build_mX3 := isMeasurableFun.Build _ _ _ _ _ mX3.
+pose Y3 : {mfun T >-> _} := HB.pack X3 build_mX3.
+rewrite /X1.
+rewrite [LHS](_ : _ = \int[pushforward P mX3]_y (y.1 * \prod_(i < n) tnth y.2 i)%:E); last first.
+  under eq_integral => y _.
+    rewrite big_ord_recl/=.
+    rewrite [X in (_ * X)%R](_ : _ = \prod_(i < n) tnth (behead_tuple y) i )%R; last first.
+      by apply eq_bigr => j _; rewrite [in LHS](tuple_eta y) tnthS.
+    over.
+  simpl.
+  admit.
+rewrite [in LHS]/pushforward/=.
+
+(*
+case: n X => [X|n X].
+  by rewrite !big_ord0 expectation_cst.
+elim: n X => [X|n IH X] /= iRVX intX.
+  admit.
+rewrite big_ord_recl [in RHS] big_ord_recl.
 rewrite expectation_prod; last 3 first.
-- split => /=.
+- apply: (@independent_generators _ _ _ _ _ _ _ _ (fun i => @RGenOInfty.G R)) => //=.
+  - move=> i _. admit.
+  - move=> i _. admit.
+  - admit.
+  split => /=.
     case => _//= A/= []B nB <-.
-      have : measurable_fun setT (\prod_(i < n) tnth X (lift ord0 i))%R by [].
-      exact.
+      have : measurable_fun setT (\prod_(i < n.+1) tnth X (lift ord0 i))%R by [].
+      apply => //. admit.
     have : measurable_fun setT (tnth X ord0) by [].
-    exact.
+    apply => //. admit.
   move=> J _ E JE.
   have [|||] := set_bool [set` J]; move=> /eqP h; rewrite -bigcap_fset -[in RHS](set_fsetK J) !h.
   - by rewrite bigcap_set1 fset_set1 big_seq_fset1.
@@ -1696,9 +1746,59 @@ rewrite expectation_prod; last 3 first.
   rewrite bigcap_setU1 bigcap_set1.
   rewrite fset_setU// !fset_set1 big_fsetU1 ?inE//= big_seq_fset1.
   case: iRVX => /=H1 H2.
+  pose E' := fun i : 'I_n.+2 => if i == ord0 then E false else
+                                  if i == lift ord0 ord0 then E true
+                                  else setT.
+  pose J' : {fset 'I_n.+2} := [fset ord0; lift ord0 ord0]%fset.
+  (* have K1 : (forall i : 'I_n.+2, i \in J' -> E' i \in g_sigma_algebra_preimage (tnth X i)). *)
+  (*   case. case. *)
+  (*   - move=> i _. rewrite /E'/=. have := JE false. admit. *)
+  (*   - case. move=> i iJ'. rewrite /E'/=. (* have := JE true. *) *)
+  (*     have : E true \in g_sigma_algebra_preimage (\prod_(i0 < n.+1) tnth X (lift ord0 i0))%R. admit. *)
+  (*     rewrite !inE. case=> B mB h1. red. red. simpl. exists B => //. rewrite /=. *)
+  (*   admit. *)
+  (* (* have := H2 _ _ _ K1. *) *)
+  have : P (\big[setI/[set: T]]_(j <- J') E' j) = \prod_(j <- J') P (E' j).
+    apply: H2 => //.
+    case. case.
+    - move=> i _. rewrite /E'/=. have := JE false. admit.
+    - case. move=> i iJ'. rewrite /E'/= inE/=. red. red. simpl.
+  by rewrite /J' !big_fsetU1 ?inE//= !big_seq_fset1 /E'/= setIC muleC.
+- split => /=.
+    case => _//= A/= []B nB <-.
+      have : measurable_fun setT (\prod_(i < n.+1) tnth X (lift ord0 i))%R by [].
+      exact.
+    have : measurable_fun setT (tnth X ord0) by [].
+    exact.
+  move=> J _ E JE.
   
-
-  admit.
+  
+  have [|||] := set_bool [set` J]; move=> /eqP h; rewrite -bigcap_fset -[in RHS](set_fsetK J) !h.
+  - by rewrite bigcap_set1 fset_set1 big_seq_fset1.
+  - by rewrite bigcap_set1 fset_set1 big_seq_fset1.
+  - by rewrite bigcap_set0 probability_setT fset_set0 big_seq_fset0.
+  rewrite setT_bool.
+  rewrite bigcap_setU1 bigcap_set1.
+  rewrite fset_setU// !fset_set1 big_fsetU1 ?inE//= big_seq_fset1.
+  case: iRVX => /=H1 H2.
+  pose E' := fun i : 'I_n.+2 => if i == ord0 then E false else
+                                  if i == lift ord0 ord0 then E true
+                                  else setT.
+  pose J' : {fset 'I_n.+2} := [fset ord0; lift ord0 ord0]%fset.
+  (* have K1 : (forall i : 'I_n.+2, i \in J' -> E' i \in g_sigma_algebra_preimage (tnth X i)). *)
+  (*   case. case. *)
+  (*   - move=> i _. rewrite /E'/=. have := JE false. admit. *)
+  (*   - case. move=> i iJ'. rewrite /E'/=. (* have := JE true. *) *)
+  (*     have : E true \in g_sigma_algebra_preimage (\prod_(i0 < n.+1) tnth X (lift ord0 i0))%R. admit. *)
+  (*     rewrite !inE. case=> B mB h1. red. red. simpl. exists B => //. rewrite /=. *)
+  (*   admit. *)
+  (* (* have := H2 _ _ _ K1. *) *)
+  have : P (\big[setI/[set: T]]_(j <- J') E' j) = \prod_(j <- J') P (E' j).
+    apply: H2 => //.
+    case. case.
+    - move=> i _. rewrite /E'/=. have := JE false. admit.
+    - case. move=> i iJ'. rewrite /E'/= inE/=. red. red. simpl.
+  by rewrite /J' !big_fsetU1 ?inE//= !big_seq_fset1 /E'/= setIC muleC.
 - by rewrite intX// mem_tnth.
 - rewrite (_ : (\prod_(i < n) tnth X (lift ord0 i))%R = (\prod_(i < n) tnth (behead_tuple X) i)%R); last first.
     by apply: eq_bigr => i _; rewrite [in LHS](tuple_eta X) tnthS.
@@ -1713,7 +1813,7 @@ rewrite IH//=.
   congr expectation.
   by rewrite [in RHS](tuple_eta X) tnthS.
 - admit.
-- by move=> Xi XiX; rewrite intX// mem_behead.
+- by move=> Xi XiX; rewrite intX// mem_behead.*)
 Abort.
 
 End properties_of_independence.
