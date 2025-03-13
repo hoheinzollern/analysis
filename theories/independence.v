@@ -6,8 +6,7 @@ From mathcomp Require Import cardinality fsbigop interval_inference.
 From HB Require Import structures.
 From mathcomp Require Import exp numfun lebesgue_measure lebesgue_integral.
 From mathcomp Require Import reals ereal topology normedtype sequences.
-From mathcomp Require Import esum measure exp numfun lebesgue_measure.
-From mathcomp Require Import lebesgue_integral kernel probability.
+From mathcomp Require Import esum measure kernel probability.
 
 (**md**************************************************************************)
 (* # Independence                                                             *)
@@ -60,7 +59,7 @@ Definition mutual_independence (I : set I0) (F : I0 -> set_system T) :=
       P (\big[setI/setT]_(j <- J) E j) = \prod_(j <- J) P (E j).
 
 Lemma eq_mutual_independence (I : set I0) (F F' : I0 -> set_system T) :
-  (forall i, I i -> F i = F' i) ->
+    (forall i, I i -> F i = F' i) ->
   mutual_independence I F -> mutual_independence I F'.
 Proof.
 move=> FF' IF; split => [i Ii|J JI E EF'].
@@ -828,17 +827,9 @@ HB.instance Definition _ := @Measure_isProbability.Build _ _ R (P \x P) PP.
 Lemma integrable_expectationM (X Y : {RV P >-> R}) :
   independent_RVs2 P X Y ->
   P.-integrable setT (EFin \o X) -> P.-integrable setT (EFin \o Y) ->
-  'E_(P \x P) [(fun x => `|X x.1 * Y x.2|)%R] < +oo
-(*  `|'E_(P) [(fun x => X x * Y x)%R]| < +oo *) .
+  'E_(P \x P) [(fun x => `|X x.1 * Y x.2|)%R] < +oo.
 Proof.
 move=> indeXY iX iY.
-(*apply: (@le_lt_trans _ _ 'E_(P \x P)[(fun x => `|(X x.1 * Y x.2)|%R)]
-   (* 'E_(P)[(fun x => `|(X x * Y x)|%R)] *)  ).
-  rewrite unlock/=.
-  rewrite (le_trans (le_abse_integral _ _ _))//.
-  apply/measurable_EFinP/measurable_funM.
-    by apply/measurableT_comp => //.
-  by apply/measurableT_comp => //.*)
 rewrite unlock.
 rewrite [ltLHS](_ : _ =
     \int[distribution (P \x P) (pairRV X Y)%R]_x `|x.1 * x.2|%:E); last first.
@@ -868,11 +859,11 @@ rewrite [ltLHS](_ : _ = \int[distribution P X]_x `|x|%:E *
 rewrite ge0_integral_distribution//=; last exact/measurable_EFinP.
 rewrite ge0_integral_distribution//=; last exact/measurable_EFinP.
 rewrite lte_mul_pinfty//.
-  by apply: integral_ge0 => //.
-  apply: integral_fune_fin_num => //=.
-  by move/integrable_abse : iX => //.
-apply: integral_fune_lt_pinfty => //.
-by move/integrable_abse : iY => //.
+- exact: integral_ge0.
+- apply: integral_fune_fin_num => //=.
+  by move/integrable_abse : iX.
+- apply: integral_fune_lt_pinfty => //.
+  by move/integrable_abse : iY.
 Qed.
 
 End product_expectation.
