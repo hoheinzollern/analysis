@@ -146,14 +146,14 @@ Context {R : realType} d {T : measurableType d} (P : probability T R).
 Local Open Scope ereal_scope.
 
 Definition pairwise_independent_events E1 E2 :=
-  kwise_independent_events P [set false; true] (bigcap2 E1 E2) 2.
+  @independent_events _ _ _ P bool [set false; true] (bigcap2 E1 E2).
 
 Lemma pairwise_independent_eventsM (E1 E2 : set T) :
   pairwise_independent_events E1 E2 <->
   [/\ d.-measurable E1, d.-measurable E2 & P (E1 `&` E2) = P E1 * P E2].
 Proof.
 split.
-- move=> [mE1E2 /(_ [fset false; true]%fset)].
+- move=> /(independent_events_are_kwise_independent 2) [mE1E2 /(_ [fset false; true]%fset)].
   rewrite bigcap_fset !big_fsetU1 ?inE//= !big_seq_fset1/= => ->; last 2 first.
   + by rewrite set_fsetU !set_fset1; exact: subset_refl.
   + by rewrite cardfs2.
@@ -164,7 +164,7 @@ split.
   rewrite /pairwise_independent_events.
   split.
   + by move=> [| [|]]//=.
-  + move=> B B01 B2.
+  + move=> B B01.
     have [B_set0|B_set0|B_set1|B_set01] := subset_set2 B01.
     * rewrite B_set0.
       move: B_set0 => /eqP; rewrite set_fset_eq0 => /eqP ->.
@@ -196,13 +196,14 @@ Qed.
 Lemma pairwise_independent_eventsC (E1 E2 : set T) :
   pairwise_independent_events E1 E2 -> pairwise_independent_events E2 E1.
 Proof.
-rewrite/pairwise_independent_events/kwise_independent_events. move=> [mE1E2 /(_ [fset false; true]%fset)].
+rewrite/pairwise_independent_events.
+move=> [mE1E2 /(_ [fset false; true]%fset)].
 rewrite bigcap_fset !big_fsetU1 ?inE//= !big_seq_fset1/= => h.
 split.
 - case=> [_|[_|]]//=.
   + by apply: (mE1E2 false) => /=; left.
   + by apply: (mE1E2 true) => /=; right.
-- move=> B B01 B2.
+- move=> B B01.
   have [B_set0|B_set0|B_set1|B_set01] := subset_set2 B01.
   + rewrite B_set0.
     move: B_set0 => /eqP; rewrite set_fset_eq0 => /eqP ->.
@@ -218,7 +219,6 @@ split.
     rewrite !fsbig_set1//= muleC setIC.
     apply: h.
     * by rewrite set_fsetU !set_fset1; exact: subset_refl.
-    * by rewrite cardfs2.
 Qed.
 
 End pairwise_independent_events.
