@@ -40,7 +40,188 @@ Definition independent_events (I : set I0) (E : I0 -> set T) :=
   forall J : {fset I0}, [set` J] `<=` I ->
     P (\bigcap_(i in [set` J]) E i) = \prod_(i <- J) P (E i).
 
+Definition kwise_independent_events (A : set I0) (E : I0 -> set T) k :=
+  (forall i, A i -> measurable (E i)) /\
+  forall B : {fset I0}, [set` B] `<=` A -> (#|` B | <= k)%nat ->
+    P (\bigcap_(i in [set` B]) E i) = \prod_(i <- B) P (E i).
+
 End independent_events.
+
+Section independent_events.
+Context {R : realType} d {T : measurableType d} (P : probability T R)
+  {I0 : choiceType}.
+Local Open Scope ereal_scope.
+
+Lemma sub_independent_events (A B : set I0) (E : I0 -> set T) :
+  A `<=` B -> independent_events P B E -> independent_events P A E.
+Proof.
+by move=> AB [mE h]; split=> [i /AB/mE//|C CA]; apply: h; apply: subset_trans AB.
+Qed.
+
+Lemma sub_kwise_independent (A B : set I0) (E : I0 -> set T) k :
+  A `<=` B -> kwise_independent_events P B E k -> kwise_independent_events P A E k.
+Proof.
+by move=> AB [mE h]; split=> [i /AB/mE//|C CA]; apply: h; apply: subset_trans AB.
+Qed.
+
+Lemma independent_events_are_kwise_independent (A : set I0) (E : I0 -> set T) k :
+  independent_events P A E -> kwise_independent_events P A E k.
+Proof.
+rewrite /independent_events /kwise_independent_events.
+move=> [mE miE]; split=> // B BleA _.
+exact: miE.
+Qed.
+
+Lemma nwise_indep_is_mutual_indep (A : {fset I0}) (E : I0 -> set T) n :
+  #|` A | = n -> kwise_independent_events P [set` A] E n -> independent_events P [set` A] E.
+Proof.
+rewrite /independent_events /kwise_independent_events.
+move=> nA [mE miE]; split=> // B BleA.
+apply: miE => //; rewrite -nA fsubset_leq_card//.
+by apply/fsubsetP => x xB; exact: (BleA x).
+Qed.
+
+Lemma independent_events_weak (E : I0 -> set T) (B : set I0) :
+    (forall b, ~ B b -> E b = setT) ->
+  independent_events P [set: I0] E <-> independent_events P B E.
+Proof.
+move=> BE; split; first exact: sub_independent_events.
+move=> [mE h]; split=> [i _|C _].
+  by have [Bi|Bi] := pselect (B i); [exact: mE|rewrite BE].
+have [CB|CB] := pselect ([set` C] `<=` B); first by rewrite h.
+rewrite -(setIT [set` C]) -(setUv B) setIUr bigcap_setU.
+rewrite (@bigcapT _ _ (_ `&` ~` _)) ?setIT//; last by move=> i [_ /BE].
+have [D CBD] : exists D : {fset I0}, [set` C] `&` B = [set` D].
+  exists (fset_set ([set` C] `&` B)).
+  by rewrite fset_setK//; exact: finite_setIl.
+rewrite CBD h; last first.
+  rewrite -CBD; exact: subIsetr.
+rewrite [RHS]fsbig_seq//= [RHS](fsbigID B)//=.
+rewrite [X in _ * X](_ : _ = 1) ?mule1; last first.
+  by rewrite fsbig1// => m [_ /BE] ->; rewrite probability_setT.
+by rewrite CBD -fsbig_seq.
+Qed.
+
+Lemma kwise_independent_events_weak (E : I0 -> set T) (B : set I0) k :
+    (forall b, ~ B b -> E b = setT) ->
+  kwise_independent_events P [set: I0] E k <-> kwise_independent_events P B E k.
+Proof.
+move=> BE; split; first exact: sub_kwise_independent.
+move=> [mE h]; split=> [i _|C _ Ck].
+  by have [Bi|Bi] := pselect (B i); [exact: mE|rewrite BE].
+have [CB|CB] := pselect ([set` C] `<=` B); first by rewrite h.
+rewrite -(setIT [set` C]) -(setUv B) setIUr bigcap_setU.
+rewrite (@bigcapT _ _ (_ `&` ~` _)) ?setIT//; last by move=> i [_ /BE].
+have [D CBD] : exists D : {fset I0}, [set` C] `&` B = [set` D].
+  exists (fset_set ([set` C] `&` B)).
+  by rewrite fset_setK//; exact: finite_setIl.
+rewrite CBD h; last 2 first.
+  - rewrite -CBD; exact: subIsetr.
+  - rewrite (leq_trans _ Ck)// fsubset_leq_card// -(set_fsetK D) -(set_fsetK C).
+    by rewrite -fset_set_sub// -CBD; exact: subIsetl.
+rewrite [RHS]fsbig_seq//= [RHS](fsbigID B)//=.
+rewrite [X in _ * X](_ : _ = 1) ?mule1; last first.
+  by rewrite fsbig1// => m [_ /BE] ->; rewrite probability_setT.
+by rewrite CBD -fsbig_seq.
+Qed.
+
+End independent_events.
+
+Section independent_events.
+Context {R : realType} d {T : measurableType d} (P : probability T R).
+Local Open Scope ereal_scope.
+
+Lemma kwise_independent_weak01 E1 E2 :
+  kwise_independent_events P [set: nat] (bigcap2 E1 E2) 2%N <->
+  kwise_independent_events P [set 0%N; 1%N] (bigcap2 E1 E2) 2%N.
+Proof.
+apply kwise_independent_events_weak.
+by move=> n /= /not_orP[/eqP /negbTE -> /eqP /negbTE ->].
+Qed.
+
+End independent_events.
+
+Section pairwise_independent_events.
+Context {R : realType} d {T : measurableType d} (P : probability T R).
+Local Open Scope ereal_scope.
+
+Definition pairwise_independent_events E1 E2 :=
+  kwise_independent_events P [set false; true] (bigcap2 E1 E2) 2.
+
+Lemma pairwise_independent_eventsM (E1 E2 : set T) :
+  pairwise_independent_events E1 E2 <->
+  [/\ d.-measurable E1, d.-measurable E2 & P (E1 `&` E2) = P E1 * P E2].
+Proof.
+split.
+- move=> [mE1E2 /(_ [fset false; true]%fset)].
+  rewrite bigcap_fset !big_fsetU1 ?inE//= !big_seq_fset1/= => ->; last 2 first.
+  + by rewrite set_fsetU !set_fset1; exact: subset_refl.
+  + by rewrite cardfs2.
+  split => //.
+  + by apply: (mE1E2 false) => /=; left.
+  + by apply: (mE1E2 true) => /=; right.
+- move=> [mE1 mE2 E1E2M].
+  rewrite /pairwise_independent_events.
+  split.
+  + by move=> [| [|]]//=.
+  + move=> B B01 B2.
+    have [B_set0|B_set0|B_set1|B_set01] := subset_set2 B01.
+    * rewrite B_set0.
+      move: B_set0 => /eqP; rewrite set_fset_eq0 => /eqP ->.
+      by rewrite big_nil bigcap_set0 probability_setT.
+    * rewrite B_set0 bigcap_set1 /=.
+      by rewrite fsbig_seq//= B_set0 fsbig_set1/=.
+    * rewrite B_set1 bigcap_set1 /=.
+      by rewrite fsbig_seq//= B_set1 fsbig_set1/=.
+    * rewrite B_set01 bigcap_setU1 bigcap_set1/=.
+      rewrite fsbig_seq//= B_set01.
+      rewrite fsbigU//=; last first.
+        by move=> n [/= ->].
+      by rewrite !fsbig_set1//=.
+Qed.
+
+Lemma pairwise_independent_events_setC (E1 E2 : set T) :
+  pairwise_independent_events E1 E2 -> pairwise_independent_events E1 (~` E2).
+Proof.
+rewrite/pairwise_independent_events.
+move/pairwise_independent_eventsM=> [mE1 mE2 h].
+apply/pairwise_independent_eventsM; split=> //.
+- exact: measurableC.
+- rewrite -setDE measureD//; last first.
+    exact: (le_lt_trans (probability_le1 P mE1) (ltry _)).
+  rewrite probability_setC// muleBr// ?mule1 -?h//.
+  by rewrite fin_num_measure.
+Qed.
+
+Lemma pairwise_independent_eventsC (E1 E2 : set T) :
+  pairwise_independent_events E1 E2 -> pairwise_independent_events E2 E1.
+Proof.
+rewrite/pairwise_independent_events/kwise_independent_events. move=> [mE1E2 /(_ [fset false; true]%fset)].
+rewrite bigcap_fset !big_fsetU1 ?inE//= !big_seq_fset1/= => h.
+split.
+- case=> [_|[_|]]//=.
+  + by apply: (mE1E2 false) => /=; left.
+  + by apply: (mE1E2 true) => /=; right.
+- move=> B B01 B2.
+  have [B_set0|B_set0|B_set1|B_set01] := subset_set2 B01.
+  + rewrite B_set0.
+    move: B_set0 => /eqP; rewrite set_fset_eq0 => /eqP ->.
+    by rewrite big_nil bigcap_set0 probability_setT.
+  + rewrite B_set0 bigcap_set1 /=.
+    by rewrite fsbig_seq//= B_set0 fsbig_set1/=.
+  + rewrite B_set1 bigcap_set1 /=.
+    by rewrite fsbig_seq//= B_set1 fsbig_set1/=.
+  + rewrite B_set01 bigcap_setU1 bigcap_set1/=.
+    rewrite fsbig_seq//= B_set01.
+    rewrite fsbigU//=; last first.
+    by move=> n [/= ->].
+    rewrite !fsbig_set1//= muleC setIC.
+    apply: h.
+    * by rewrite set_fsetU !set_fset1; exact: subset_refl.
+    * by rewrite cardfs2.
+Qed.
+
+End pairwise_independent_events.
 
 Section mutual_independence.
 Context {R : realType} d {T : measurableType d} (P : probability T R)
