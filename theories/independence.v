@@ -24,6 +24,8 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
+Reserved Notation "I .-independent X" (at level 2, format "I  .-independent X").
+
 Import Order.TTheory GRing.Theory Num.Def Num.Theory.
 Import numFieldTopology.Exports.
 
@@ -64,7 +66,7 @@ Proof.
 by move=> AB [mE h]; split=> [i /AB/mE//|C CA]; apply: h; apply: subset_trans AB.
 Qed.
 
-Lemma independent_events_are_kwise_independent (A : set I0) (E : I0 -> set T) k :
+Lemma independent_events_is_kwise_independent (A : set I0) (E : I0 -> set T) k :
   independent_events P A E -> kwise_independent_events P A E k.
 Proof.
 rewrite /independent_events /kwise_independent_events.
@@ -153,7 +155,7 @@ Lemma pairwise_independent_eventsM (E1 E2 : set T) :
   [/\ d.-measurable E1, d.-measurable E2 & P (E1 `&` E2) = P E1 * P E2].
 Proof.
 split.
-- move=> /(independent_events_are_kwise_independent 2) [mE1E2 /(_ [fset false; true]%fset)].
+- move=> /(independent_events_is_kwise_independent 2) [mE1E2 /(_ [fset false; true]%fset)].
   rewrite bigcap_fset !big_fsetU1 ?inE//= !big_seq_fset1/= => ->; last 2 first.
   + by rewrite set_fsetU !set_fset1; exact: subset_refl.
   + by rewrite cardfs2.
@@ -239,6 +241,12 @@ Definition mutual_independence (I : set I0) (F : I0 -> set_system T) :=
     forall E, (forall i, i \in J -> E i \in F i) ->
       P (\big[setI/setT]_(j <- J) E j) = \prod_(j <- J) P (E j).
 
+Definition kwise_independence (I : set I0) (F : I0 -> set_system T) k :=
+  (forall i, I i -> F i `<=` measurable) /\
+  forall J : {fset I0}, [set` J] `<=` I -> (#|` J | <= k)%nat ->
+    forall E, (forall i, i \in J -> E i \in F i) ->
+      P (\big[setI/setT]_(j <- J) E j) = \prod_(j <- J) P (E j).
+
 Lemma eq_mutual_independence (I : set I0) (F F' : I0 -> set_system T) :
     (forall i, I i -> F i = F' i) ->
   mutual_independence I F -> mutual_independence I F'.
@@ -247,6 +255,23 @@ move=> FF' IF; split => [i Ii|J JI E EF'].
   by rewrite -FF'//; apply IF.
 apply IF => // i iJ.
 by rewrite FF' ?EF'//; exact: JI.
+Qed.
+
+Lemma mutual_independence_is_kwise_independence (I : set I0) (F : I0 -> set_system T) k :
+  mutual_independence I F -> kwise_independence I F k.
+Proof.
+rewrite /mutual_independence/kwise_independence.
+move=> [mE miE]; split=> // B BleA _.
+exact: miE.
+Qed.
+
+Lemma nwise_independence_is_mutual_independence (I : {fset I0}) (F : I0 -> set_system T) n :
+  #|` I | = n -> kwise_independence [set` I] F n -> mutual_independence [set` I] F.
+Proof.
+rewrite /kwise_independence/mutual_independence.
+move=> nA [mE miE]; split=> // B BleA.
+apply: miE => //; rewrite -nA fsubset_leq_card//.
+by apply/fsubsetP => x xB; exact: (BleA x).
 Qed.
 
 End mutual_independence.
@@ -699,32 +724,25 @@ Context {d' : I0 -> _} (T' : forall i : I0, measurableType (d' i)).
 Variable P : probability T R.
 
 Definition independent_RVs (I : set I0)
-  (X : forall i : I0, {mfun T >-> T' i}) : Prop :=
+  (X : forall i : I0, {RV P >-> T' i}) : Prop :=
   mutual_independence P I (fun i => g_sigma_algebra_preimage (X i)).
 
+Definition kwise_independent_RV (I : set I0)
+  (X : forall i : I0, {RV P >-> R}) k : Prop :=
+  kwise_independence P I (fun i => g_sigma_algebra_preimage (X i)) k.
+
 End independent_RVs.
+
+Notation "I .-independent X" := (independent_RVs I X).
 
 Section independent_RVs2.
 Context {R : realType} d d' (T : measurableType d) (T' : measurableType d').
 Variable P : probability T R.
 
-Definition independent_RVs2 (X Y : {mfun T >-> T'}) :=
-  independent_RVs P [set: bool] (fun b => if b then Y else X).
+Definition independent_RVs2 (X Y : {RV P >-> T'}) :=
+  [set: bool].-independent (fun b => if b then Y else X).
 
 End independent_RVs2.
-
-(*Section independent_RVs.
-Context {R : realType} d d' (T : measurableType d) (T' : measurableType d').
-Variable P : probability T R.
-
-Definition independent_RVs (I0 : choiceType)
-    (I : set I0) (X : I0 -> {mfun T >-> T'}) : Prop :=
-  mutual_independence P I (fun i => g_sigma_algebra_preimage (X i)).
-
-Definition independent_RVs2 (X Y : {mfun T >-> T'}) :=
-  independent_RVs [set: bool] [eta (fun=> cst point) with false |-> X, true |-> Y].
-
-End independent_RVs.*)
 
 Section independent_RVs_comp.
 Context {R : realType} d d' (T : measurableType d) (T' : measurableType d').
@@ -732,8 +750,8 @@ Variable P : probability T R.
 Local Open Scope ring_scope.
 
 Lemma independent_RVs_comp (I0 : choiceType)
-    (I : set I0) (X : I0 -> {mfun T >-> T'}) (f : {mfun T' >-> R}) :
-  independent_RVs P I X -> independent_RVs P I (fun i => f \o X i).
+    (I : set I0) (X : I0 -> {RV P >-> T'}) (f : {mfun T' >-> R}) :
+  independent_RVs I X -> independent_RVs I (fun i => [the {RV P >-> R} of f \o X i]).
 Proof.
 move=> PIX; split.
 - move=> i Ii.
@@ -751,8 +769,8 @@ Variable P : probability T R.
 Local Open Scope ring_scope.
 
 Lemma independent_RVs_scale (I0 : choiceType)
-    (I : set I0) (X : I0 -> {mfun T >-> R}) k :
-  independent_RVs P I X -> independent_RVs P I (fun i => k \o* X i).
+    (I : set I0) (X : I0 -> {RV P >-> R}) k :
+  independent_RVs I X -> independent_RVs I (fun i => k \o* X i : {RV P >-> R}).
 Proof.
 move=> PIX; split.
 - move=> i Ii.
@@ -773,7 +791,7 @@ Variable P : probability T R.
 Local Open Scope ring_scope.
 
 Lemma independent_RVs2_comp (X Y : {RV P >-> R}) (f g : {mfun R >-> R}) :
-  independent_RVs2 P X Y -> independent_RVs2 P (f \o X) (g \o Y).
+  independent_RVs2 X Y -> independent_RVs2 (f \o X : {RV P >-> R}) (g \o Y).
 Proof.
 move=> indeXY; split => /=.
 - move=> [] _ /= A.
@@ -788,7 +806,7 @@ move=> indeXY; split => /=.
 Qed.
 
 Lemma independent_RVs2_funrposneg (X Y : {RV P >-> R}) :
-  independent_RVs2 P X Y -> independent_RVs2 P X^\+ Y^\-.
+  independent_RVs2 X Y -> @independent_RVs2 _ _ _ _ _ P X^\+ Y^\-.
 Proof.
 move=> indeXY; split=> [[|]/= _|J J2 E JE].
 - exact: g_sigma_algebra_preimage_funrneg.
@@ -802,7 +820,7 @@ move=> indeXY; split=> [[|]/= _|J J2 E JE].
 Qed.
 
 Lemma independent_RVs2_funrnegpos (X Y : {RV P >-> R}) :
-  independent_RVs2 P X Y -> independent_RVs2 P X^\- Y^\+.
+  independent_RVs2 X Y -> @independent_RVs2 _ _ _ _ _ P X^\- Y^\+.
 Proof.
 move=> indeXY; split=> [/= [|]// _ |J J2 E JE].
 - exact: g_sigma_algebra_preimage_funrpos.
@@ -816,7 +834,7 @@ move=> indeXY; split=> [/= [|]// _ |J J2 E JE].
 Qed.
 
 Lemma independent_RVs2_funrnegneg (X Y : {RV P >-> R}) :
-  independent_RVs2 P X Y -> independent_RVs2 P X^\- Y^\-.
+  independent_RVs2 X Y -> @independent_RVs2 _ _ _ _ _ P X^\- Y^\-.
 Proof.
 move=> indeXY; split=> [/= [|]// _ |J J2 E JE].
 - exact: g_sigma_algebra_preimage_funrneg.
@@ -830,7 +848,7 @@ move=> indeXY; split=> [/= [|]// _ |J J2 E JE].
 Qed.
 
 Lemma independent_RVs2_funrpospos (X Y : {RV P >-> R}) :
-  independent_RVs2 P X Y -> independent_RVs2 P X^\+ Y^\+.
+  independent_RVs2 X Y -> @independent_RVs2 _ _ _ _ _ P X^\+ Y^\+.
 Proof.
 move=> indeXY; split=> [/= [|]//= _ |J J2 E JE].
 - exact: g_sigma_algebra_preimage_funrpos.
@@ -858,7 +876,7 @@ Theorem independent_generators (I : set I0) (F : forall i : I0, set_system (T' i
   (forall i, i \in I -> F i `<=` @measurable _ (T' i)) ->
   (forall i, i \in I -> @measurable _ (T' i) = <<s F i>>) ->
   mutual_independence P I (fun i => preimage_set_system setT (X i) (F i)) ->
-  independent_RVs P I X.
+  independent_RVs I X.
 Proof.
 move=> IF FA AsF indeX1.
 have closed_preimage i : I i -> setI_closed (preimage_set_system setT (X i) (F i)).
@@ -951,7 +969,7 @@ Qed.
 
 Lemma tmp0 (X Y : {RV P >-> R}) (B1 B2 : set R) :
   measurable B1 -> measurable B2 ->
-  independent_RVs2 P X Y ->
+  independent_RVs2 X Y ->
   P (X @^-1` B1 `&` Y @^-1` B2) = P (X @^-1` B1) * P (Y @^-1` B2).
 Proof.
 move=> mB1 mB2.
@@ -966,7 +984,7 @@ Qed.
 
 Lemma tmp1 (X Y : {RV P >-> R}) (B1 B2 : set R) :
   measurable B1 -> measurable B2 ->
-  independent_RVs2 P X Y ->
+  independent_RVs2 X Y ->
   P (X @^-1` B1 `&` Y @^-1` B2) = (P \x P) (pairRV X Y @^-1` (B1 `*` B2)).
 Proof.
 move=> mB1 mB2 XY.
@@ -1006,7 +1024,7 @@ Qed.
 HB.instance Definition _ := @Measure_isProbability.Build _ _ R (P \x P) PP.
 
 Lemma integrable_expectationM (X Y : {RV P >-> R}) :
-  independent_RVs2 P X Y ->
+  independent_RVs2 X Y ->
   P.-integrable setT (EFin \o X) -> P.-integrable setT (EFin \o Y) ->
   'E_(P \x P) [(fun x => `|X x.1 * Y x.2|)%R] < +oo.
 Proof.
@@ -1134,7 +1152,7 @@ by apply: eq_fsbigr => y fy; rewrite -integralZl//; exact/integrable_indic.
 Qed.
 
 Lemma expectationM_ge0 (X Y : {RV P >-> R}) :
-  independent_RVs2 P X Y ->
+  independent_RVs2 X Y ->
   'E_P[X] *? 'E_P[Y] ->
   (forall t, 0 <= X t)%R -> (forall t, 0 <= Y t)%R ->
   'E_P [X * Y] = 'E_P [X] * 'E_P [Y].
@@ -1229,7 +1247,7 @@ by rewrite setTI.
 Qed.
 
 Lemma integrable_expectationM000 (X Y : {RV P >-> R}) :
-  independent_RVs2 P X Y ->
+  independent_RVs2 X Y ->
   P.-integrable setT (EFin \o X) -> P.-integrable setT (EFin \o Y) ->
   `|'E_P [X * Y]| < +oo.
 Proof.
@@ -1258,7 +1276,7 @@ rewrite expectationM_ge0//=.
 Qed.
 
 Lemma independent_integrableM (X Y : {RV P >-> R}) :
-  independent_RVs2 P X Y ->
+  independent_RVs2 X Y ->
   P.-integrable setT (EFin \o X) -> P.-integrable setT (EFin \o Y) ->
   P.-integrable setT (EFin \o (X \* Y)%R).
 Proof.
@@ -1271,7 +1289,7 @@ Qed.
 
 (* TODO: rename to expectationM when deprecation is removed  *)
 Lemma expectation_mul (X Y : {RV P >-> R}) :
-  independent_RVs2 P X Y ->
+  independent_RVs2 X Y ->
   P.-integrable setT (EFin \o X) -> P.-integrable setT (EFin \o Y) ->
   'E_P [X * Y] = 'E_P [X] * 'E_P [Y].
 Proof.
@@ -1350,7 +1368,7 @@ by move=> [|] ->; rewrite eqxx// orbT.
 Qed.
 
 Lemma independent_RVsD1 (I : {fset nat}) i0 (X : {RV P >-> R}^nat) :
-  independent_RVs P [set` I] X -> independent_RVs P [set` (I `\ i0)%fset] X.
+  independent_RVs [set` I] X -> independent_RVs [set` (I `\ i0)%fset] X.
 Proof.
 move=> H.
 split => [/= i|/= J JIi0 E EK].
