@@ -23,6 +23,16 @@
 - file `lebesgue_integral.v`:
   + lemma `measurable_fun_le`
 
+- in `trigo.v`:
+  + lemma `integral0oo_atan`
+
+- in `measure.v`:
+  + lemmas `preimage_set_system0`, `preimage_set_systemU`, `preimage_set_system_compS`
+  + lemma `preimage_set_system_id`
+
+- in `Rstruct_topology.v`:
+  + lemma `RexpE`
+
 - file `mathcomp_extra.v`:
   + lemma `mulr_funEcomp`
 
@@ -208,15 +218,6 @@
   + `min_le_min` -> `le_min2`
   + `max_le_max` -> `le_max2`
   + `real_sqrtC` -> `sqrtC_real`
-- in `measure.v`
-  + `preimage_class` -> `preimage_set_system`
-  + `image_class` -> `image_set_system`
-  + `preimage_classes` -> `g_sigma_preimageU`
-  + `preimage_class_measurable_fun` -> `preimage_set_system_measurable_fun`
-  + `sigma_algebra_preimage_class` -> `sigma_algebra_preimage`
-  + `sigma_algebra_image_class` -> `sigma_algebra_image`
-  + `sigma_algebra_preimage_classE` -> `g_sigma_preimageE`
-  + `preimage_classes_comp` -> `g_sigma_preimageU_comp`
   
 ### Renamed
 
@@ -278,16 +279,6 @@
   + lemma `Pos_to_natE` (moved to `Rstruct.v`)
   + lemma `deg_le2_ge0` (available as `deg_le2_poly_ge0` in `ssrnum.v`
     since MathComp 2.1.0)
-- in `sequences.v`:
-  + notations `nneseries_pred0`, `eq_nneseries`, `nneseries0`,
-    `ereal_cvgPpinfty`, `ereal_cvgPninfty` (were deprecated since 0.6.0)
-- in `topology_structure.v`:
-  + lemma `closureC`
-
-- in file `lebesgue_integral.v`:
-  + lemma `approximation`
-
-### Removed
 
 - in `lebesgue_integral.v`:
   + definition `cst_mfun`
