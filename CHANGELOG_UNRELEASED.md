@@ -159,6 +159,7 @@
   + lemma `lfun_inclusion`, `lfun_inclusion12`
   + lemma `lfun_oppr_closed`
   + lemma `lfun_addr_closed`
+  + lemmas `minkowski'`, `minkowskie`
 
 - in `lebesgue_integral.v`:
   + lemma `mfunMn`
@@ -168,6 +169,8 @@
 
 - in `measurable_realfun.v`:
   + lemmas `ereal_inf_seq`, `ereal_sup_seq`,
+- in `measurable_realfun.v`:
+  + lemmas `ereal_inf_seq`, `ereal_sup_seq`, `set_cst`,
     `ereal_sup_cst`, `ereal_inf_cst`, `ereal_sup_pZl`,
     `ereal_supZl`, `ereal_inf_pZl`, `ereal_infZl`
 
@@ -208,6 +211,39 @@
   + lemmas `poweR_Lnorm`, `oppe_Lnorm`
 - in `probability.v`:
   + lemma `lfun1_expectation_lty`
+
+- new file `lspace.v`:
+  + definition `finite_norm`
+  + mixin `isLfun` with field `lfuny`
+  + structure `Lfun`
+  + notation `LfunType`
+  + definition `Lequiv`
+  + canonical `Lequiv_canonical`
+  + definition `LspaceType`
+  + canonicals `LspaceType_quotType`, `LspaceType_eqType`, `LspaceType_choiceType`,
+    `LspaceType_eqQuotType`
+  + lemma `LequivP`
+  + record `LType`
+  + coercion `LfunType_of_LType`
+  + definition `Lspace` with notation `mu.-Lspace p`
+  + lemma `LType1_integrable`, `LType2_integrable_sqr`
+  + definition `conjugate`
+  + lemma `conjugateE`
+  + definitions `finlfun`, `lfun`, `lfun_key`
+  + canonical `lfun_keyed`
+  + lemmas `sub_lfun_mfun`, `sub_lfun_finlfun`
+  + definition `lfun_Sub`
+  + lemmas `lfun_rect`, `lfun_valP`, `lfuneqP`, `lfuny0`, `mfunP`, `lfunP`,
+    `mfun_scaler_closed`
+  + lemmas `LnormZ`, `lfun_submod_closed`
+  + definition `nm`
+  + lemmas `finite_norm_fine`, `ler_Lnorm_add`, `natmulfctE`,
+    `LnormN`, `enatmul_ninfty`, `Lnorm_natmul`, `nm_eq0`
+  + lemma `mul_lte_pinfty`
+  + lemma `Lspace_inclusion`
+
+- in `nat_topology.v`:
+  + lemma `nbhs_infty_gtr`
 
 ### Changed
 
@@ -280,6 +316,9 @@
   + `Lnorm_ge0` -> `Lnormr_ge0`
   + `Lnorm_eq0_eq0` -> `Lnormr_eq0_eq0`
 
+- in `ereal.v`:
+  + `ereal_sup_le` -> `ereal_sup_ge`
+
 ### Generalized
 
 - in `constructive_ereal.v`:
@@ -298,6 +337,9 @@
 
 - in `probability.v`
   + lemma `cantelli`
+- in `hoelder.v`:
+  + definition `Lnorm` generalized to functions with codomain `\bar R`
+    (this impacts the notation `'N_p[f]`)
 
 ### Deprecated
 
@@ -340,6 +382,10 @@
 - in `classical_sets.v`:
   + notations `setvI`, `setIv`, `bigcup_set`, `bigcup_set_cond`, `bigcap_set`,
     `bigcap_set_cond`
+
+- in `measure.v`:
+  + definition `almost_everywhere_notation`
+  + lemma `ess_sup_ge0`
 
 - in `measure.v`:
   + definition `almost_everywhere_notation`
