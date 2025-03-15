@@ -222,6 +222,7 @@ Notation "'N[ mu ]_ p [ f ]" := (Lnorm mu p f) : ereal_scope.
 Section lnorm.
 Context d {T : measurableType d} {R : realType}.
 Local Open Scope ereal_scope.
+(** lp-norm is just Lp-norm applied to counting *)
 Local Notation "'N_ p [ f ]" := (Lnorm counting p (EFin \o f)).
 
 Lemma Lnorm_counting p (f : R^nat) : (0 < p)%R ->
@@ -681,27 +682,37 @@ case: ifPn => mugt0; last by rewrite adde0 lexx.
 exact: ess_sup_normD.
 Qed.
 
-Lemma minkowski' f g p :
-  measurable_fun setT f -> measurable_fun setT g -> (1 <= p)%R ->
+Lemma lerB_DLnorm f g p :
+  measurable_fun [set: T] f -> measurable_fun [set: T] g -> (1 <= p)%R ->
   'N_p%:E[f] <= 'N_p%:E[f \+ g] + 'N_p%:E[g].
 Proof.
 move=> mf mg p1.
 rewrite (_ : f = ((f \+ g) \+ (-%R \o g))%R); last first.
   by apply: funext => x /=; rewrite -addrA subrr addr0.
-rewrite [X in _ <= 'N__[X] + _](_ : ((f \+ g \- g) \+ g)%R = (f \+ g)%R); last first.
+rewrite [X in _ <= 'N__[X] + _](_ : _ = (f \+ g)%R); last first.
   by apply: funext => x /=; rewrite -addrA [X in _ + _ + X]addrC subrr addr0.
-rewrite (_ : 'N__[g] = 'N_p%:E[-%R \o g]); last first.
-  by rewrite oppr_Lnorm.
-apply: minkowski => //.
-  apply: measurable_funD => //.
-apply: measurableT_comp => //.
+rewrite (_ : 'N__[g] = 'N_p%:E[-%R \o g]); last by rewrite oppr_Lnorm.
+by apply: minkowski_EFin => //;
+  [exact: measurable_funD|exact: measurableT_comp].
 Qed.
 
-Lemma minkowskie (f g : T -> R) (p : \bar R) :
-  measurable_fun setT f -> measurable_fun setT g -> 1 <= p ->
+Lemma lerB_LnormD f g p :
+  measurable_fun [set: T] f -> measurable_fun [set: T] g -> (1 <= p)%R ->
+  'N_p%:E[f] - 'N_p%:E[g] <= 'N_p%:E[f \+ g].
+Proof.
+move=> mf mg p1.
+set rhs := (leRHS); have [?|] := boolP (rhs \is a fin_num).
+  by rewrite lee_subel_addr//; exact: lerB_DLnorm.
+rewrite fin_numEn => /orP[|/eqP ->]; last by rewrite leey.
+by rewrite gt_eqF// (lt_le_trans _ (Lnorm_ge0 _ _ _)).
+Qed.
+
+(* TODO: rename to minkowski after version 1.12.0 *)
+Lemma eminkowski f g (p : \bar R) :
+  measurable_fun [set: T] f -> measurable_fun [set: T] g -> 1 <= p ->
   'N_p[(f \+ g)%R] <= 'N_p[f] + 'N_p[g].
 Proof.
-case: p => //[r|]; first exact: minkowski.
+case: p => //[r|]; first exact: minkowski_EFin.
 move=> mf mg _; rewrite unlock /Lnorm.
 case: ifPn => mugt0; last by rewrite adde0 lexx.
 exact: ess_sup_normD.
