@@ -4246,13 +4246,16 @@ Local Notation ae_eq := (ae_eq mu D).
 Lemma ae_eq0 U (f g : T -> U) : measurable D -> mu D = 0 -> f = g %[ae mu in D].
 Proof. by move=> mD D0; exists D; split => // t/= /not_implyP[]. Qed.
 
-Instance comp_ae_eq U V (j : T -> U -> V) : Proper (ae_eq ==> ae_eq) (fun f x => j x (f x)).
+Instance comp_ae_eq U V (j : T -> U -> V) :
+  Proper (ae_eq ==> ae_eq) (fun f x => j x (f x)).
 Proof. by move=> f g; apply: filterS => x /[apply] /= ->. Qed.
 
-Instance comp_ae_eq2 U U' V (j : T -> U -> U' -> V) : Proper (ae_eq ==> ae_eq ==> ae_eq) (fun f g x => j x (f x) (g x)).
+Instance comp_ae_eq2 U U' V (j : T -> U -> U' -> V) :
+  Proper (ae_eq ==> ae_eq ==> ae_eq) (fun f g x => j x (f x) (g x)).
 Proof. by move=> f f' + g g'; apply: filterS2 => x + + Dx => -> // ->. Qed.
 
-Instance comp_ae_eq2' U U' V (j : U -> U' -> V) : Proper (ae_eq ==> ae_eq ==> ae_eq) (fun f g x => j (f x) (g x)).
+Instance comp_ae_eq2' U U' V (j : U -> U' -> V) :
+  Proper (ae_eq ==> ae_eq ==> ae_eq) (fun f g x => j (f x) (g x)).
 Proof. by move=> f f' + g g'; apply: filterS2 => x + + Dx => -> // ->. Qed.
 
 Instance sub_ae_eq2 : Proper (ae_eq ==> ae_eq ==> ae_eq) (@GRing.sub_fun T R).
@@ -5465,4 +5468,3 @@ Lemma measure_dominates_ae_eq m1 m2 f g E : measurable E ->
 Proof. by move=> mE m21 [A [mA A0 ?]]; exists A; split => //; exact: m21. Qed.
 
 End absolute_continuity_lemmas.
-
