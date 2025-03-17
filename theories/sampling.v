@@ -55,22 +55,30 @@ Lemma prodr_map {R : realType} U d (T : measurableType d) (l : seq U) Q
   (\prod_(i <- l | Q i) f i) x = \prod_(i <- l | Q i) f i x.
 Proof. by elim/big_ind2 : _ => //= _ h _ g <- <-. Qed.
 
+Definition sumrfct_tuple {R : realType} d {T : measurableType d}
+    n (s : n.-tuple {mfun T >-> R}) : T -> R :=
+  \sum_(f <- s) f.
+
+Lemma measurable_sumrfct_tuple {R : realType} d {T : measurableType d}
+    n (s : n.-tuple {mfun T >-> R}) :
+  measurable_fun setT (sumrfct_tuple s).
+Proof. by apply/measurable_EFinP => /=; exact/measurableT_comp. Qed.
+
+HB.instance Definition _ {R : realType} d {T : measurableType d}
+    n (s : n.-tuple {mfun T >-> R}) :=
+  isMeasurableFun.Build _ _ _ _ (sumrfct_tuple s) (measurable_sumrfct_tuple s).
+
 Definition sumrfct {R : realType} d {T : measurableType d} (s : seq {mfun T >-> R}) : T -> R :=
-  fun x => \sum_(f <- s) f x.
+  \sum_(f <- s) f.
 
 Lemma measurable_sumrfct {R : realType} d {T : measurableType d} (s : seq {mfun T >-> R}) :
   measurable_fun setT (sumrfct s).
 Proof.
-apply/measurable_EFinP => /=; apply/measurableT_comp => //.
-exact: measurable_sum.
+by apply/measurable_EFinP => /=; apply/measurableT_comp => //.
 Qed.
 
 HB.instance Definition _ {R : realType} d {T : measurableType d} (s : seq {mfun T >-> R}) :=
   isMeasurableFun.Build _ _ _ _ (sumrfct s) (measurable_sumrfct s).
-
-Lemma sum_mfunE {R : realType} d {T : measurableType d} (s : seq {mfun T >-> R}) x :
-  ((\sum_(f <- s) f) x = sumrfct s x)%R.
-Proof. by rewrite/sumrfct; elim/big_ind2 : _ => //= u a v b <- <-. Qed.
 
 End move.
 
@@ -780,34 +788,55 @@ Qed.
 
 End taylor_ln_le.
 
+(* TODO: move to functions. *)
+Lemma fct_prodE (I : Type) (T : pointedType) (M : comRingType) r (P : {pred I}) (f : I -> T -> M)
+    (x : T) :
+  (\prod_(i <- r | P i) f i) x = \prod_(i <- r | P i) f i x.
+Proof. by elim/big_rec2: _ => //= i y ? Pi <-. Qed.
+
+HB.instance Definition _ (n : nat) := isPointed.Build 'I_n.+1 ord0.
+
+HB.instance Definition _ (n : nat) := @isMeasurable.Build default_measure_display
+  'I_n.+1 discrete_measurable discrete_measurable0
+  discrete_measurableC discrete_measurableU.
+
 Section tuple_sum.
 Context d (T : measurableType d) (R : realType) (P : probability T R).
 
-Definition tuple_sum n (s : n.-tuple {mfun T >-> R}) : mtuple n T -> R :=
-  (fun x => \sum_(i < n) (tnth s i) (tnth x i))%R.
+Definition Tnth n (X : n.-tuple {mfun T >-> R}) (i : 'I_n) : mtuple n T -> R :=
+  fun t => (tnth X i) (tnth t i).
 
-Lemma measurable_tuple_sum n (s : n.-tuple {mfun T >-> R}) :
-  measurable_fun setT (tuple_sum s).
+Lemma measurable_Tnth n (X : n.-tuple {mfun T >-> R}) (i : 'I_n) :
+  measurable_fun [set: mtuple n T] (Tnth X i).
+Proof. by apply: measurableT_comp => //; exact: measurable_tnth. Qed.
+
+HB.instance Definition _ n (X : n.-tuple {mfun T >-> R}) (i : 'I_n) :=
+  isMeasurableFun.Build _ _ _ _ (Tnth X i) (measurable_Tnth X i).
+
+Lemma measurable_tuple_sum n (X : n.-tuple {mfun T >-> R}) :
+  measurable_fun setT (\sum_(i < n) Tnth X i)%R.
 Proof.
+rewrite [X in measurable_fun _ X](_ : _
+    = (fun x => \sum_(i < n) Tnth X i x)); last first.
+  by apply/funext => x; rewrite fct_sumE.
 apply: measurable_sum => i/=; apply/measurableT_comp => //.
 exact: measurable_tnth.
 Qed.
 
 HB.instance Definition _ n (s : n.-tuple {mfun T >-> R}) :=
-  isMeasurableFun.Build _ _ _ _ (tuple_sum s) (measurable_tuple_sum s).
+  isMeasurableFun.Build _ _ _ _ (\sum_(i < n) Tnth s i)%R (measurable_tuple_sum s).
 
-Definition tuple_prod n (s : n.-tuple {mfun T >-> R}) : mtuple n T -> R :=
-  (fun x => \prod_(i < n) (tnth s i) (tnth x i))%R.
-
-Lemma measurable_tuple_prod n (s : n.-tuple {mfun T >-> R}) :
-  measurable_fun setT (tuple_prod s).
+Lemma measurable_tuple_prod m n (s : m.-tuple {mfun T >-> R}) (f : 'I_n -> 'I_m) :
+  measurable_fun setT (\prod_(i < n) Tnth s (f i))%R.
 Proof.
-apply: measurable_prod => /= i _; apply/measurableT_comp => //.
-exact: measurable_tnth.
+rewrite [X in measurable_fun _ X](_ : _
+    = (fun x => \prod_(i < n) Tnth s (f i) x)); last first.
+  by apply/funext => x; rewrite fct_prodE.
+by apply: measurable_prod => /= i _; apply/measurableT_comp => //.
 Qed.
 
-HB.instance Definition _ n (s : n.-tuple {mfun T >-> R}) :=
-  isMeasurableFun.Build _ _ _ _ (tuple_prod s) (measurable_tuple_prod s).
+HB.instance Definition _ m n (s : m.-tuple {mfun T >-> R}) (f : 'I_n -> 'I_m) :=
+  isMeasurableFun.Build _ _ _ _ (\prod_(i < n) Tnth s (f i))%R (measurable_tuple_prod s f).
 
 End tuple_sum.
 
@@ -815,21 +844,19 @@ Section properties_of_expectation.
 Context d (T : measurableType d) (R : realType) (P : probability T R).
 Local Open Scope ereal_scope.
 
-Lemma expectation_sum_pro n (X : n.-tuple {RV P >-> R}) :
-  'E_(\X_n P)[tuple_sum X] = \sum_(i < n) ('E_P[(tnth X i)]).
+Lemma expectation_sum_pro n (X : n.-tuple {RV P >-> R}) M :
+    (forall i t, (0 <= tnth X i t <= M)%R) ->
+  'E_(\X_n P)[\sum_(i < n) Tnth X i] = \sum_(i < n) ('E_P[(tnth X i)]).
 Proof.
-elim: n X => [X|n IH X] /=.
-  rewrite /tuple_sum.
-  under eq_fun do rewrite big_ord0.
-  by rewrite big_ord0 expectation_cst.
+elim: n X => [X|n IH X] /= XM.
+  by rewrite !big_ord0 expectation_cst.
 pose X0 := thead X.
 have intX0 : P.-integrable [set: T] (EFin \o X0).
   admit.
 have {}intX Xi : Xi \in X -> P.-integrable [set: T] (EFin \o Xi).
   admit.
 rewrite big_ord_recl/=.
-rewrite /tuple_sum/=.
-under eq_fun do rewrite big_ord_recl/=.
+rewrite big_ord_recl/=.
 pose X1 (x : mtuple n.+1 T) :=
   (\sum_(i < n) (tnth X (lift ord0 i)) (tnth x (lift ord0 i)))%R.
 have mX1 : measurable_fun setT X1.
@@ -843,7 +870,12 @@ rewrite /X2 /=.
   by apply: measurableT_comp => //; exact: measurable_tnth.
 pose build_mX2 := isMeasurableFun.Build _ _ _ _ _ mX2.
 pose Y2 : {mfun mtuple n.+1 T >-> R} := HB.pack X2 build_mX2.
-rewrite [X in 'E__[X]](_ : _ = Y2 \+ Y1)//.
+rewrite [X in 'E__[X]](_ : _ = Y2 \+ Y1); last first.
+  rewrite /Y2 /Y1/=.
+  rewrite /X2 /X1/=.
+  apply/funext => t.
+  rewrite !fctE.
+  by rewrite fct_sumE.
 rewrite expectationD; last 2 first.
   admit. admit.
 congr (_ + _).
@@ -921,7 +953,9 @@ congr (_ + _).
     congr (tnth X _ _)%:E.
     apply/val_inj => /=.
     by rewrite inordK// ltnS.
-  by [].
+  congr expectation.
+  apply/funext => t.
+  by rewrite fct_sumE.
 Admitted.
 
 Lemma expectation_prod2 d1 d2 (T1 : measurableType d1) (T2 : measurableType d2)
@@ -995,23 +1029,32 @@ Qed.
 Lemma expectation_prod_nondep n (X : n.-tuple {RV P >-> R}) M :
     (forall i t, (0 <= tnth X i t <= M)%R) ->
     (forall Xi, Xi \in X -> P.-integrable [set: T] (EFin \o Xi)) ->
-  'E_(\X_n P)[ tuple_prod X ] = \prod_(i < n) 'E_P[ (tnth X i) ].
+  'E_(\X_n P)[ \prod_(i < n) Tnth X i] = \prod_(i < n) 'E_P[ (tnth X i) ].
 Proof.
 elim: n X => [X|n IH X] /= boundedX intX.
-  rewrite /tuple_prod.
-  under eq_fun do rewrite big_ord0.
-  by rewrite big_ord0 expectation_cst.
-rewrite big_ord_recl/=.
-rewrite unlock /expectation integral_mpro /pro2//; last first.
-  apply: (bounded_RV_integrable (M^+n.+1)%R) => // t.
-  rewrite /tuple_prod.
-  apply/andP. split.
+  by rewrite !big_ord0 expectation_cst.
+rewrite unlock /expectation integral_mpro /pro2; last 2 first.
+- admit.
+- apply: (bounded_RV_integrable (M^+n.+1)%R) => //.
+    exact: measurable_tuple_prod.
+  move=> t; apply/andP; split.
+    rewrite fct_prodE.
     rewrite prodr_ge0//= => i _.
     by have /andP[] := boundedX i (tnth t i).
   rewrite -[in leRHS](subn0 n.+1) -prodr_const_nat.
-  by rewrite big_mkord ler_prod.
-rewrite /tuple_prod/=.
-under eq_fun => x do (rewrite big_ord_recl/= tnth0; under eq_bigr => i do rewrite tnthS).
+  rewrite fct_prodE big_mkord.
+  by rewrite ler_prod// => i _; exact: boundedX.
+under eq_fun.
+  move=> x.
+  rewrite big_ord_recl/=.
+  rewrite /Tnth/= fctE tnth0.
+  rewrite fct_prodE.
+  under eq_bigr.
+    move=> i _.
+    rewrite tnthS.
+    over.
+  over.
+rewrite /=.
 rewrite -fubini1' /fubini_F/=; last first.
   apply: measurable_bounded_integrable => //=.
   - rewrite /product_measure1/=.
@@ -1051,6 +1094,7 @@ under eq_fun => x.
   rewrite integralZl//= -[X in _*X]fineK ?integral_fune_fin_num//=.
   over.
 rewrite integralZr//; last by rewrite intX// (tuple_eta X) tnth0 mem_head.
+rewrite big_ord_recl/=.
 congr (_ * _).
 rewrite fineK ?integral_fune_fin_num//=.
 under eq_fun => x.
@@ -1059,8 +1103,10 @@ under eq_fun => x.
     over.
   over.
 simpl.
-rewrite [LHS](_ : _ = 'E_(\X_n P)[ tuple_prod (behead_tuple X) ]); last first.
-  by rewrite [in RHS]unlock /expectation [in RHS]/tuple_prod.
+rewrite [LHS](_ : _ = 'E_(\X_n P)[ \prod_(i < n) Tnth (behead_tuple X) i]); last first.
+  rewrite [in RHS]unlock /expectation.
+  apply: eq_integral => t _; congr EFin.
+  by rewrite fct_prodE.
 rewrite IH; last 2 first.
 - by move=> i t; rewrite tnth_behead.
 - by move=> Xi XiX; apply: intX; rewrite mem_behead.
@@ -1069,7 +1115,7 @@ rewrite unlock /expectation.
 apply: eq_integral => x _.
 congr EFin.
 by rewrite [in RHS](tuple_eta X) tnthS.
-Qed.
+Admitted.
 
 Section fset.
 Local Open Scope fset_scope.
@@ -1190,8 +1236,8 @@ by rewrite expe2 -EFinD onemMr.
 Admitted.
 
 Definition bernoulli_trial n (X : n.-tuple (bernoulliRV P p)) : {RV (\X_n P) >-> R : realType} :=
-  tuple_sum [the n.-tuple _ of (map (btr P)
-   (map (fun t : bernoulliRV P p => t : {mfun T >-> bool}) X))].
+  (\sum_(i < n) Tnth [the n.-tuple _ of (map (btr P)
+   (map (fun t : bernoulliRV P p => t : {mfun T >-> bool}) X))] i)%R.
 
 (*
 was wrong
@@ -1209,7 +1255,8 @@ Lemma expectation_bernoulli_trial n (X : n.-tuple (bernoulliRV P p)) :
   'E_(\X_n P)[bernoulli_trial X] = (n%:R * p)%:E.
 Proof.
 rewrite /bernoulli_trial.
-rewrite expectation_sum_pro.
+rewrite (@expectation_sum_pro _ _ _ _ _ _ 1%R); last first.
+  by move=> i t; rewrite tnth_map// btr_ge0 btr_le1.
 transitivity (\sum_(i < n) p%:E).
   by apply: eq_bigr => k _; rewrite !tnth_map bernoulli_expectation.
 by rewrite sumEFin big_const_ord iter_addr addr0 mulrC mulr_natr.
@@ -1220,7 +1267,9 @@ Lemma bernoulli_trial_ge0 n (X : n.-tuple (bernoulliRV P p)) :
 Proof.
 move=> t.
 rewrite /bernoulli_trial.
+rewrite [leRHS]fct_sumE.
 apply/sumr_ge0 => /= i _.
+rewrite /Tnth.
 by rewrite !tnth_map.
 Qed.
 
@@ -1229,10 +1278,13 @@ Lemma bernoulli_trial_mmt_gen_fun n (X_ : n.-tuple (bernoulliRV P p)) (t : R) :
   'M_X t = \prod_(i < n) 'M_(btr P (tnth X_ i)) t.
 Proof.
 pose mmtX : 'I_n -> {RV P >-> R : realType} := fun i => expR \o t \o* btr P (tnth X_ i).
-transitivity ('E_(\X_n P)[ tuple_prod (mktuple mmtX) ])%R.
+transitivity ('E_(\X_n P)[ \prod_(i < n) Tnth (mktuple mmtX) i ])%R.
   congr expectation => /=; apply: funext => x/=.
-  rewrite /tuple_sum big_distrl/= expR_sum; apply: eq_bigr => i _.
-  admit.
+  rewrite fct_sumE.
+  rewrite big_distrl/= expR_sum.
+  rewrite [in RHS]fct_prodE.
+  apply: eq_bigr => i _.
+  by rewrite /Tnth !tnth_map /mmtX/= tnth_ord_tuple.
 rewrite /mmtX.
 Admitted.
 
@@ -1496,10 +1548,12 @@ rewrite set_orb.
 rewrite measureU; last 3 first.
 - rewrite -(@setIidr _ setT [set _ | _]) ?subsetT//.
   apply: emeasurable_fun_le => //.
-  apply: measurableT_comp => //.
+  apply/measurable_EFinP.
+  exact: measurableT_comp.
 - rewrite -(@setIidr _ setT [set _ | _]) ?subsetT//.
   apply: emeasurable_fun_le => //.
-  apply: measurableT_comp => //.
+  apply/measurable_EFinP.
+  exact: measurableT_comp.
 - rewrite disjoints_subset => x /=.
   rewrite /mem /in_mem/= => X0; apply/negP.
   rewrite -ltNge.
