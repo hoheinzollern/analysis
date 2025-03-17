@@ -1288,11 +1288,13 @@ rewrite [X in 'E_P[X]]bool_RV_sqr !bernoulli_expectation//.
 by rewrite expe2 -EFinD onemMr.
 Qed.
 
-Definition real_of_bool := map (bool_to_real R : bernoulliRV P p -> {mfun _ >-> _}).
+Definition real_of_bool n : _ -> n.-tuple _ :=
+  map_tuple (bool_to_real R : bernoulliRV P p -> {mfun _ >-> _}).
 
-Definition bernoulli_trial n (X : n.-tuple (bernoulliRV P p))
-    : {RV (\X_n P) >-> R : realType} :=
-  (\sum_(i < n) Tnth (real_of_bool X) i)%R.
+Definition trial_value n (X : n.-tuple {RV P >-> _}) : {RV (\X_n P) >-> R : realType} :=
+  (\sum_(i < n) Tnth X i)%R.
+
+Definition bool_trial_value n := @trial_value n \o @real_of_bool n.
 
 (*
 was wrong
@@ -1307,9 +1309,8 @@ Lemma btr_le1 (X : {RV P >-> bool}) t : (bool_to_real R X t <= 1)%R.
 Proof. by rewrite /bool_to_real/=; case: (X t). Qed.
 
 Lemma expectation_bernoulli_trial n (X : n.-tuple (bernoulliRV P p)) :
-  'E_(\X_n P)[bernoulli_trial X] = (n%:R * p)%:E.
+  'E_(\X_n P)[bool_trial_value X] = (n%:R * p)%:E.
 Proof.
-rewrite /bernoulli_trial.
 (*=======
 move=> bRV. rewrite /bernoulli_trial.
 transitivity ('E_(\X_n P)[\sum_(i < n) Tnth (map (bool_to_real R) X) i]).
@@ -1327,10 +1328,9 @@ by rewrite sumEFin big_const_ord iter_addr addr0 mulrC mulr_natr.
 Qed.
 
 Lemma bernoulli_trial_ge0 n (X : n.-tuple (bernoulliRV P p)) :
-  (forall t, 0 <= bernoulli_trial X t)%R.
+  (forall t, 0 <= bool_trial_value X t)%R.
 Proof.
 move=> t.
-rewrite /bernoulli_trial.
 rewrite [leRHS]fct_sumE.
 apply/sumr_ge0 => /= i _.
 rewrite /Tnth.
@@ -1338,7 +1338,7 @@ by rewrite !tnth_map.
 Qed.
 
 Lemma bernoulli_trial_mmt_gen_fun n (X_ : n.-tuple (bernoulliRV P p)) (t : R) :
-  let X := bernoulli_trial X_ in
+  let X := bool_trial_value X_ in
   'M_X t = \prod_(i < n) 'M_(bool_to_real R (tnth X_ i) : {RV P >-> _}) t.
 Proof.
 pose mmtX : 'I_n -> {RV P >-> R : realType} := fun i => expR \o t \o* bool_to_real R (tnth X_ i).
@@ -1412,7 +1412,7 @@ Qed.
 
 (* wrong lemma *)
 Lemma binomial_mmt_gen_fun n (X_ : n.-tuple (bernoulliRV P p)) (t : R) :
-  let X := bernoulli_trial X_ : {RV \X_n P >-> R : realType} in
+  let X := bool_trial_value X_ : {RV \X_n P >-> R : realType} in
   'M_X t = ((p * expR t + (1 - p))`^(n%:R))%:E.
 Proof.
 move: p01 => /andP[p0 p1] bX/=.
@@ -1424,7 +1424,7 @@ Qed.
 
 Lemma mmt_gen_fun_expectation n (X_ : n.-tuple (bernoulliRV P p)) (t : R) :
   (0 <= t)%R ->
-  let X := bernoulli_trial X_ : {RV \X_n P >-> R : realType} in
+  let X := bool_trial_value X_ : {RV \X_n P >-> R : realType} in
   'M_X t <= (expR (fine 'E_(\X_n P)[X] * (expR t - 1)))%:E.
 Proof.
 move=> t_ge0/=.
@@ -1439,7 +1439,7 @@ Qed.
 
 Lemma end_thm24 n (X_ : n.-tuple (bernoulliRV P p)) (t delta : R) :
   (0 < delta)%R ->
-  let X := @bernoulli_trial n X_ in
+  let X := bool_trial_value X_ in
   let mu := 'E_(\X_n P)[X] in
   let t := ln (1 + delta) in
   (expR (expR t - 1) `^ fine mu)%:E *
@@ -1458,13 +1458,13 @@ Qed.
 (* theorem 2.4 Rajani / thm 4.4.(2) mu-book *)
 Theorem bernoulli_trial_inequality1 n (X_ : n.-tuple (bernoulliRV P p)) (delta : R) :
   (0 < delta)%R ->
-  let X := @bernoulli_trial n X_ in
+  let X := bool_trial_value X_ in
   let mu := 'E_(\X_n P)[X] in
   (\X_n P) [set i | X i >= (1 + delta) * fine mu]%R <=
   ((expR delta / ((1 + delta) `^ (1 + delta))) `^ (fine mu))%:E.
 Proof.
 rewrite /= => delta0.
-set X := @bernoulli_trial n X_.
+set X := bool_trial_value X_.
 set mu := 'E_(\X_n P)[X].
 set t := ln (1 + delta).
 have t0 : (0 < t)%R by rewrite ln_gt0// ltrDl.
@@ -1479,7 +1479,7 @@ Qed.
 
 (* theorem 2.5 *)
 Theorem bernoulli_trial_inequality2 n (X : n.-tuple (bernoulliRV P p)) (delta : R) :
-  let X' := @bernoulli_trial n X in
+  let X' := bool_trial_value X in
   let mu := 'E_(\X_n P)[X'] in
   (0 < n)%nat ->
   (0 < delta < 1)%R ->
@@ -1507,12 +1507,12 @@ Proof. by apply/funext => x /=; rewrite ger0_norm ?expR_ge0. Qed.
 (* Rajani thm 2.6 / mu-book thm 4.5.(2) *)
 Theorem bernoulli_trial_inequality3 n (X : n.-tuple (bernoulliRV P p)) (delta : R) :
   (0 < delta < 1)%R ->
-  let X' := @bernoulli_trial n X : {RV \X_n P >-> R : realType} in
+  let X' := bool_trial_value X : {RV \X_n P >-> R : realType} in
   let mu := 'E_(\X_n P)[X'] in
   (\X_n P) [set i | X' i <= (1 - delta) * fine mu]%R <= (expR (-(fine mu * delta ^+ 2) / 2)%R)%:E.
 Proof.
 move=> /andP[delta0 delta1] /=.
-set X' := @bernoulli_trial n X : {RV \X_n P >-> R : realType}.
+set X' := bool_trial_value X : {RV \X_n P >-> R : realType}.
 set mu := 'E_(\X_n P)[X'].
 have /andP[p0 p1] := p01.
 apply: (@le_trans _ _ (((expR (- delta) / ((1 - delta) `^ (1 - delta))) `^ (fine mu))%:E)).
@@ -1607,13 +1607,13 @@ Corollary bernoulli_trial_inequality4 n (X : n.-tuple (bernoulliRV P p)) (delta 
   (0 < delta < 1)%R ->
   (0 < n)%nat ->
   (0 < p)%R ->
-  let X' := @bernoulli_trial n X in
+  let X' := bool_trial_value X in
   let mu := 'E_(\X_n P)[X'] in
   (\X_n P) [set i | `|X' i - fine mu | >=  delta * fine mu]%R <=
   (expR (- (fine mu * delta ^+ 2) / 3)%R *+ 2)%:E.
 Proof.
 move=> /andP[d0 d1] n0 p0 /=.
-set X' := @bernoulli_trial n X.
+set X' := bool_trial_value X.
 set mu := 'E_(\X_n P)[X'].
 under eq_set => x.
   rewrite ler_normr.
@@ -1653,15 +1653,13 @@ Qed.
 
 (* Rajani thm 3.1 / mu-book thm 4.7 *)
 Theorem sampling n (X : n.-tuple (bernoulliRV P p)) (theta delta : R) :
-  let X' x := (bernoulli_trial X x) / n%:R in
+  let X' x := (bool_trial_value X x) / n%:R in
   (0 < p)%R ->
   (0 < delta <= 1)%R -> (0 < theta < p)%R -> (0 < n)%nat ->
   (3 / theta ^+ 2 * ln (2 / delta) <= n%:R)%R ->
   (\X_n P) [set i | `| X' i - p | <= theta]%R >= 1 - delta%:E.
 Proof.
-move=> X_sum X' p0 /andP[delta0 delta1] /andP[theta0 thetap] n0 tdn.
-have E_X_sum: 'E_(\X_n P)[X_sum] = (p * n%:R)%:E.
-  by rewrite /X_sum expectation_bernoulli_trial// mulrC.
+move=> X' p0 /andP[delta0 delta1] /andP[theta0 thetap] n0 tdn.
 have /andP[_ p1] := p01.
 set epsilon := theta / p.
 have epsilon01 : (0 < epsilon < 1)%R.
@@ -1671,11 +1669,11 @@ have thetaE : theta = (epsilon * p)%R.
 have step1 : (\X_n P) [set i | `| X' i - p | >= epsilon * p]%R <=
     ((expR (- (p * n%:R * (epsilon ^+ 2)) / 3)) *+ 2)%:E.
   rewrite [X in (\X_n P) X <= _](_ : _ =
-      [set i | `| X_sum i - p * n%:R | >= epsilon * p * n%:R]%R); last first.
+      [set i | `| bool_trial_value X i - p * n%:R | >= epsilon * p * n%:R]%R); last first.
     apply/seteqP; split => [t|t]/=.
       move/(@ler_wpM2r _ n%:R (ler0n _ _)) => /le_trans; apply.
       rewrite -[X in (_ * X)%R](@ger0_norm _ n%:R)// -normrM mulrBl.
-      by rewrite -mulrA mulVf ?mulr1// gt_eqF ?ltr0n.
+      by rewrite -mulrA mulVf ?mulr1// ?gt_eqF ?ltr0n.
     move/(@ler_wpM2r _ n%:R^-1); rewrite invr_ge0// ler0n => /(_ erefl).
     rewrite -(mulrA _ _ n%:R^-1) divff ?mulr1 ?gt_eqF ?ltr0n//.
     move=> /le_trans; apply.
@@ -1683,7 +1681,7 @@ have step1 : (\X_n P) [set i | `| X' i - p | >= epsilon * p]%R <=
     by rewrite -mulrA divff ?mulr1// gt_eqF// ltr0n.
   rewrite -mulrA.
   have -> : (p * n%:R)%R = fine (p * n%:R)%:E by [].
-  rewrite -E_X_sum.
+  rewrite -(mulrC _ p) -(expectation_bernoulli_trial X).
   exact: (@bernoulli_trial_inequality4 _ X epsilon).
 have step2 : (\X_n P) [set i | `| X' i - p | >= theta]%R <=
     ((expR (- (n%:R * theta ^+ 2) / 3)) *+ 2)%:E.
