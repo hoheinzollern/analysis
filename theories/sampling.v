@@ -66,7 +66,9 @@ HB.instance Definition _ :=
 
 HB.instance Definition _ := MeasurableFun.on bool_to_real.
 
-Definition btr : {RV P >-> R} := bool_to_real.
+(*Definition btr : {RV P >-> R} := bool_to_real.
+
+HB.instance Definition _ := MeasurableFun.on btr.*)
 
 End bool_to_real.
 
@@ -1247,9 +1249,9 @@ by apply/seteqP; split => [x /eqP H//|x /eqP].
 Qed.
 
 Lemma bernoulli_expectation (X : bernoulliRV P p) :
-  'E_P[btr P X] = p%:E.
+  'E_P[bool_to_real R X] = p%:E.
 Proof.
-rewrite unlock /btr.
+rewrite unlock.
 rewrite -(@ge0_integral_distribution _ _ _ _ _ _ X (EFin \o [eta GRing.natmul 1]))//; last first.
   by move=> y //=.
 rewrite /bernoulli/=.
@@ -1260,11 +1262,11 @@ by rewrite -!EFinM -EFinD mulr0 addr0 mulr1.
 Qed.
 
 Lemma integrable_bernoulli (X : bernoulliRV P p) :
-  P.-integrable [set: T] (EFin \o btr P X).
+  P.-integrable [set: T] (EFin \o bool_to_real R X).
 Proof.
 apply/integrableP; split.
   by apply: measurableT_comp => //; exact: measurable_bool_to_real.
-have -> : \int[P]_x `|(EFin \o btr P X) x| = 'E_P[btr P X].
+have -> : \int[P]_x `|(EFin \o bool_to_real R X) x| = 'E_P[bool_to_real R X].
   rewrite unlock /expectation.
   apply: eq_integral => x _.
   by rewrite gee0_abs //= lee_fin.
@@ -1272,37 +1274,39 @@ by rewrite bernoulli_expectation// ltry.
 Qed.
 
 Lemma bool_RV_sqr (X : {RV P >-> bool}) :
-  ((btr P X ^+ 2) = btr P X :> (T -> R))%R.
+  ((bool_to_real R X ^+ 2) = bool_to_real R X :> (T -> R))%R.
 Proof.
 apply: funext => x /=.
-rewrite /GRing.exp /btr/bool_to_real /GRing.mul/=.
+rewrite /GRing.exp /bool_to_real /GRing.mul/=.
 by case: (X x) => /=; rewrite ?mulr1 ?mulr0.
 Qed.
 
 Lemma bernoulli_variance (X : bernoulliRV P p) :
-  'V_P[btr P X] = (p * (`1-p))%:E.
+  'V_P[bool_to_real R X] = (p * (`1-p))%:E.
 Proof.
-rewrite (@varianceE _ _ _ _ (btr P X));
+rewrite (@varianceE _ _ _ _ (bool_to_real R X));
   [|rewrite ?[X in _ \o X]bool_RV_sqr; exact: integrable_bernoulli..].
 rewrite [X in 'E_P[X]]bool_RV_sqr !bernoulli_expectation//.
 by rewrite expe2 -EFinD onemMr.
 Qed.
 
-Definition bernoulli_trial n (X : n.-tuple (bernoulliRV P p)) : {RV (\X_n P) >-> R : realType} :=
-  (\sum_(i < n) Tnth [the n.-tuple _ of (map (btr P)
-   (map (fun t : bernoulliRV P p => t : {mfun T >-> bool}) X))] i)%R.
+Definition real_of_bool := map (bool_to_real R : bernoulliRV P p -> {mfun _ >-> _}).
+
+Definition bernoulli_trial n (X : n.-tuple (bernoulliRV P p))
+    : {RV (\X_n P) >-> R : realType} :=
+  (\sum_(i < n) Tnth (real_of_bool X) i)%R.
 
 (*
 was wrong
 Definition bernoulli_trial n (X : {dRV P >-> bool}^nat) : {RV (pro n P) >-> R} :=
-  (\sum_(i<n) (btr P (X i)))%R. (* TODO: add HB instance measurablefun sum*)
+  (\sum_(i<n) (bool_to_real R (X i)))%R. (* TODO: add HB instance measurablefun sum*)
 *)
 
-Lemma btr_ge0 (X : {RV P >-> bool}) t : (0 <= btr P X t)%R.
+Lemma btr_ge0 (X : {RV P >-> bool}) t : (0 <= bool_to_real R X t)%R.
 Proof. by []. Qed.
 
-Lemma btr_le1 (X : {RV P >-> bool}) t : (btr P X t <= 1)%R.
-Proof. by rewrite /btr/=/bool_to_real/=; case: (X t). Qed.
+Lemma btr_le1 (X : {RV P >-> bool}) t : (bool_to_real R X t <= 1)%R.
+Proof. by rewrite /bool_to_real/=; case: (X t). Qed.
 
 Lemma expectation_bernoulli_trial n (X : n.-tuple (bernoulliRV P p)) :
   'E_(\X_n P)[bernoulli_trial X] = (n%:R * p)%:E.
@@ -1310,7 +1314,7 @@ Proof.
 rewrite /bernoulli_trial.
 (*=======
 move=> bRV. rewrite /bernoulli_trial.
-transitivity ('E_(\X_n P)[\sum_(i < n) Tnth (map (btr P) X) i]).
+transitivity ('E_(\X_n P)[\sum_(i < n) Tnth (map (bool_to_real R) X) i]).
   congr expectation; apply/funext => t.
   rewrite /Tnth/=.
   rewrite !fct_sumE/=.
@@ -1337,9 +1341,9 @@ Qed.
 
 Lemma bernoulli_trial_mmt_gen_fun n (X_ : n.-tuple (bernoulliRV P p)) (t : R) :
   let X := bernoulli_trial X_ in
-  'M_X t = \prod_(i < n) 'M_(btr P (tnth X_ i)) t.
+  'M_X t = \prod_(i < n) 'M_(bool_to_real R (tnth X_ i) : {RV P >-> _}) t.
 Proof.
-pose mmtX : 'I_n -> {RV P >-> R : realType} := fun i => expR \o t \o* btr P (tnth X_ i).
+pose mmtX : 'I_n -> {RV P >-> R : realType} := fun i => expR \o t \o* bool_to_real R (tnth X_ i).
 transitivity ('E_(\X_n P)[ \prod_(i < n) Tnth (mktuple mmtX) i ])%R.
   congr expectation => /=; apply: funext => x/=.
   rewrite fct_sumE.
@@ -1374,10 +1378,10 @@ Arguments sub_countable [T U].
 Arguments card_le_finite [T U].
 
 Lemma bernoulli_mmt_gen_fun (X : bernoulliRV P p) (t : R) :
-  'M_(btr P X : {RV P >-> R : realType}) t = (p * expR t + (1-p))%:E.
+  'M_(bool_to_real R X : {RV P >-> R : realType}) t = (p * expR t + (1-p))%:E.
 Proof.
 rewrite/mmt_gen_fun.
-pose mmtX : {RV P >-> R : realType} := expR \o t \o* (btr P X).
+pose mmtX : {RV P >-> R : realType} := expR \o t \o* (bool_to_real R X).
 set A := X @^-1` [set true].
 set B := X @^-1` [set false].
 have mA: measurable A by exact: measurable_sfunP.
