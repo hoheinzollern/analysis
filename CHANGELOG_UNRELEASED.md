@@ -134,6 +134,8 @@
   + lemmas `poweR_Lnorm`, `oppe_Lnorm`
 - in `probability.v`:
   + lemma `lfun1_expectation_lty`
+- in `derive.v`:
+  + lemmas `derive_shift`, `is_derive_shift`
 
 ### Changed
 
