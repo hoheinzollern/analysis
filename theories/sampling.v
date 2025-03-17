@@ -197,11 +197,6 @@ Qed.
 HB.instance Definition _ (n : nat) (T : pointedType) :=
   isPointed.Build (n.-tuple T) (nseq n point).
 
-Definition mtuple (n : nat) d (T : measurableType d) : Type := n.-tuple T.
-
-HB.instance Definition _ (n : nat) d (T : measurableType d) :=
-  Pointed.on (mtuple n T).
-
 Lemma countable_range_bool d (T : measurableType d) (b : bool) :
   countable (range (@cst T _ b)).
 Proof. exact: countableP. Qed.
@@ -231,8 +226,8 @@ Proof. exact: sigma_algebra_bigcup. Qed.
 
 HB.instance Definition _ :=
   @isMeasurable.Build (measure_tuple_display d)
-    (mtuple n T) (g_sigma_preimage coors)
-    (tuple_set0) (tuple_setC) (tuple_bigcup).
+    (n.-tuple T) (g_sigma_preimage coors)
+    tuple_set0 tuple_setC tuple_bigcup.
 
 End measurable_tuple.
 
@@ -248,7 +243,7 @@ Definition Z d {T : measurableType d} m
   [set B | exists A, B = cylinder A J].
 
 Lemma measurable_tnth d (T : measurableType d) n (i : 'I_n) :
-  measurable_fun [set: mtuple n T] (@tnth _ T ^~ i).
+  measurable_fun [set: n.-tuple T] (@tnth _ T ^~ i).
 Proof.
 move=> _ Y mY; rewrite setTI; apply: sub_sigma_algebra => /=.
 rewrite -bigcup_seq/=; exists i => //=; first by rewrite mem_index_enum.
@@ -258,7 +253,7 @@ Qed.
 Section cons_measurable_fun.
 Context d d1 (T : measurableType d) (T1 : measurableType d1).
 
-Lemma cons_measurable_funP (n : nat) (h : T -> mtuple n T1) :
+Lemma cons_measurable_funP (n : nat) (h : T -> n.-tuple T1) :
   measurable_fun setT h <->
   forall i : 'I_n,  measurable_fun setT ((@tnth _ T1 ^~ i) \o h).
 Proof.
@@ -289,9 +284,9 @@ apply: (@iff_trans _ (g_sigma_preimage
 Qed.
 
 (* TODO: rename to measurable_cons *)
-Lemma measurable_fun_cons (f : T -> T1) n (g : T -> mtuple n T1) :
+Lemma measurable_fun_cons (f : T -> T1) n (g : T -> n.-tuple T1) :
   measurable_fun setT f -> measurable_fun setT g ->
-  measurable_fun setT (fun x : T => [the mtuple n.+1 T1 of (f x) :: (g x)]).
+  measurable_fun setT (fun x : T => [the n.+1.-tuple T1 of (f x) :: (g x)]).
 Proof.
 move=> mf mg; apply/cons_measurable_funP => /= i.
 have [->|i0] := eqVneq i ord0.
@@ -304,7 +299,7 @@ have @j : 'I_n.
   by rewrite lt0n.
 rewrite (_ : _ \o _ = (fun x => tnth (g x) j))//.
   apply: (@measurableT_comp _ _ _ _ _ _
-    (fun x : mtuple n T1 => tnth x j) _ g) => //.
+    (fun x : n.-tuple T1 => tnth x j) _ g) => //.
   exact: measurable_tnth.
 apply/funext => t/=.
 rewrite (_ : i = lift ord0 j) ?tnthS//.
@@ -337,7 +332,7 @@ by move=> ->.
 Qed.
 
 Lemma measurable_behead d (T : measurableType d) n :
-  measurable_fun setT (fun x : mtuple n.+1 T => [tuple of behead x] : mtuple n T).
+  measurable_fun setT (fun x : n.+1.-tuple T => [tuple of behead x] : n.-tuple T).
 Proof.
 red=> /=.
 move=> _ Y mY.
@@ -381,7 +376,7 @@ Section pro1.
 Context {d1} {T1 : measurableType d1} {d2} {T2 : measurableType d2}
   (R : realType) (P1 : probability T1 R) (P2 : probability T2 R).
 
-Definition pro1 := product_measure1 P1 P2.
+Definition pro1 := (P1 \x P2)%E.
 
 HB.instance Definition _ := Measure.on pro1.
 
@@ -399,7 +394,7 @@ Section pro2.
 Context {d1} {T1 : measurableType d1} {d2} {T2 : measurableType d2}
   (R : realType) (P1 : probability T1 R) (P2 : probability T2 R).
 
-Definition pro2 := product_measure2 P1 P2.
+Definition pro2 := (P1 \x^ P2)%E.
 
 HB.instance Definition _ := Measure.on pro2.
 
@@ -416,9 +411,9 @@ End pro2.
 Section pro.
 Context d (T : measurableType d) (R : realType) (P : probability T R).
 
-Fixpoint mpro (n : nat) : set (mtuple n T) -> \bar R :=
+Fixpoint mpro (n : nat) : set (n.-tuple T) -> \bar R :=
   match n with
-  | 0%N => \d_([::] : mtuple 0 T)
+  | 0%N => \d_([::] : 0.-tuple T)
   | m.+1 => fun A => (P \x^ @mpro m)%E [set (thead x, [tuple of behead x]) | x in A]
   end.
 
@@ -444,8 +439,8 @@ move=> [:save].
 apply: measure_semi_sigma_additive.
 - abstract: save.
   move=> i.
-  pose f (t : n.+1.-tuple T) := (@thead n T t, [the mtuple _ T of behead t]).
-  pose f' (x : T * mtuple n T) := [the mtuple n.+1 T of x.1 :: x.2].
+  pose f (t : n.+1.-tuple T) := (@thead n T t, [the _.-tuple T of behead t]).
+  pose f' (x : T * n.-tuple T) := [the n.+1.-tuple T of x.1 :: x.2].
   rewrite [X in measurable X](_ : _ = f' @^-1` F i); last first.
     apply/seteqP; split=> [x/= [t Fit] <-{x}|[x1 x2] /= Fif'].
     rewrite /f'/=.
@@ -497,7 +492,7 @@ Qed.
 HB.instance Definition _ n :=
   Measure_isProbability.Build _ _ _ (@mpro n) (@mpro_setT n).
 
-Definition pro (n : nat) : probability (mtuple n T) R := @mpro n.
+Definition pro (n : nat) : probability (n.-tuple T) R := @mpro n.
 
 End pro.
 Arguments pro {d T R} P n.
@@ -560,14 +555,14 @@ Context d (T : measurableType d) (R : realType) (P : probability T R).
 Local Open Scope ereal_scope.
 Variable n : nat.
 
-Definition phi := fun (w : T * mtuple n T) => [the mtuple _ _ of w.1 :: w.2].
+Definition phi := fun (w : T * n.-tuple T) => [the _.-tuple _ of w.1 :: w.2].
 
-Lemma mphi : measurable_fun [set: T * mtuple _ _] phi.
+Lemma mphi : measurable_fun [set: T * _.-tuple _] phi.
 Proof. exact: measurable_fun_cons. Qed.
 
-Definition psi := fun (w : mtuple n.+1 T) => (thead w, [the mtuple _ _ of behead w]).
+Definition psi := fun (w : n.+1.-tuple T) => (thead w, [the _.-tuple _ of behead w]).
 
-Lemma mpsi : measurable_fun [set: mtuple _ _] psi.
+Lemma mpsi : measurable_fun [set: _.-tuple _] psi.
 Proof.
 apply/measurable_fun_prod => /=.
   exact: measurable_tnth.
@@ -583,13 +578,13 @@ Let psiK : cancel psi phi.
 Proof. by move=> x; rewrite /psi /phi/= [RHS]tuple_eta. Qed.
 
 Lemma integral_mpro (f : n.+1.-tuple T -> R) :
-  (\X_n.+1 P).-integrable [set: mtuple n.+1 T] (EFin \o f) ->
+  (\X_n.+1 P).-integrable [set: n.+1.-tuple T] (EFin \o f) ->
   \int[\X_n.+1 P]_w (f w)%:E =
   \int[pro2 P (\X_n P)]_w (f (w.1 :: w.2))%:E.
 Proof.
 move=> /integrableP[mf intf].
 rewrite -(@integral_pushforward _ _ _ _ R _ mphi _ setT
-    (fun x : mtuple n.+1 T => (f x)%:E)); [|by []| |by []].
+    (fun x : n.+1.-tuple T => (f x)%:E)); [|by []| |by []].
   apply: eq_measure_integral => A mA _.
   rewrite /=.
   rewrite /pushforward.
@@ -616,7 +611,7 @@ rewrite [leRHS](_ : _ = \int[\X_n.+1 P]_x
   by apply: eq_integral => x _ /=; rewrite psiK.
 rewrite le_eqVlt; apply/orP; left; apply/eqP.
 rewrite -[RHS](@integral_pushforward _ _ _ _ R _ mpsi _ setT
-    (fun x : T * mtuple n T => ((abse \o (EFin \o (f \o phi))) x)))//.
+    (fun x : T * n.-tuple T => ((abse \o (EFin \o (f \o phi))) x)))//.
 - apply: eq_measure_integral => // A mA _.
   apply: product_measure_unique => // B C mB mC.
   rewrite /= /pushforward/=.
@@ -636,7 +631,7 @@ rewrite -[RHS](@integral_pushforward _ _ _ _ R _ mpsi _ setT
   apply: measurableT_comp => //=.
     by apply/measurable_EFinP.
   exact: mphi.
-- have : (\X_n.+1 P).-integrable [set: mtuple n.+1 T] (EFin \o f).
+- have : (\X_n.+1 P).-integrable [set: n.+1.-tuple T] (EFin \o f).
     exact/integrableP.
 - apply: le_integrable => //=.
   + apply: measurableT_comp => //=; last exact: mpsi.
@@ -835,11 +830,11 @@ HB.instance Definition _ (n : nat) := @isMeasurable.Build default_measure_displa
 Section tuple_sum.
 Context d (T : measurableType d) (R : realType) (P : probability T R).
 
-Definition Tnth n (X : n.-tuple {mfun T >-> R}) (i : 'I_n) : mtuple n T -> R :=
+Definition Tnth n (X : n.-tuple {mfun T >-> R}) (i : 'I_n) : n.-tuple T -> R :=
   fun t => (tnth X i) (tnth t i).
 
 Lemma measurable_Tnth n (X : n.-tuple {mfun T >-> R}) (i : 'I_n) :
-  measurable_fun [set: mtuple n T] (Tnth X i).
+  measurable_fun [set: n.-tuple T] (Tnth X i).
 Proof. by apply: measurableT_comp => //; exact: measurable_tnth. Qed.
 
 HB.instance Definition _ n (X : n.-tuple {mfun T >-> R}) (i : 'I_n) :=
@@ -893,19 +888,19 @@ have {}intX Xi : Xi \in X -> P.-integrable [set: T] (EFin \o Xi).
   exact: XM.
 rewrite big_ord_recl/=.
 rewrite big_ord_recl/=.
-pose X1 (x : mtuple n.+1 T) :=
+pose X1 (x : n.+1.-tuple T) :=
   (\sum_(i < n) (tnth X (lift ord0 i)) (tnth x (lift ord0 i)))%R.
 have mX1 : measurable_fun setT X1.
   apply: measurable_sum => /= i; apply: measurableT_comp => //.
   exact: measurable_tnth.
 pose build_mX1 := isMeasurableFun.Build _ _ _ _ _ mX1.
-pose Y1 : {mfun mtuple n.+1 T >-> R} := HB.pack X1 build_mX1.
-pose X2 (x : mtuple n.+1 T) := (thead X) (thead x).
+pose Y1 : {mfun n.+1.-tuple T >-> R} := HB.pack X1 build_mX1.
+pose X2 (x : n.+1.-tuple T) := (thead X) (thead x).
 have mX2 : measurable_fun setT X2.
 rewrite /X2 /=.
   by apply: measurableT_comp => //; exact: measurable_tnth.
 pose build_mX2 := isMeasurableFun.Build _ _ _ _ _ mX2.
-pose Y2 : {mfun mtuple n.+1 T >-> R} := HB.pack X2 build_mX2.
+pose Y2 : {mfun n.+1.-tuple T >-> R} := HB.pack X2 build_mX2.
 rewrite [X in 'E__[X]](_ : _ = Y2 \+ Y1); last first.
   rewrite /Y2 /Y1/=.
   rewrite /X2 /X1/=.
@@ -919,15 +914,15 @@ rewrite expectationD; last 2 first.
       (tnth X (lift ord0 i) (tnth x (lift ord0 i)))%:E)); last first.
     by apply/funext => t/=; rewrite sumEFin.
   apply: integrable_sum_ord => // i.
-  have : measurable_fun setT (fun x : mtuple n.+1 T =>
-      (tnth X (lift ord0 i) (tnth x (lift ord0 i)))).
+  have : measurable_fun setT (fun x : n.+1.-tuple T =>
+      tnth X (lift ord0 i) (tnth x (lift ord0 i))).
     apply/measurableT_comp => //=.
     exact: measurable_tnth.
   by move/(bounded_RV_integrable M); exact.
 congr (_ + _).
 - rewrite /Y2 /X2/= unlock /expectation.
   (* \int[\X_n.+1 P]_w (thead X (thead w))%:E = \int[P]_w (tnth X ord0 w)%:E *)
-  pose phi : mtuple n.+1 T -> T := (fun w => @tnth n.+1 T w ord0).
+  pose phi : n.+1.-tuple T -> T := fun w => @tnth n.+1 T w ord0.
   have mphi : measurable_fun setT phi.
     exact: measurable_tnth.
   rewrite -(@integral_pushforward _ _ _ _ _ phi mphi _ setT
@@ -946,7 +941,7 @@ congr (_ + _).
     = A `*` setT); last first.
     apply/seteqP; split => [[x1 x2]/= [t At [<- _]]//|].
     move=> [x1 x2]/= [Ax1 _].
-    exists [the mtuple _ _ of x1 :: x2] => //=.
+    exists [the _.-tuple _ of x1 :: x2] => //=.
     by rewrite theadE; congr pair => //; exact/val_inj.
   by rewrite product_measure2E//= probability_setT mule1.
 - rewrite /Y1 /X1/=.
@@ -961,8 +956,8 @@ congr (_ + _).
     move=> i t.
     rewrite tnth_behead.
     exact: XM.
-  transitivity ('E_\X_n P[(fun x : mtuple n T =>
-      (\sum_(i < n) tnth (behead X) i (tnth x i))%R)]).
+  transitivity ('E_\X_n P[(fun x : n.-tuple T =>
+      \sum_(i < n) tnth (behead X) i (tnth x i))%R]).
     rewrite unlock /expectation.
     transitivity (\int[(pro2 P (\X_n P))]_w (\sum_(i < n) tnth X (lift ord0 i) (tnth w.2 i))%:E).
       rewrite integral_mpro//.
@@ -974,10 +969,9 @@ congr (_ + _).
         (tnth X (lift ord0 i) (tnth w (lift ord0 i)))%:E))); last first.
         by apply/funext => t/=; rewrite sumEFin.
       apply: integrable_sum_ord => // i.
-      have : measurable_fun setT (fun x : mtuple n.+1 T =>
+      have : measurable_fun setT (fun x : n.+1.-tuple T =>
           (tnth X (lift ord0 i) (tnth x (lift ord0 i)))).
-        apply/measurableT_comp => //=.
-        exact: measurable_tnth.
+        by apply/measurableT_comp => //=; exact: measurable_tnth.
       by move/(bounded_RV_integrable M); exact.
     rewrite /pro2.
     rewrite -fubini2'/=; last first.
@@ -985,11 +979,12 @@ congr (_ + _).
           (tnth X (lift ord0 i) (tnth z.2 i))%:E))); last first.
         by apply/funext => t/=; rewrite sumEFin.
       apply: integrable_sum_ord => //= i.
-      have : measurable_fun setT (fun x : T * mtuple n T => (tnth X (lift ord0 i) (tnth x.2 i))).
+      have : measurable_fun setT (fun x : T * n.-tuple T => (tnth X (lift ord0 i) (tnth x.2 i))).
         apply/measurableT_comp => //=.
-        apply: (@measurableT_comp _ _ _ _ _ _ (fun x : mtuple n _ => tnth x i) _ snd) => //=.
+        apply: (@measurableT_comp _ _ _ _ _ _ (fun x => tnth x i) _ snd) => //=.
         exact: measurable_tnth.
-      move/(@bounded_RV_integrable _ _ R (pro1 P (mpro P (n:=n)))%E _ M) => /=.
+      have Q : probability (T * n.-tuple T)%type R := (pro1 P (pro P n))%E.
+      move/(@bounded_RV_integrable _ _ R (pro1 P (pro P n))%E _ M) => /=.
       apply => t.
       by apply: XM.
     apply: eq_integral => t _.
@@ -1120,7 +1115,7 @@ rewrite -fubini1' /fubini_F/=; last first.
       exact: measurableT_comp.
     apply: measurable_prod => //=i ?.
     apply: measurableT_comp => //=.
-    apply: (@measurableT_comp _ _ _ _ _ _ (fun x : mtuple n T => @tnth n T x i) _ snd) => //=.
+    apply: (@measurableT_comp _ _ _ _ _ _ (fun x => tnth x i) _ snd) => //=.
     exact: measurable_tnth.
   apply: boundedM.
     apply/ex_bound. exact: (@globally_properfilter _ _ point). (* TODO: need to automate globally_properfilter *)
@@ -1133,8 +1128,8 @@ rewrite -fubini1' /fubini_F/=; last first.
   rewrite big_mkord ler_prod => //=i _.
   have /andP[? ?] := boundedX (lift ord0 i) (tnth x.2 i).
   by rewrite normr_ge0/= ger0_norm.
-have ? : (mpro P (n:=n)).-integrable [set: mtuple n T]
-    (fun x : mtuple n T => (\prod_(i < n) tnth X (lift ord0 i) (tnth x i))%:E).
+have ? : (mpro P (n:=n)).-integrable [set: n.-tuple T]
+    (fun x : n.-tuple T => (\prod_(i < n) tnth X (lift ord0 i) (tnth x i))%:E).
   apply: (bounded_RV_integrable (M^+n)%R) => //=.
     apply: measurable_prod => /=i _.
     apply: measurableT_comp => //.
