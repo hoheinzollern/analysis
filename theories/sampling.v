@@ -1200,8 +1200,6 @@ Qed.
 
 End properties_of_independence.
 
-
-HB.about isMeasurableFun.
 HB.mixin Record RV_isBernoulli d (T : measurableType d) (R : realType)
   (P : probability T R) (p : R) (X : T -> bool) of @isMeasurableFun d _ T bool X  := {
     bernoulliP : distribution P X = bernoulli p }.
@@ -1655,8 +1653,7 @@ Qed.
 
 (* Rajani thm 3.1 / mu-book thm 4.7 *)
 Theorem sampling n (X : n.-tuple (bernoulliRV P p)) (theta delta : R) :
-  let X_sum := bernoulli_trial X in
-  let X' x := (X_sum x) / n%:R in
+  let X' x := (bernoulli_trial X x) / n%:R in
   (0 < p)%R ->
   (0 < delta <= 1)%R -> (0 < theta < p)%R -> (0 < n)%nat ->
   (3 / theta ^+ 2 * ln (2 / delta) <= n%:R)%R ->
