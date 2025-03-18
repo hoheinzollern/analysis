@@ -781,6 +781,11 @@ Definition LspaceType := {eq_quot Lequiv}.
 HB.instance Definition _ := Choice.on LspaceType.
 HB.instance Definition _ := EqQuotient.on LspaceType.
 
+(*Canonical LspaceType_quotType := [the quotType _ of LspaceType].
+Canonical LspaceType_eqType := [the eqType of LspaceType].
+Canonical LspaceType_choiceType := [the choiceType of LspaceType].
+Canonical LspaceType_eqQuotType := [the eqQuotType Lequiv of LspaceType].*)
+
 Lemma LequivP (f g : LfunType mu p1) :
   reflect (f = g %[ae mu]) (f == g %[mod LspaceType]).
 Proof. by apply/(iffP idP); rewrite eqmodE// => /asboolP. Qed.
@@ -809,6 +814,56 @@ HB.instance Definition _ := GRing.isScaleClosed.Build _ _ (@mfun _ _ T R)
 HB.instance Definition _ := [SubZmodule_isSubLmodule of {mfun T >-> R} by <:].
 
 End mfun_extra.
+
+Section Lspace.
+Context d (T : measurableType d) (R : realType).
+Variable mu : {measure set T -> \bar R}.
+
+Definition Lspace p (p1 : (1 <= p)%E) := [set: LType mu p1].
+Arguments Lspace : clear implicits.
+
+Lemma LType1_integrable (f : LType mu (@lexx _ _ 1%E)) :
+  mu.-integrable setT (EFin \o f).
+Proof.
+apply/integrableP; split; first exact/measurable_EFinP.
+have := lfuny _ f.
+rewrite /finite_norm unlock /Lnorm invr1 poweRe1; last first.
+  by apply integral_ge0 => x _; rewrite lee_fin powRr1.
+by under eq_integral => i _ do rewrite poweRe1//.
+Qed.
+
+Let le12 : (1 <= 2%:E :> \bar R)%E.
+Proof.
+rewrite lee_fin.
+rewrite (ler_nat _ 1 2).
+by [].
+Qed.
+
+Lemma LType2_integrable_sqr (f : LType mu le12) :
+  mu.-integrable [set: T] (EFin \o (fun x => f x ^+ 2)).
+Proof.
+apply/integrableP; split.
+  apply/measurable_EFinP.
+  exact/(@measurableT_comp _ _ _ _ _ _ (fun x : R => x ^+ 2)%R _ f).
+rewrite (@lty_poweRy _ _ 2^-1)//.
+rewrite (le_lt_trans _ (lfuny _ f))//.
+rewrite unlock.
+rewrite gt0_ler_poweR//.
+- by rewrite in_itv/= leey integral_ge0// => x _.
+- rewrite in_itv/= leey integral_ge0// => x _.
+  by rewrite lee_fin powR_ge0.
+- rewrite ge0_le_integral//.
+  + apply: measurableT_comp => //; apply/measurable_EFinP.
+    exact/(@measurableT_comp _ _ _ _ _ _ (fun x : R => x ^+ 2)%R _ f).
+  + by move=> x _; rewrite lee_fin powR_ge0.
+  + apply/measurable_EFinP.
+    apply/(@measurableT_comp _ _ _ _ _ _ (fun x : R => x `^ 2)%R) => //.
+    exact/measurableT_comp.
+  + by move=> t _/=; rewrite lee_fin normrX powR_mulrn.
+Qed.
+
+End Lspace.
+Notation "mu .-Lspace p" := (@Lspace _ _ _ mu p) : type_scope.
 
 Section lfun_pred.
 Context d (T : measurableType d) (R : realType).
@@ -872,33 +927,18 @@ Proof. by rewrite /finite_norm Lnorm0// ltry. Qed.
 
 HB.instance Definition _ := @isLfun.Build d T R mu p p1 (cst 0) lfuny0.
 
+Lemma mfunP (f : {mfun T >-> R}) : (f : T -> R) \in mfun.
+Proof. exact: valP. Qed.
+
 Lemma lfunP (f : LfunType mu p1) : (f : T -> R) \in lfun.
 Proof. exact: valP. Qed.
 
-Lemma lfun_oppr_closed : oppr_closed lfun.
-Proof.
-move=> f /andP[mf /[!inE] lf].
-by rewrite rpredN/= mf/= inE/= /finite_norm oppr_Lnorm.
-Qed.
+Lemma mfun_scaler_closed : scaler_closed (@mfun _ _ T R).
+Proof. move=> a/= f; rewrite !inE; exact: measurable_funM. Qed.
 
-HB.instance Definition _ := GRing.isOppClosed.Build _ lfun
-  lfun_oppr_closed.
-
-(* NB: not used directly by HB.instance *)
-Lemma lfun_addr_closed : addr_closed lfun.
-Proof.
-split.
-  by rewrite inE rpred0/= inE/= /finite_norm/= Lnorm0.
-move=> f g /andP[mf /[!inE]/= lf] /andP[mg /[!inE]/= lg].
-rewrite rpredD//= inE/=.
-rewrite /finite_norm.
-rewrite (le_lt_trans (@eminkowski _ _ _ mu f g p _ _ _))//.
-- by rewrite inE in mf.
-- by rewrite inE in mg.
-- by rewrite lte_add_pinfty.
-Qed.
-
-Import numFieldNormedType.Exports.
+HB.instance Definition _ := GRing.isScaleClosed.Build _ _ (@mfun _ _ T R)
+  mfun_scaler_closed.
+HB.instance Definition _ := [SubZmodule_isSubLmodule of {mfun T >-> R} by <:].
 
 Lemma LnormZ (f : LfunType mu p1) a :
   ('N[mu]_p[EFin \o (a \*: f)] = `|a|%:E * 'N[mu]_p[EFin \o f])%E.

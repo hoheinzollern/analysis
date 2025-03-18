@@ -145,6 +145,7 @@
   + definition `Lspace` with notation `mu.-Lspace p`
   + lemma `lfun_integrable`, `lfun1_integrable`, `lfun2_integrable_sqr`, `lfun2M2_1`
   + lemma `lfunp_scale`, `lfun_cst`,
+  + lemma `LType1_integrable`, `LType2_integrable_sqr`
   + definitions `finlfun`, `lfun`, `lfun_key`
   + canonical `lfun_keyed`
   + lemmas `sub_lfun_mfun`, `sub_lfun_finlfun`
@@ -160,6 +161,8 @@
   + lemma `lfun_oppr_closed`
   + lemma `lfun_addr_closed`
   + lemmas `minkowski'`, `minkowskie`
+    `LnormN`, `Lnorm_natmul`, `fine_Lnorm_eq0`
+  + lemma `Lspace_inclusion`
 
 - in `lebesgue_integral.v`:
   + lemma `mfunMn`
