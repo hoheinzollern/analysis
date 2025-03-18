@@ -1378,6 +1378,54 @@ rewrite mulrC expRM -mulNr mulrA expRM.
 exact: end_thm24.
 Qed.
 
+(* p.66 of mu's book *)
+Section another_analytical_argument.
+Local Open Scope ring_scope.
+Local Arguments derive_val {R V W a v f df}.
+Lemma another_analytical_argument (delta : R) :
+  (0 < delta)%R -> (delta < 1)%R ->
+  (- delta - (1 - delta) * ln (1 - delta) <= - delta ^+ 2 / 2)%R.
+Proof.
+move=> delta0 delta1.
+rewrite -(@ler_pM2r _ 2)// -mulrA mulVf// mulr1 mulrDl.
+rewrite -subr_le0 mulNr opprK.
+rewrite addrC !addrA.
+have -> : delta ^+ 2 - delta * 2 = (1 - delta)^+2 - 1.
+  rewrite sqrrB expr1n mul1r [RHS]addrC !addrA addNr add0r addrC -mulNrn.
+  by rewrite -(mulr_natr (- delta) 2) mulNr.
+rewrite addrAC subr_le0.
+set f := fun (x : R) => x ^+ 2 + - (x * ln x) * 2.
+have @idf (x : R^o) : 0 < x -> {df | is_derive x 1 (f : R^o -> R^o) df}.
+  move=> x0; evar (df : (R : Type)); exists df.
+  apply: is_deriveD; first by [].
+  apply: is_deriveM; last by [].
+  apply: is_deriveN.
+  apply: is_deriveM; first by [].
+  exact: is_derive1_ln.
+suff: forall x : R, x \in `]0, 1[ -> f x <= 1.
+  by apply; rewrite memB_itv0 in_itv /= delta0 delta1.
+move=> x x01.
+have->: 1 = f 1 by rewrite /f expr1n ln1 mulr0 oppr0 mul0r addr0.
+apply: (@ger0_derive1_homo _ f 0 1 false false)=> //.
+- move=> t /[!in_itv] /= /andP [] + _.
+  by case/idf=> ? /@ex_derive.
+- move=> t /[!in_itv] /= /andP [] t0 t1.
+  rewrite (derive_val (svalP (idf _ t0))) /=.
+  clear idf.
+  rewrite exp_derive derive_cst derive_id .
+  rewrite scaler0 add0r /GRing.scale /= !mulr1 expr1.
+  rewrite -mulrDr mulr_ge0// divff ?lt0r_neq0//.
+  rewrite opprD addrA subr_ge0 -ler_expR.
+  have:= t0; rewrite -lnK_eq => /eqP ->.
+  by rewrite -[leLHS]addr0 -(subrr 1) addrCA expR_ge1Dx.
+- apply: derivable_within_continuous => t /[!in_itv] /= /andP [] + _.
+  by case/idf=> ? /@ex_derive.
+- by apply: (subset_itvW_bound _ _ x01); rewrite bnd_simp.
+- by rewrite in_itv /= ltr01 lexx.
+- by move: x01; rewrite in_itv=> /= /andP [] _ /ltW.
+Qed.
+End another_analytical_argument.
+
 (* [Theorem 2.6, Rajani] / [thm 4.5.(2), MU] *)
 Theorem bernoulli_trial_inequality3 n (X : n.-tuple (bernoulliRV P p)) (delta : R) :
   (0 < delta < 1)%R ->
@@ -1434,47 +1482,8 @@ rewrite -mulrN -mulrA [in leRHS]mulrC expRM ge0_ler_powR// ?nnegrE.
   rewrite expRK// ln_div ?posrE ?expR_gt0 ?powR_gt0 ?subr_gt0//.
   rewrite expRK//.
   rewrite /powR (*TODO: lemma ln of powR*) gt_eqF ?subr_gt0// expRK.
-  (* requires analytical argument: see p.66 of mu's book *)
-  Local Open Scope ring_scope.
-  rewrite -(@ler_pM2r _ 2)// -mulrA mulVf// mulr1 mulrDl.
-  rewrite -subr_le0 mulNr opprK.
-  rewrite addrC !addrA.
-  have -> : delta ^+ 2 - delta * 2 = (1 - delta)^+2 - 1.
-    rewrite sqrrB expr1n mul1r [RHS]addrC !addrA addNr add0r addrC -mulNrn.
-    by rewrite -(mulr_natr (- delta) 2) mulNr.
-  rewrite addrAC subr_le0.
-  set f := fun (x : R) => x ^+ 2 + - (x * ln x) * 2.
-  have @idf (x : R^o) : 0 < x -> {df | is_derive x 1 (f : R^o -> R^o) df}.
-    move=> x0; evar (df : (R : Type)); exists df.
-    apply: is_deriveD; first by [].
-    apply: is_deriveM; last by [].
-    apply: is_deriveN.
-    apply: is_deriveM; first by [].
-    exact: is_derive1_ln.
-  suff: forall x : R, x \in `]0, 1[ -> f x <= 1.
-    by apply; rewrite memB_itv0 in_itv /= delta0 delta1.
-  move=> x x01.
-  have->: 1 = f 1 by rewrite /f expr1n ln1 mulr0 oppr0 mul0r addr0.
-  apply: (@ger0_derive1_homo _ f 0 1 false false)=> //.
-  - move=> t /[!in_itv] /= /andP [] + _.
-    by case/idf=> ? /@ex_derive.
-  - move=> t /[!in_itv] /= /andP [] t0 t1.
-    Local Arguments derive_val {R V W a v f df}.
-    rewrite (derive_val (svalP (idf _ t0))) /=.
-    clear idf.
-    rewrite exp_derive derive_cst derive_id .
-    rewrite scaler0 add0r /GRing.scale /= !mulr1 expr1.
-    rewrite -mulrDr mulr_ge0// divff ?lt0r_neq0//.
-    rewrite opprD addrA subr_ge0 -ler_expR.
-    have:= t0; rewrite -lnK_eq => /eqP ->.
-    by rewrite -[leLHS]addr0 -(subrr 1) addrCA expR_ge1Dx.
-  - apply: derivable_within_continuous => t /[!in_itv] /= /andP [] + _.
-    by case/idf=> ? /@ex_derive.
-  - by apply: (subset_itvW_bound _ _ x01); rewrite bnd_simp.
-  - by rewrite in_itv /= ltr01 lexx.
-  - by move: x01; rewrite in_itv=> /= /andP [] _ /ltW.
+  exact: another_analytical_argument.
 Qed.
-
 End sampling_theorem_part1.
 
 (* this is a preliminary for the second part of the proof of the sampling lemma *)
