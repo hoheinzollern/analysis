@@ -146,6 +146,7 @@
   + lemma `lfun_integrable`, `lfun1_integrable`, `lfun2_integrable_sqr`, `lfun2M2_1`
   + lemma `lfunp_scale`, `lfun_cst`,
   + lemma `LType1_integrable`, `LType2_integrable_sqr`
+  + lemma `lfun1_integrable`, `lfun2_integrable_sqr`, `lfun2M2_1`
   + definitions `finlfun`, `lfun`, `lfun_key`
   + canonical `lfun_keyed`
   + lemmas `sub_lfun_mfun`, `sub_lfun_finlfun`
@@ -345,6 +346,9 @@
   + definition `Lnorm` generalized to functions with codomain `\bar R`
     (this impacts the notation `'N_p[f]`)
   + lemmas `Lnorm1`, `eq_Lnorm` (from `f : _ -> R` to `f : _ -> \bar R`)
+
+- in `probability.v`
+  + lemma `cantelli`
 
 ### Deprecated
 

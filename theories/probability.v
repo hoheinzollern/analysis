@@ -277,9 +277,13 @@ move: iX => /integrableP[? Xoo]; rewrite (le_lt_trans _ Xoo)// unlock.
 exact: le_trans (le_abse_integral _ _ _).
 Qed.
 
-Lemma expectationZl (X : T -> R) (k : R) : X \in lfun P 1 ->
-  'E_P[k \o* X] = k%:E * 'E_P [X].
-Proof. by move=> ?; rewrite unlock muleC -integralZr ?lfun1_integrable. Qed.
+Lemma finite_norm_expectation (X : {RV P >-> R}) :
+  (X : T -> R) \in lfun P 1 -> `| 'E_P[X] | < +oo. 
+Proof. by move/lfun1_integrable; exact: integrable_expectation. Qed.
+
+Lemma expectationZl (X : {RV P >-> R}) (iX : P.-integrable [set: T] (EFin \o X))
+  (k : R) : 'E_P[k \o* X] = k%:E * 'E_P [X].
+Proof. by rewrite unlock muleC -integralZr. Qed.
 
 Lemma expectation_ge0 (X : T -> R) : (forall x, 0 <= X x)%R ->
   0 <= 'E_P[X].
