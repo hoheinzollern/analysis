@@ -320,6 +320,8 @@
 
 - in `hoelder.v`:
   + `minkowski` -> `minkowski_EFin`
+  + `Lnorm_ge0` -> `Lnormr_ge0`
+  + `Lnorm_eq0_eq0` -> `Lnormr_eq0_eq0`
 
 ### Generalized
 
@@ -342,6 +344,7 @@
 - in `hoelder.v`:
   + definition `Lnorm` generalized to functions with codomain `\bar R`
     (this impacts the notation `'N_p[f]`)
+  + lemmas `Lnorm1`, `eq_Lnorm` (from `f : _ -> R` to `f : _ -> \bar R`)
 
 ### Deprecated
 
