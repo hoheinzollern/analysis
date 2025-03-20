@@ -1378,7 +1378,7 @@ rewrite mulrC expRM -mulNr mulrA expRM.
 exact: end_thm24.
 Qed.
 
-Section sqrXBxlnx.
+Section sqrxBxlnx.
 Local Open Scope ring_scope.
 Local Arguments derive_val {R V W a v f df}.
 
@@ -1479,7 +1479,7 @@ rewrite -mulrA (addrC c) mulrDl !mulrA opprD addrA.
 rewrite -[ltLHS]addr0 ltrD// ?sqrxB2xlnx_gt1// oppr_gt0.
 by rewrite nmulr_rlt0 ?ln_gt0// nmulr_rlt0 ?(lt_trans _ x1).
 Qed.
-End sqrXBxlnx.
+End sqrxBxlnx.
 
 (* p.66 of mu's book *)
 Lemma another_analytical_argument (delta : R) :
