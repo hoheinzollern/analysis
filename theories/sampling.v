@@ -1378,10 +1378,110 @@ rewrite mulrC expRM -mulNr mulrA expRM.
 exact: end_thm24.
 Qed.
 
-(* p.66 of mu's book *)
-Section another_analytical_argument.
+Section sqrXBxlnx.
 Local Open Scope ring_scope.
 Local Arguments derive_val {R V W a v f df}.
+
+Let f (x : R) := x ^+ 2 - 2 * x * ln x.
+Let idf (x : R) : 0 < x -> {df | is_derive x 1 f df}.
+Proof.
+evar (df : (R : Type)); exists df.
+apply: is_deriveD; first by [].
+apply: is_deriveN.
+apply: is_deriveM; first by [].
+exact: is_derive1_ln.
+Defined.
+Let f1E : f 1 = 1. Proof. by rewrite /f expr1n ln1 !mulr0 subr0. Qed.
+Let Df_gt0 (x : R) : 0 < x -> x != 1 -> 0 < 'D_1 f x.
+Proof.
+move=> x0 x1.
+rewrite (derive_val (svalP (idf x0))) /=.
+clear idf.
+rewrite exp_derive deriveM// derive_cst derive_id .
+rewrite scaler0 addr0 /GRing.scale /= !mulr1 expr1.
+rewrite -mulrA divff ?lt0r_neq0//.
+rewrite (mulrC _ 2) -mulrDr -mulrBr mulr_gt0//.
+rewrite opprD addrA subr_gt0 -ltr_expR.
+have:= x0; rewrite -lnK_eq => /eqP ->.
+rewrite -[ltLHS]addr0 -(subrr 1) addrCA expR_gt1Dx//.
+by rewrite subr_eq0.
+Qed.
+
+Lemma sqrxB2xlnx_lt1 (c x : R) :
+  0 < x -> x < 1 -> x ^+ 2 - 2 * x * ln x < 1.
+Proof.
+move=> x0 x1.
+fold (f x).
+simpl in idf.
+rewrite -f1E.
+apply: (@gtr0_derive1_homo _ f 0 1 false false).
+- move=> t /[!in_itv] /= /andP [] + _.
+  by case/idf=> ? /@ex_derive.
+- move=> t /[!in_itv] /= /andP [] t0 t1.
+  apply: Df_gt0=> //.
+  by rewrite (lt_eqF t1).
+- apply: derivable_within_continuous => t /[!in_itv] /= /andP [] + _.
+  by case/idf=> ? /@ex_derive.
+- by rewrite in_itv/=; apply/andP; split=> //; apply/ltW.
+- by rewrite in_itv /= ltr01 lexx.
+- assumption.
+Qed.
+
+Lemma sqrxBxlnx_lt1 (c x : R) :
+  c <= 2 -> 0 < x -> x < 1 -> x ^+ 2 - c * x * ln x < 1.
+Proof.
+pose c' := c - 2.
+have-> : c = c' + 2 by rewrite /c' addrAC -addrA subrr addr0.
+rewrite -lerBrDr subrr.
+move: c'; clear c => c.
+rewrite le_eqVlt=> /orP [/eqP-> |]; first by rewrite add0r; exact: sqrxB2xlnx_lt1.
+move=> c0 x0 x1.
+rewrite -mulrA (addrC c) mulrDl !mulrA opprD addrA.
+rewrite -[ltRHS]addr0 ltrD// ?sqrxB2xlnx_lt1// oppr_lt0.
+rewrite -mulrA nmulr_lgt0// nmulr_llt0// ln_lt0//.
+by apply/andP; split.
+Qed.
+
+Lemma sqrxB2xlnx_gt1 (c x : R) :
+  1 < x -> 1 < x ^+ 2 - 2 * x * ln x.
+Proof.
+move=> x1.
+have x0 : 0 < x by rewrite (lt_trans _ x1).
+fold (f x).
+simpl in idf.
+rewrite -f1E.
+apply: (@gtr0_derive1_homo _ f 1 x true false).
+- move=> t /[!in_itv] /= /andP [] + _ => t1.
+  have: 0 < t by rewrite (lt_trans _ t1).
+  by case/idf=> ? /@ex_derive.
+- move=> t /[!in_itv] /= /andP [] t1 tx.
+  have t0: 0 < t by rewrite (lt_trans _ t1).
+  apply: Df_gt0=> //.
+  by rewrite (gt_eqF t1).
+- apply: derivable_within_continuous => t /[!in_itv] /= /andP [] + _ => t1.
+  have: 0 < t by rewrite (lt_le_trans _ t1).
+  by case/idf=> ? /@ex_derive.
+- by rewrite in_itv/=; apply/andP; split=> //; apply/ltW.
+- by rewrite in_itv /= lexx andbT ltW.
+- assumption.
+Qed.
+
+Lemma sqrxBxlnx_gt1 (c x : R) :
+  c <= 2 -> 1 < x -> 1 < x ^+ 2 - c * x * ln x.
+Proof.
+pose c' := c - 2.
+have-> : c = c' + 2 by rewrite /c' addrAC -addrA subrr addr0.
+rewrite -lerBrDr subrr.
+move: c'; clear c => c.
+rewrite le_eqVlt=> /orP [/eqP-> |]; first by rewrite add0r; exact: sqrxB2xlnx_gt1.
+move=> c0 x1.
+rewrite -mulrA (addrC c) mulrDl !mulrA opprD addrA.
+rewrite -[ltLHS]addr0 ltrD// ?sqrxB2xlnx_gt1// oppr_gt0.
+by rewrite nmulr_rlt0 ?ln_gt0// nmulr_rlt0 ?(lt_trans _ x1).
+Qed.
+End sqrXBxlnx.
+
+(* p.66 of mu's book *)
 Lemma another_analytical_argument (delta : R) :
   (0 < delta)%R -> (delta < 1)%R ->
   (- delta - (1 - delta) * ln (1 - delta) <= - delta ^+ 2 / 2)%R.
@@ -1390,41 +1490,13 @@ move=> delta0 delta1.
 rewrite -(@ler_pM2r _ 2)// -mulrA mulVf// mulr1 mulrDl.
 rewrite -subr_le0 mulNr opprK.
 rewrite addrC !addrA.
-have -> : delta ^+ 2 - delta * 2 = (1 - delta)^+2 - 1.
+have -> : (delta ^+ 2 - delta * 2 = (1 - delta)^+2 - 1)%R.
   rewrite sqrrB expr1n mul1r [RHS]addrC !addrA addNr add0r addrC -mulNrn.
   by rewrite -(mulr_natr (- delta) 2) mulNr.
 rewrite addrAC subr_le0.
-set f := fun (x : R) => x ^+ 2 + - (x * ln x) * 2.
-have @idf (x : R^o) : 0 < x -> {df | is_derive x 1 (f : R^o -> R^o) df}.
-  move=> x0; evar (df : (R : Type)); exists df.
-  apply: is_deriveD; first by [].
-  apply: is_deriveM; last by [].
-  apply: is_deriveN.
-  apply: is_deriveM; first by [].
-  exact: is_derive1_ln.
-suff: forall x : R, x \in `]0, 1[ -> f x <= 1.
-  by apply; rewrite memB_itv0 in_itv /= delta0 delta1.
-move=> x x01.
-have->: 1 = f 1 by rewrite /f expr1n ln1 mulr0 oppr0 mul0r addr0.
-apply: (@ger0_derive1_homo _ f 0 1 false false)=> //.
-- move=> t /[!in_itv] /= /andP [] + _.
-  by case/idf=> ? /@ex_derive.
-- move=> t /[!in_itv] /= /andP [] t0 t1.
-  rewrite (derive_val (svalP (idf _ t0))) /=.
-  clear idf.
-  rewrite exp_derive derive_cst derive_id .
-  rewrite scaler0 add0r /GRing.scale /= !mulr1 expr1.
-  rewrite -mulrDr mulr_ge0// divff ?lt0r_neq0//.
-  rewrite opprD addrA subr_ge0 -ler_expR.
-  have:= t0; rewrite -lnK_eq => /eqP ->.
-  by rewrite -[leLHS]addr0 -(subrr 1) addrCA expR_ge1Dx.
-- apply: derivable_within_continuous => t /[!in_itv] /= /andP [] + _.
-  by case/idf=> ? /@ex_derive.
-- by apply: (subset_itvW_bound _ _ x01); rewrite bnd_simp.
-- by rewrite in_itv /= ltr01 lexx.
-- by move: x01; rewrite in_itv=> /= /andP [] _ /ltW.
+rewrite mulrC mulrN mulrA ltW// sqrxB2xlnx_lt1// ?subr_gt0//.
+by rewrite ltrBlDl -ltrBlDr subrr.
 Qed.
-End another_analytical_argument.
 
 (* [Theorem 2.6, Rajani] / [thm 4.5.(2), MU] *)
 Theorem bernoulli_trial_inequality3 n (X : n.-tuple (bernoulliRV P p)) (delta : R) :
