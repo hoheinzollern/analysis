@@ -352,7 +352,7 @@ rewrite unlock [X in 'E_P[X]](_ : _ = (X \* Y \- fine 'E_P[X] \o* Y
   apply/funeqP => x /=; rewrite mulrDr !mulrDl/= mul1r.
   rewrite fineM ?expectation_fin_num// mulrNN addrA.
   by rewrite mulrN mulNr [Z in (X x * Y x - Z)%R]mulrC.
-rewrite expectationD/= ?rpredB//= ?lfunp_scale ?lfun_cst//.
+rewrite expectationD/= ?rpredB ?lfunp_scale ?lfun_cst//.
 rewrite 2?expectationB//= ?rpredB ?lfunp_scale// 3?expectationZl//= ?lfun_cst//.
 rewrite expectation_cst mule1 fineM ?expectation_fin_num// EFinM.
 rewrite !fineK ?expectation_fin_num//.
@@ -519,10 +519,8 @@ Proof.
 move=> X2.
 have Pfin : P setT \is a fin_num := fin_num_measure P _ measurableT.
 have X1 := lfun_inclusion12 Pfin X2.
-rewrite /variance covarianceZl//=.
-- by rewrite covarianceZr// ?muleA ?EFinM// lfun2M2_1.
-- by rewrite lfunp_scale.
-- by rewrite lfun2M2_1// lfunp_scale// ler1n.
+rewrite /variance covarianceZl ?covarianceZr ?lfun2M2_1 ?lfunp_scale ?ler1n//.
+by rewrite muleA EFinM.
 Qed.
 
 Lemma varianceN (X : T -> R) : X \in lfun P 2%:E -> 'V_P[(\- X)%R] = 'V_P[X].

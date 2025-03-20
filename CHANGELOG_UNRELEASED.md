@@ -147,6 +147,7 @@
   + lemma `lfunp_scale`, `lfun_cst`,
   + lemma `LType1_integrable`, `LType2_integrable_sqr`
   + lemma `lfun1_integrable`, `lfun2_integrable_sqr`, `lfun2M2_1`
+  + lemma `lfunp_scale`, `lfun0`, `lfun_cst`, `lfun_sum`
   + definitions `finlfun`, `lfun`, `lfun_key`
   + canonical `lfun_keyed`
   + lemmas `sub_lfun_mfun`, `sub_lfun_finlfun`

@@ -891,6 +891,15 @@ case: p p1 f => //[r r1 f|? f].
   by rewrite normrZ EFinM.
 Qed.
 
+Lemma lfun_oppr_closed : oppr_closed lfun.
+Proof.
+move=> f /andP[mf /[!inE] lf].
+by rewrite rpredN/= mf/= inE/= /finite_norm oppr_Lnorm.
+Qed.
+
+HB.instance Definition _ := GRing.isOppClosed.Build _ lfun
+  lfun_oppr_closed.
+
 Lemma lfun_submod_closed : submod_closed lfun.
 Proof.
 split.
