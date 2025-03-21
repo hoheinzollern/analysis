@@ -273,7 +273,7 @@ split=> [i Ii|K KI E EF].
   by apply: smallest_sub; exact: sigma_algebra_measurable.
 suff: forall J J' : {fset I0}%fset, (J `<=` J')%fset -> [set` J'] `<=` I ->
   forall E, (forall i, i \in J -> E i \in <<s F i >>) ->
-            (forall i, i \in [set` J'] `\` [set` J] -> E i \in F i) ->
+       (forall i, i \in [set` J'] `\` [set` J] -> E i \in F i) ->
     P (\big[setI/setT]_(j <- J') E j) = \prod_(j <- J') P (E j).
   move=> /(_ K K (@fsubset_refl _ _) KI E); apply.
   - by move=> i iK; exact: EF.
@@ -547,13 +547,15 @@ Definition independent_RVs2 (X Y : {mfun T >-> T'}) :=
 End independent_RVs.*)
 
 Section independent_RVs_comp.
-Context {R : realType} d d' (T : measurableType d) (T' : measurableType d').
-Variable P : probability T R.
+Context d1 (T1 : measurableType d1).
+Context (R : realType).
+Variable P : probability T1 R.
 Local Open Scope ring_scope.
 
-Lemma independent_RVs_comp (I0 : choiceType)
-    (I : set I0) (X : I0 -> {mfun T >-> T'}) (f : {mfun T' >-> R}) :
-  independent_RVs P I X -> independent_RVs P I (fun i => f \o X i).
+Lemma independent_RVs_comp (I0 : choiceType) d2 d3 (T2 : I0 -> measurableType d2)
+  (T3 : I0 -> measurableType d3)
+  (I : set I0) (X : forall i : I0, {mfun T1 >-> T2 i}) (f : forall i : I0, {mfun T2 i >-> T3 i}) :
+  independent_RVs P I X -> independent_RVs P I (fun i => f i \o X i).
 Proof.
 move=> PIX; split.
 - move=> i Ii.
@@ -562,6 +564,13 @@ move=> PIX; split.
 - move=> J JI E/= JEfX; apply PIX => // j jJ.
   by have := JEfX _ jJ; rewrite !inE; exact: g_sigma_algebra_preimage_comp.
 Qed.
+
+Lemma independent_RVs_U_sigma_algebra
+  (I0 I1 : choiceType) d2 d3 (T2 : I0 -> measurableType d2) (T3 : I1 -> measurableType d3)
+  (I : set I0) (J : I1 -> {fset I0}) (X : forall i : I0, {mfun T1 >-> T2 i})
+: trivIset [set: I1] (fun j => [set` J j]) -> independent_RVs P I X ->
+    mutual_independence P [set: I1]
+      (fun j : I1 => sigma_algebra_bigcup (J j) (g_sigma_algebra_preimage \o X)).
 
 End independent_RVs_comp.
 
