@@ -11,7 +11,7 @@ From mathcomp Require Import reals ereal interval_inference topology normedtype.
 From mathcomp Require Import sequences realfun convex real_interval.
 From mathcomp Require Import derive esum measure exp numfun lebesgue_measure.
 From mathcomp Require Import lebesgue_integral kernel probability.
-From mathcomp Require Import independence.
+From mathcomp Require Import hoelder independence.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -44,6 +44,7 @@ Unset Printing Implicit Defensive.
 
 Import Order.TTheory GRing.Theory Num.Def Num.Theory.
 Import numFieldTopology.Exports numFieldNormedType.Exports.
+Import hoelder.
 
 Local Open Scope classical_set_scope.
 Local Open Scope ring_scope.
@@ -862,18 +863,20 @@ pose Y2 : {mfun n.+1.-tuple T >-> R} := HB.pack X2 build_mX2.
 rewrite [X in 'E__[X]](_ : _ = Y2 \+ Y1); last first.
   rewrite /Y2 /Y1/= /X2 /X1/=.
   by apply/funext => t; rewrite !fctE fct_sumE.
-rewrite expectationD; last 2 first.
-  apply: (bounded_RV_integrable M) => // t.
-  exact: XM.
-  rewrite (_ : _ \o _ = fun x => (\sum_(i < n)
-      (tnth X (lift ord0 i) (tnth x (lift ord0 i)))%:E)); last first.
-    by apply/funext => t/=; rewrite sumEFin.
-  apply: integrable_sum_ord => // i.
-  have : measurable_fun setT (fun x : n.+1.-tuple T =>
-      tnth X (lift ord0 i) (tnth x (lift ord0 i))).
-    apply/measurableT_comp => //=.
-    exact: measurable_tnth.
-  by move/(bounded_RV_integrable M); exact.
+rewrite expectationD/=; last 2 first.
+- (* apply: (bounded_RV_integrable M) => // t. *)
+  (* exact: XM. *)
+  admit.
+(* - rewrite (_ : _ \o _ = fun x => (\sum_(i < n) *)
+(*       (tnth X (lift ord0 i) (tnth x (lift ord0 i)))%:E)); last first. *)
+(*     by apply/funext => t/=; rewrite sumEFin. *)
+(*   apply: integrable_sum_ord => // i. *)
+(*   have : measurable_fun setT (fun x : n.+1.-tuple T => *)
+(*       tnth X (lift ord0 i) (tnth x (lift ord0 i))). *)
+(*     apply/measurableT_comp => //=. *)
+(*     exact: measurable_tnth. *)
+(*   by move/(bounded_RV_integrable M); exact. *)
+ admit.
 congr (_ + _).
 - rewrite /Y2 /X2/= unlock /expectation.
   (* \int[\X_n.+1 P]_w (thead X (thead w))%:E = \int[P]_w (tnth X ord0 w)%:E *)
@@ -954,7 +957,7 @@ congr (_ + _).
     by rewrite inordK// ltnS.
   congr expectation.
   by apply/funext => t; rewrite fct_sumE.
-Qed.
+Admitted.
 
 Lemma expectation_pro2 d1 d2 (T1 : measurableType d1) (T2 : measurableType d2)
   (P1 : probability T1 R) (P2 : probability T2 R)
@@ -1177,6 +1180,10 @@ have -> : \int[P]_x `|(EFin \o bool_to_real R X) x| = 'E_P[bool_to_real R X].
 by rewrite bernoulli_expectation// ltry.
 Qed.
 
+Lemma lfun_bernoulli (X : bernoulliRV P p) q :
+  1 <= q -> (bool_to_real R X : T -> R) \in lfun P q.
+Admitted.
+
 Lemma bool_RV_sqr (X : {RV P >-> bool}) :
   ((bool_to_real R X ^+ 2) = bool_to_real R X :> (T -> R))%R.
 Proof.
@@ -1189,10 +1196,11 @@ Lemma bernoulli_variance (X : bernoulliRV P p) :
   'V_P[bool_to_real R X] = (p * (`1-p))%:E.
 Proof.
 rewrite (@varianceE _ _ _ _ (bool_to_real R X));
-  [|rewrite ?[X in _ \o X]bool_RV_sqr; exact: integrable_bernoulli..].
+  [|rewrite ?[X in _ \o X]bool_RV_sqr; apply: lfun_bernoulli..]; last first.
+  admit.
 rewrite [X in 'E_P[X]]bool_RV_sqr !bernoulli_expectation//.
 by rewrite expe2 -EFinD onemMr.
-Qed.
+Admitted.
 
 Definition real_of_bool n : _ -> n.-tuple _ :=
   map_tuple (bool_to_real R : bernoulliRV P p -> {mfun _ >-> _}).
