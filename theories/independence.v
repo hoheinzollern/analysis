@@ -27,7 +27,7 @@ Unset Printing Implicit Defensive.
 Reserved Notation "I .-independent X" (at level 2, format "I .-independent  X").
 
 Import Order.TTheory GRing.Theory Num.Def Num.Theory.
-Import numFieldTopology.Exports.
+Import numFieldTopology.Exports ess_sup_inf hoelder.
 
 Local Open Scope classical_set_scope.
 Local Open Scope ring_scope.
@@ -1298,84 +1298,80 @@ move=> /(_ measurableT [set y] (measurable_set1 y)).
 by rewrite setTI.
 Qed.
 
-Lemma integrable_expectationM000 (X Y : {RV P >-> R}) :
-  independent_RVs2 X Y ->
-  P.-integrable setT (EFin \o X) -> P.-integrable setT (EFin \o Y) ->
-  `|'E_P [X * Y]| < +oo.
+Lemma Lnorm_le F G p : 
+    (* F \in lfun P p -> G \in lfun P p -> *)
+  1 <= p -> (forall i, `|F i| <= `|G i|) -> 'N[P]_p[F] <= 'N[P]_p[G].
 Proof.
-move=> indeXY iX iY.
-apply: (@le_lt_trans _ _ 'E_P[(@normr _ _ \o X) * (@normr _ _ \o Y)]).
-  rewrite unlock/=.
-  rewrite (le_trans (le_abse_integral _ _ _))//.
-    apply/measurable_EFinP/measurable_funM.
-      by have /measurable_EFinP := measurable_int _ iX.
-    by have /measurable_EFinP := measurable_int _ iY.
-  apply: ge0_le_integral => //=.
-  - by apply/measurable_EFinP; exact/measurableT_comp.
-  - by move=> x _; rewrite lee_fin/= mulr_ge0/=.
-  - by apply/measurable_EFinP; apply/measurable_funM; exact/measurableT_comp.
-  - by move=> t _; rewrite lee_fin/= normrM.
-rewrite expectationM_ge0//=.
-- rewrite lte_mul_pinfty//.
-  + by rewrite expectation_ge0/=.
-  + rewrite expectation_fin_num//= compA//.
-    exact: (integrable_abse iX).
-  + by move/integrableP : iY => [_ iY]; rewrite unlock.
-- exact: independent_RVs2_comp.
-- apply: mule_def_fin; rewrite unlock integral_fune_fin_num//.
-  + exact: (integrable_abse iX).
-  + exact: (integrable_abse iY).
+move=> +leFG.
+rewrite unlock.
+case: p => [r|?|//].
+- rewrite lee_fin=> r1.
+  rewrite gt0_ler_poweR ?invr_ge0 ?(le_trans _ r1)//.
+  - by rewrite in_itv/= leey ; rewrite integral_ge0// => x; rewrite poweR_ge0.
+  - by rewrite in_itv/= leey; rewrite integral_ge0// => x; rewrite poweR_ge0.
+  apply: le_integral => //=. admit. admit.
+  by move=> x _; rewrite gt0_ler_poweR ?(le_trans _ r1) ?in_itv//= leey abse_ge0.
+case: ifPn => // ?.
+apply: le_ess_sup.
+near=> x => //=.
+Unshelve. by end_near.
+Admitted.
+
+Lemma lfun_pos X p : 1 <= p -> X \in lfun P p -> (X^\+)%R \in lfun P p.
+Proof.
+rewrite !inE/= => p1 /andP[]; rewrite !inE/= => mX lfunX; apply/andP; split.
+  by rewrite inE/=; exact: measurable_funrpos.
+rewrite inE/=.
+apply: (le_lt_trans _ lfunX).
+rewrite Lnorm_le//= => i.
+rewrite lee_fin /funrpos/maxr.
+case: ifPn => //?.
+by rewrite normr0 normr_ge0.
 Qed.
 
-Lemma independent_integrableM (X Y : {RV P >-> R}) :
-  independent_RVs2 X Y ->
-  P.-integrable setT (EFin \o X) -> P.-integrable setT (EFin \o Y) ->
-  P.-integrable setT (EFin \o (X \* Y)%R).
+Lemma lfun_neg X p : 1 <= p -> X \in lfun P p -> (X^\-)%R \in lfun P p.
 Proof.
-move=> indeXY iX iY.
-apply/integrableP; split; first exact/measurable_EFinP/measurable_funM.
-have := integrable_expectationM000 indeXY iX iY.
-rewrite unlock => /abse_integralP; apply => //.
-exact/measurable_EFinP/measurable_funM.
+rewrite !inE/= => p1 /andP[]; rewrite !inE/= => mX lfunX; apply/andP; split.
+  by rewrite inE/=; exact: measurable_funrneg.
+rewrite inE/=.
+apply: (le_lt_trans _ lfunX).
+rewrite Lnorm_le//= => i.
+rewrite lee_fin /funrneg/maxr.
+case: ifPn => //?.
+- by rewrite normr0 normr_ge0.
+by rewrite normrN lexx.
 Qed.
+
 
 (* TODO: rename to expectationM when deprecation is removed  *)
 Lemma expectation_mul (X Y : {RV P >-> R}) :
   independent_RVs2 X Y ->
-  P.-integrable setT (EFin \o X) -> P.-integrable setT (EFin \o Y) ->
+  (X : T -> R) \in lfun P 2%:E -> (Y : T -> R) \in lfun P 2%:E ->
   'E_P [X * Y] = 'E_P [X] * 'E_P [Y].
 Proof.
-move=> XY iX iY.
+move=> XY lfunX lfunY.
 transitivity ('E_P[(X^\+ - X^\-) * (Y^\+ - Y^\-)]).
   congr ('E_P[_]).
   apply/funext => /=t.
   by rewrite [in LHS](funrposneg X)/= [in LHS](funrposneg Y).
-have ? : P.-integrable [set: T] (EFin \o X^\-%R).
-  by rewrite -funerneg; exact/integrable_funeneg.
-have ? : P.-integrable [set: T] (EFin \o X^\+%R).
-  by rewrite -funerpos; exact/integrable_funepos.
-have ? : P.-integrable [set: T] (EFin \o Y^\+%R).
-  by rewrite -funerpos; exact/integrable_funepos.
-have ? : P.-integrable [set: T] (EFin \o Y^\-%R).
-  by rewrite -funerneg; exact/integrable_funeneg.
-have ? : P.-integrable [set: T] (EFin \o (X^\+ \* Y^\+)%R).
-  by apply: independent_integrableM => //=; exact: independent_RVs2_funrpospos.
-have ? : P.-integrable [set: T] (EFin \o (X^\- \* Y^\+)%R).
-  by apply: independent_integrableM => //=; exact: independent_RVs2_funrnegpos.
-have ? : P.-integrable [set: T] (EFin \o (X^\+ \* Y^\-)%R).
-  by apply: independent_integrableM => //=; exact: independent_RVs2_funrposneg.
-have ? : P.-integrable [set: T] (EFin \o (X^\- \* Y^\-)%R).
-  by apply: independent_integrableM => //=; exact: independent_RVs2_funrnegneg.
+have ? : 1 <= 2%:E :> \bar R. rewrite lee_fin. admit.
+have ? : (X^\+)%R \in lfun P 2%:E by exact: lfun_pos.
+have ? : (X^\-)%R \in lfun P 2%:E by exact: lfun_neg.
+have ? : (Y^\+)%R \in lfun P 2%:E by exact: lfun_pos.
+have ? : (Y^\-)%R \in lfun P 2%:E by exact: lfun_neg.
+have ? : (X^\+)%R \in lfun P 1 by rewrite lfun_inclusion12// fin_num_measure.
+have ? : (X^\-)%R \in lfun P 1 by rewrite lfun_inclusion12// fin_num_measure.
+have ? : (Y^\+)%R \in lfun P 1 by rewrite lfun_inclusion12// fin_num_measure.
+have ? : (Y^\-)%R \in lfun P 1 by rewrite lfun_inclusion12// fin_num_measure.
+have ? : (X^\+ * Y^\+)%R \in lfun P 1 by exact: lfun2M2_1.
+have ? : (X^\- * Y^\+)%R \in lfun P 1 by exact: lfun2M2_1.
+have ? : (X^\+ * Y^\-)%R \in lfun P 1 by exact: lfun2M2_1.
+have ? : (X^\+ * Y^\+ \- X^\- * Y^\+)%R \in lfun P 1 by exact: rpredB.
+have ? : (X^\+ * Y^\+ \- X^\- * Y^\+ \- X^\+ * Y^\-)%R \in lfun P 1 by exact: rpredB.
+have ? : (X^\- * Y^\-)%R \in lfun P 1 by exact: lfun2M2_1.
 transitivity ('E_P[X^\+ * Y^\+] - 'E_P[X^\- * Y^\+]
               - 'E_P[X^\+ * Y^\-] + 'E_P[X^\- * Y^\-]).
-  rewrite mulrDr !mulrDl -expectationB//= -expectationB//=; last first.
-    rewrite (_ : _ \o _ = EFin \o (X^\+ \* Y^\+)%R \-
-                          (EFin \o (X^\- \* Y^\+)%R))//.
-    exact: integrableB.
-  rewrite -expectationD//=; last first.
-    rewrite (_ : _ \o _ = (EFin \o (X^\+ \* Y^\+)%R)
-      \- (EFin \o (X^\- \* Y^\+)%R) \- (EFin \o (X^\+ \* Y^\-)%R))//.
-    by apply: integrableB => //; exact: integrableB.
+  rewrite mulrDr !mulrDl -expectationB//= -expectationB//= -expectationD//=.
   congr ('E_P[_]); apply/funext => t/=.
   by rewrite !fctE !(mulNr,mulrN,opprK,addrA)/=.
 rewrite [in LHS]expectationM_ge0//=; last 2 first.
@@ -1389,7 +1385,7 @@ rewrite [in LHS]expectationM_ge0//=; last 2 first.
   by rewrite mule_def_fin// expectation_fin_num.
 rewrite [in LHS]expectationM_ge0//=; last 2 first.
   exact: independent_RVs2_funrnegneg.
-  by rewrite mule_def_fin// expectation_fin_num//=.
+  by rewrite mule_def_fin// expectation_fin_num.
 transitivity ('E_P[X^\+ - X^\-] * 'E_P[Y^\+ - Y^\-]).
   rewrite -addeA -addeACA -muleBr; last 2 first.
     by rewrite expectation_fin_num.
@@ -1400,11 +1396,11 @@ transitivity ('E_P[X^\+ - X^\-] * 'E_P[Y^\+ - Y^\-]).
     by rewrite expectation_fin_num.
     by rewrite fin_num_adde_defr// expectation_fin_num.
   rewrite -muleBl; last 2 first.
-    by rewrite fin_numB// !expectation_fin_num//.
+    by rewrite fin_numB// !expectation_fin_num.
     by rewrite fin_num_adde_defr// expectation_fin_num.
   by rewrite -expectationB//= -expectationB.
 by congr *%E; congr ('E_P[_]); rewrite [RHS]funrposneg.
-Qed.
+Admitted.
 
 Lemma prodE (s : seq nat) (X : {RV P >-> R}^nat) (t : T) :
   (\prod_(i <- s) X i t)%R = ((\prod_(j <- s) X j)%R t).
@@ -1618,12 +1614,33 @@ move=> /(_ measurableT [set y] (measurable_set1 y)).
 by rewrite setTI.
 Qed.
 
+Lemma Lnorm_normr (X : T -> R) p :
+  'N[P]_p[EFin \o normr \o X] = 'N[P]_p[EFin \o X].
+Proof.
+rewrite unlock/=.
+have -> : (abse \o ((EFin \o normr) \o X)) = abse \o (EFin \o X).
+  by apply: funext => x/=; rewrite normr_id.
+case: p => [r|//|//].
+by under eq_integral => x _ do rewrite normr_id.
+Qed.
+
+Lemma lfun_norm (X : {RV P >-> R}) :
+  (X : T -> R) \in lfun P 1 -> (normr \o X) \in lfun P 1.
+Proof.
+move=> /andP[mX finX]; apply/andP; split.
+  by rewrite inE/=; exact: measurableT_comp.
+rewrite inE/=/finite_norm Lnorm_normr.
+by move: finX; rewrite inE.
+Qed.
+
 Lemma integrable_expectationM' (X Y : {RV P >-> R}) :
   independent_RVs2 (P := P) X Y ->
-  P.-integrable setT (EFin \o X) -> P.-integrable setT (EFin \o Y) ->
+  (X : T -> R) \in lfun P 1 -> (Y : T -> R) \in lfun P 1 ->
   `|'E_P [X * Y]| < +oo.
 Proof.
-move=> indeXY iX iY.
+move=> indeXY lfunX lfunY.
+have iX : P.-integrable setT (EFin \o X) by exact: lfun1_integrable.
+have iY : P.-integrable setT (EFin \o Y) by exact: lfun1_integrable.
 apply: (@le_lt_trans _ _ 'E_P[(@normr _ _ \o X) * (@normr _ _ \o Y)]).
   rewrite unlock/=.
   rewrite (le_trans (le_abse_integral _ _ _))//.
@@ -1638,8 +1655,7 @@ apply: (@le_lt_trans _ _ 'E_P[(@normr _ _ \o X) * (@normr _ _ \o Y)]).
 rewrite expectationM_ge0//=.
 - rewrite lte_mul_pinfty//.
   + by rewrite expectation_ge0/=.
-  + rewrite expectation_fin_num//= compA//.
-    exact: (integrable_abse iX).
+  + by rewrite expectation_fin_num//= lfun_norm//.
   + by move/integrableP : iY => [_ iY]; rewrite unlock.
 - exact: independent_RVs2_comp.
 - apply: mule_def_fin; rewrite unlock integral_fune_fin_num//.
@@ -1647,14 +1663,16 @@ rewrite expectationM_ge0//=.
   + exact: (integrable_abse iY).
 Qed.
 
-Lemma independent_integrableM' (X Y : {RV P >-> R}) :
+Lemma independent_lfunM (X Y : {RV P >-> R}) :
   independent_RVs2 (P := P) X Y ->
-  P.-integrable setT (EFin \o X) -> P.-integrable setT (EFin \o Y) ->
-  P.-integrable setT (EFin \o (X \* Y)%R).
+  (X : T -> R) \in lfun P 1 -> (Y : T -> R) \in lfun P 1 ->
+  ((X \* Y)%R : T -> R) \in lfun P 1.
 Proof.
-move=> indeXY iX iY.
-apply/integrableP; split; first exact/measurable_EFinP/measurable_funM.
-have := integrable_expectationM' indeXY iX iY.
+move=> indeXY lfunX lfunY.
+rewrite inE/=; apply/andP; split.
+  by rewrite rpredM//= inE//=.
+rewrite inE/=/finite_norm Lnorm1.
+have := integrable_expectationM' indeXY lfunX lfunY.
 rewrite unlock => /abse_integralP; apply => //.
 exact/measurable_EFinP/measurable_funM.
 Qed.
@@ -1662,7 +1680,7 @@ Qed.
 (* TODO: rename to expectationM when deprecation is removed  *)
 Lemma expectation_prod (X Y : {RV P >-> R}) :
   independent_RVs2 (P := P) X Y ->
-  P.-integrable setT (EFin \o X) -> P.-integrable setT (EFin \o Y) ->
+  (X : T -> R) \in lfun P 1 -> (Y : T -> R) \in lfun P 1 ->
   'E_P [X * Y] = 'E_P [X] * 'E_P [Y].
 Proof.
 move=> XY iX iY.
@@ -1670,32 +1688,22 @@ transitivity ('E_P[(X^\+ - X^\-) * (Y^\+ - Y^\-)]).
   congr ('E_P[_]).
   apply/funext => /=t.
   by rewrite [in LHS](funrposneg X)/= [in LHS](funrposneg Y).
-have ? : P.-integrable [set: T] (EFin \o X^\-%R).
-  by rewrite -funerneg; exact/integrable_funeneg.
-have ? : P.-integrable [set: T] (EFin \o X^\+%R).
-  by rewrite -funerpos; exact/integrable_funepos.
-have ? : P.-integrable [set: T] (EFin \o Y^\+%R).
-  by rewrite -funerpos; exact/integrable_funepos.
-have ? : P.-integrable [set: T] (EFin \o Y^\-%R).
-  by rewrite -funerneg; exact/integrable_funeneg.
-have ? : P.-integrable [set: T] (EFin \o (X^\+ \* Y^\+)%R).
-  by apply: independent_integrableM => //=; exact: independent_RVs2_funrpospos.
-have ? : P.-integrable [set: T] (EFin \o (X^\- \* Y^\+)%R).
-  by apply: independent_integrableM => //=; exact: independent_RVs2_funrnegpos.
-have ? : P.-integrable [set: T] (EFin \o (X^\+ \* Y^\-)%R).
-  by apply: independent_integrableM => //=; exact: independent_RVs2_funrposneg.
-have ? : P.-integrable [set: T] (EFin \o (X^\- \* Y^\-)%R).
-  by apply: independent_integrableM => //=; exact: independent_RVs2_funrnegneg.
+have ? : (X^\+)%R \in lfun P 1 by exact: lfun_pos.
+have ? : (X^\-)%R \in lfun P 1 by exact: lfun_neg.
+have ? : (Y^\+)%R \in lfun P 1 by exact: lfun_pos.
+have ? : (Y^\-)%R \in lfun P 1 by exact: lfun_neg.
+have ? : (X^\+ * Y^\+)%R \in lfun P 1.
+  by rewrite independent_lfunM//=; exact: independent_RVs2_funrpospos.
+have ? : (X^\- * Y^\+)%R \in lfun P 1.
+  by rewrite independent_lfunM//=; exact: independent_RVs2_funrnegpos.
+have ? : (X^\+ * Y^\-)%R \in lfun P 1.
+  by rewrite independent_lfunM//=; exact: independent_RVs2_funrposneg.
+have ? : (X^\- * Y^\-)%R \in lfun P 1.
+  by rewrite independent_lfunM//=; exact: independent_RVs2_funrnegneg.
 transitivity ('E_P[X^\+ * Y^\+] - 'E_P[X^\- * Y^\+]
               - 'E_P[X^\+ * Y^\-] + 'E_P[X^\- * Y^\-]).
-  rewrite mulrDr !mulrDl -expectationB//= -expectationB//=; last first.
-    rewrite (_ : _ \o _ = EFin \o (X^\+ \* Y^\+)%R \-
-                          (EFin \o (X^\- \* Y^\+)%R))//.
-    exact: integrableB.
-  rewrite -expectationD//=; last first.
-    rewrite (_ : _ \o _ = (EFin \o (X^\+ \* Y^\+)%R)
-      \- (EFin \o (X^\- \* Y^\+)%R) \- (EFin \o (X^\+ \* Y^\-)%R))//.
-    by apply: integrableB => //; exact: integrableB.
+  rewrite mulrDr !mulrDl -expectationB//= -expectationB ?rpredB//=.
+  rewrite -expectationD ?rpredB//=.
   congr ('E_P[_]); apply/funext => t/=.
   by rewrite !fctE !(mulNr,mulrN,opprK,addrA)/=.
 rewrite [in LHS]expectationM_ge0//=; last 2 first.
