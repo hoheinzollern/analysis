@@ -430,10 +430,9 @@ Lemma covarianceDl (X Y Z : T -> R) :
   covariance P (X \+ Y)%R Z = covariance P X Z + covariance P Y Z.
 Proof.
 move=> X2 Y2 Z2.
-have Pfin : P setT \is a fin_num := fin_num_measure P _ measurableT.
-have X1 := lfun_inclusion12 Pfin X2.
-have Y1 := lfun_inclusion12 Pfin Y2.
-have Z1 := lfun_inclusion12 Pfin Z2.
+have X1 := lfun_inclusion12 X2.
+have Y1 := lfun_inclusion12 Y2.
+have Z1 := lfun_inclusion12 Z2.
 have XY1 := lfun2M2_1 X2 Y2.
 have YZ1 := lfun2M2_1 Y2 Z2.
 have XZ1 := lfun2M2_1 X2 Z2.
@@ -455,9 +454,8 @@ Lemma covarianceBl (X Y Z : T -> R) :
   covariance P (X \- Y)%R Z = covariance P X Z - covariance P Y Z.
 Proof.
 move=> X2 Y2 Z2.
-have Pfin : P setT \is a fin_num := fin_num_measure P _ measurableT.
-have Y1 := lfun_inclusion12 Pfin Y2.
-have Z1 := lfun_inclusion12 Pfin Z2.
+have Y1 := lfun_inclusion12 Y2.
+have Z1 := lfun_inclusion12 Z2.
 have YZ1 := lfun2M2_1 Y2 Z2.
 by rewrite -[(X \- Y)%R]/(X \+ (\- Y))%R covarianceDl ?covarianceNl ?rpredN.
 Qed.
@@ -467,9 +465,8 @@ Lemma covarianceBr (X Y Z : T -> R) :
   covariance P X (Y \- Z)%R = covariance P X Y - covariance P X Z.
 Proof.
 move=> X2 Y2 Z2.
-have Pfin : P setT \is a fin_num := fin_num_measure P _ measurableT.
-have Y1 := lfun_inclusion12 Pfin Y2.
-have Z1 := lfun_inclusion12 Pfin Z2.
+have Y1 := lfun_inclusion12 Y2.
+have Z1 := lfun_inclusion12 Z2.
 have YZ1 := lfun2M2_1 Y2 Z2.
 by rewrite !(covarianceC X) covarianceBl 1?(mulrC _ X).
 Qed.
@@ -513,8 +510,7 @@ Lemma varianceZ a (X : T -> R) : X \in lfun P 2%:E ->
   'V_P[(a \o* X)%R] = (a ^+ 2)%:E * 'V_P[X].
 Proof.
 move=> X2.
-have Pfin : P setT \is a fin_num := fin_num_measure P _ measurableT.
-have X1 := lfun_inclusion12 Pfin X2.
+have X1 := lfun_inclusion12 X2.
 rewrite /variance covarianceZl//=.
 - by rewrite covarianceZr// ?muleA ?EFinM// lfun2M2_1.
 - by rewrite lfunp_scale.
@@ -531,9 +527,8 @@ Lemma varianceD (X Y : T -> R) : X \in lfun P 2%:E -> Y \in lfun P 2%:E ->
   'V_P[X \+ Y]%R = 'V_P[X] + 'V_P[Y] + 2%:E * covariance P X Y.
 Proof.
 move=> X2 Y2.
-have Pfin : P setT \is a fin_num := fin_num_measure P _ measurableT.
-have X1 := lfun_inclusion12 Pfin X2.
-have Y1 := lfun_inclusion12 Pfin Y2.
+have X1 := lfun_inclusion12 X2.
+have Y1 := lfun_inclusion12 Y2.
 have XY1 := lfun2M2_1 X2 Y2.
 rewrite -['V_P[_]]/(covariance P (X \+ Y)%R (X \+ Y)%R).
 rewrite covarianceDl ?rpredD ?lee1n//= covarianceDr// covarianceDr//.
@@ -545,9 +540,8 @@ Lemma varianceB (X Y : T -> R) : X \in lfun P 2%:E -> Y \in lfun P 2%:E ->
   'V_P[(X \- Y)%R] = 'V_P[X] + 'V_P[Y] - 2%:E * covariance P X Y.
 Proof.
 move=> X2 Y2.
-have Pfin : P setT \is a fin_num := fin_num_measure P _ measurableT.
-have X1 := lfun_inclusion12 Pfin X2.
-have Y1 := lfun_inclusion12 Pfin Y2.
+have X1 := lfun_inclusion12 X2.
+have Y1 := lfun_inclusion12 Y2.
 have XY1 := lfun2M2_1 X2 Y2.
 rewrite -[(X \- Y)%R]/(X \+ (\- Y))%R.
 by rewrite varianceD/= ?varianceN ?covarianceNr ?muleN ?rpredN.
@@ -585,9 +579,8 @@ Lemma covariance_le (X Y : T -> R) : X \in lfun P 2%:E -> Y \in lfun P 2%:E ->
   covariance P X Y <= sqrte 'V_P[X] * sqrte 'V_P[Y].
 Proof.
 move=> X2 Y2.
-have Pfin : P setT \is a fin_num := fin_num_measure P _ measurableT.
-have X1 := lfun_inclusion12 Pfin X2.
-have Y1 := lfun_inclusion12 Pfin Y2.
+have X1 := lfun_inclusion12 X2.
+have Y1 := lfun_inclusion12 Y2.
 have XY1 := lfun2M2_1 X2 Y2.
 rewrite -sqrteM ?variance_ge0//.
 rewrite lee_sqrE ?sqrte_ge0// sqr_sqrte ?mule_ge0 ?variance_ge0//.
@@ -707,8 +700,7 @@ Lemma cantelli (X : {RV P >-> R}) (lambda : R) :
   P [set x | lambda%:E <= (X x)%:E - 'E_P[X]]
   <= (fine 'V_P[X] / (fine 'V_P[X] + lambda^2))%:E.
 Proof.
-move=> /[dup] X2.
-move=> /(lfun_inclusion12 (fin_num_measure P _ measurableT)) X1 lambda_gt0.
+move=> /[dup] X2 /lfun_inclusion12 X1 lambda_gt0.
 have finEK : (fine 'E_P[X])%:E = 'E_P[X] by rewrite fineK ?expectation_fin_num.
 have finVK : (fine 'V_P[X])%:E = 'V_P[X] by rewrite fineK ?variance_fin_num.
 pose Y := (X \- cst (fine 'E_P[X]))%R.
