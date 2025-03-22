@@ -868,16 +868,13 @@ rewrite expectationD/=; last 2 first.
   have /andP[] := XM ord0 (thead t).
   rewrite /X2 (tuple_eta X) theadE !tnth0 => X20 X2M.
   by rewrite ger0_norm.
-- rewrite [X in X \in _](_ : _ = fun x => (\sum_(i < n)
-      (tnth X (lift ord0 i) (tnth x (lift ord0 i)))))%R; last first.
-    by apply/funext => t/=.
-  (* apply: integrable_sum_ord => // i. *)
-  (* have : measurable_fun setT (fun x : n.+1.-tuple T => *)
-  (*     tnth X (lift ord0 i) (tnth x (lift ord0 i))). *)
-  (*   apply/measurableT_comp => //=. *)
-  (*   exact: measurable_tnth. *)
-  (* by move/(bounded_RV_integrable M); exact. *)
-  admit.
+- rewrite (_ : X1 = \sum_(i < n) Tnth X (lift ord0 i))%R; last first.
+    apply: funext => x; rewrite /X1.
+    admit.
+  rewrite rpred_sum// => i _.
+  rewrite (@lfun_bounded _ _ _ _ _ M)// => x.
+  have /andP[Xge0 XleM] := XM (lift ord0 i) (tnth x (lift ord0 i)).
+  by rewrite /Tnth ger0_norm.
 congr (_ + _).
 - rewrite /Y2 /X2/= unlock /expectation.
   (* \int[\X_n.+1 P]_w (thead X (thead w))%:E = \int[P]_w (tnth X ord0 w)%:E *)
