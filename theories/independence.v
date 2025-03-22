@@ -381,7 +381,7 @@ apply: (@g_sigma_algebra_measure_unique _ _ _
 - by rewrite bigcup_const.
 - exact: setI_closed_setT.
 - by move=> B [/m1m2 //|/= ->].
-- by move=> n; apply: fin_num_fun_lty; exact: fin_num_measure.
+- by move=> n; rewrite fin_num_fun_lty// fin_num_measure.
 - move: E sGE; apply: smallest_sub => // C GC.
   by apply: sub_gen_smallest; left.
 Qed.
@@ -1298,50 +1298,56 @@ move=> /(_ measurableT [set y] (measurable_set1 y)).
 by rewrite setTI.
 Qed.
 
-Lemma Lnorm_le F G p : 
-    (* F \in lfun P p -> G \in lfun P p -> *)
-  1 <= p -> (forall i, `|F i| <= `|G i|) -> 'N[P]_p[F] <= 'N[P]_p[G].
+Lemma Lnorm_le (F G : T -> R) p :
+    1 <= p -> G \in lfun P p -> measurable_fun [set: T] F ->
+  (forall i, `|F i| <= `|G i|)%R -> 'N[P]_p[EFin \o F] <= 'N[P]_p[EFin \o G].
 Proof.
-move=> +leFG.
 rewrite unlock.
-case: p => [r|?|//].
-- rewrite lee_fin=> r1.
-  rewrite gt0_ler_poweR ?invr_ge0 ?(le_trans _ r1)//.
-  - by rewrite in_itv/= leey ; rewrite integral_ge0// => x; rewrite poweR_ge0.
-  - by rewrite in_itv/= leey; rewrite integral_ge0// => x; rewrite poweR_ge0.
-  apply: le_integral => //=. admit. admit.
-  by move=> x _; rewrite gt0_ler_poweR ?(le_trans _ r1) ?in_itv//= leey abse_ge0.
-case: ifPn => // ?.
+case: p => [r|_|//].
+- rewrite lee_fin=> r1 /(lfun_integrable r1)iG mF leFG.
+  apply:gt0_ler_poweR.
+  - by rewrite invr_ge0 (le_trans _ r1).
+  - by rewrite in_itv/= leey; rewrite integral_ge0// => x; rewrite lee_fin powR_ge0.
+  - by rewrite in_itv/= leey; rewrite integral_ge0// => x; rewrite lee_fin powR_ge0.
+  apply: le_integral => //=.
+  - apply: (le_integrable _ _ _ iG) => //.
+      apply: measurableT_comp => //.
+      apply: (@measurableT_comp _ _ _ _ _ _ (@powR R ^~ r)) => //.
+      exact: measurableT_comp.
+    by move=> x _; rewrite !gee0_abs lee_fin ?powR_ge0// ge0_ler_powR// (le_trans _ r1).
+  by move=> x _; rewrite lee_fin gt0_ler_powR ?(le_trans _ r1) ?in_itv.
+case: ifPn => // ? _ _ leFG.
 apply: le_ess_sup.
-near=> x => //=.
+near=> x => //=. by rewrite lee_fin.
 Unshelve. by end_near.
-Admitted.
+Qed.
 
 Lemma lfun_pos X p : 1 <= p -> X \in lfun P p -> (X^\+)%R \in lfun P p.
 Proof.
-rewrite !inE/= => p1 /andP[]; rewrite !inE/= => mX lfunX; apply/andP; split.
+move=> p1 /[dup] lfunX.
+rewrite !inE/= => /andP[]; rewrite !inE/= => mX fnormX; apply/andP; split.
   by rewrite inE/=; exact: measurable_funrpos.
 rewrite inE/=.
-apply: (le_lt_trans _ lfunX).
-rewrite Lnorm_le//= => i.
-rewrite lee_fin /funrpos/maxr.
+apply: (le_lt_trans _ fnormX).
+rewrite Lnorm_le//; first exact: measurable_funrpos.
+rewrite /funrpos/maxr => i.
 case: ifPn => //?.
 by rewrite normr0 normr_ge0.
 Qed.
 
 Lemma lfun_neg X p : 1 <= p -> X \in lfun P p -> (X^\-)%R \in lfun P p.
 Proof.
-rewrite !inE/= => p1 /andP[]; rewrite !inE/= => mX lfunX; apply/andP; split.
+move=> p1 /[dup] lfunX.
+rewrite !inE/= => /andP[]; rewrite !inE/= => mX fnormX; apply/andP; split.
   by rewrite inE/=; exact: measurable_funrneg.
 rewrite inE/=.
-apply: (le_lt_trans _ lfunX).
-rewrite Lnorm_le//= => i.
-rewrite lee_fin /funrneg/maxr.
+apply: (le_lt_trans _ fnormX).
+rewrite Lnorm_le//; first exact: measurable_funrneg.
+rewrite /funrneg/maxr => i.
 case: ifPn => //?.
-- by rewrite normr0 normr_ge0.
+  by rewrite normr0 normr_ge0.
 by rewrite normrN lexx.
 Qed.
-
 
 (* TODO: rename to expectationM when deprecation is removed  *)
 Lemma expectation_mul (X Y : {RV P >-> R}) :
@@ -1354,15 +1360,15 @@ transitivity ('E_P[(X^\+ - X^\-) * (Y^\+ - Y^\-)]).
   congr ('E_P[_]).
   apply/funext => /=t.
   by rewrite [in LHS](funrposneg X)/= [in LHS](funrposneg Y).
-have ? : 1 <= 2%:E :> \bar R. rewrite lee_fin. admit.
+have ? : 1 <= 2%:E :> \bar R. rewrite lee1n//.
 have ? : (X^\+)%R \in lfun P 2%:E by exact: lfun_pos.
 have ? : (X^\-)%R \in lfun P 2%:E by exact: lfun_neg.
 have ? : (Y^\+)%R \in lfun P 2%:E by exact: lfun_pos.
 have ? : (Y^\-)%R \in lfun P 2%:E by exact: lfun_neg.
-have ? : (X^\+)%R \in lfun P 1 by rewrite lfun_inclusion12// fin_num_measure.
-have ? : (X^\-)%R \in lfun P 1 by rewrite lfun_inclusion12// fin_num_measure.
-have ? : (Y^\+)%R \in lfun P 1 by rewrite lfun_inclusion12// fin_num_measure.
-have ? : (Y^\-)%R \in lfun P 1 by rewrite lfun_inclusion12// fin_num_measure.
+have ? : (X^\+)%R \in lfun P 1 by rewrite lfun_inclusion12.
+have ? : (X^\-)%R \in lfun P 1 by rewrite lfun_inclusion12.
+have ? : (Y^\+)%R \in lfun P 1 by rewrite lfun_inclusion12.
+have ? : (Y^\-)%R \in lfun P 1 by rewrite lfun_inclusion12.
 have ? : (X^\+ * Y^\+)%R \in lfun P 1 by exact: lfun2M2_1.
 have ? : (X^\- * Y^\+)%R \in lfun P 1 by exact: lfun2M2_1.
 have ? : (X^\+ * Y^\-)%R \in lfun P 1 by exact: lfun2M2_1.
@@ -1400,7 +1406,7 @@ transitivity ('E_P[X^\+ - X^\-] * 'E_P[Y^\+ - Y^\-]).
     by rewrite fin_num_adde_defr// expectation_fin_num.
   by rewrite -expectationB//= -expectationB.
 by congr *%E; congr ('E_P[_]); rewrite [RHS]funrposneg.
-Admitted.
+Qed.
 
 Lemma prodE (s : seq nat) (X : {RV P >-> R}^nat) (t : T) :
   (\prod_(i <- s) X i t)%R = ((\prod_(j <- s) X j)%R t).
