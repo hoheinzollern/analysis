@@ -1100,7 +1100,26 @@ have /integrableP/=[mXi iXi] : P.-integrable [set: T] (fun x : T => `|tnth X ord
     by do 2 apply: measurableT_comp => //.
   by under eq_fun => x do rewrite normr_id.
 have ? : \int[\X_n P]_x0 (\prod_(i < n) tnth X (lift ord0 i) (tnth x0 i))%:E < +oo.
-  admit.
+  under eq_integral => x _.
+    rewrite [X in X%:E](_ : _ = \prod_(i < n) tnth (behead_tuple X) i (tnth x i))%R; last first.
+      by apply: eq_bigr => i _; rewrite (tuple_eta X) tnthS -tuple_eta.
+    over.
+  rewrite /= -(_ : 'E_(\X_n P)[\prod_(i < n) Tnth (behead_tuple X) i]%R = \int[\X_n P]_x _); last first.
+    rewrite unlock.
+    apply: eq_integral => /=x _.
+    by rewrite /Tnth fct_prodE.
+  rewrite IH.
+  - apply: finite_prod => i; rewrite expectation_ge0//=.
+      rewrite unlock tnth_behead.
+      have /integrableP[?/=] := (intX (tnth X (inord i.+1)) (mem_tnth _ _)).
+      apply: le_lt_trans.
+      apply: ge0_le_integral => //.
+      - by move=> x _; rewrite lee_fin posX.
+      - by do 2 apply: measurableT_comp => //.
+      by move=> x _; rewrite lee_fin ler_norm.
+    by move=> x; rewrite tnth_behead posX.
+  - by move=> Xi XiX; rewrite intX// mem_behead.
+  by move=> i t; rewrite tnth_behead posX.
 have ? : measurable_fun [set: n.-tuple T]
     (fun x : n.-tuple T => \prod_(i < n) tnth X (lift ord0 i) (tnth x i))%R.
   apply: measurable_prod => //= i i_n.
@@ -1163,7 +1182,7 @@ rewrite unlock /expectation.
 apply: eq_integral => x _.
 congr EFin.
 by rewrite [in RHS](tuple_eta X) tnthS.
-Admitted.
+Qed.
 
 End properties_of_independence.
 
@@ -1303,22 +1322,14 @@ transitivity ('E_(\X_n P)[ \prod_(i < n) Tnth (mktuple mmtX) i ])%R.
   apply: eq_bigr => i _.
   by rewrite /Tnth !tnth_map /mmtX/= tnth_ord_tuple.
 rewrite /mmtX.
-rewrite (@expectation_prod_nondep _ _ _ _ _ _ (expR (`|t|))%R); last 2 first.
-- move=> i ?.
-  apply/andP. split.
-    by rewrite tnth_mktuple/= expR_ge0.
-  rewrite tnth_mktuple/=/bool_to_real/=.
-  rewrite ler_expR -[leRHS]mul1r.
-  have [t0|t0] := leP 0%R t.
-    by rewrite ger0_norm// ler_pM//; case: (tnth X_ i _).
-  rewrite (@le_trans _ _ 0%R)//.
-  by rewrite mulr_ge0_le0// ltW.
+rewrite expectation_prod_nondep; last 2 first.
 - move=> _ /mapP[/= i _ ->].
   apply: (bounded_RV_integrable (expR `|t|)) => // t0.
   rewrite expR_ge0/= ler_expR/=.
   rewrite /bool_to_real/=.
   case: (tnth X_ i t0) => //=; rewrite ?mul1r ?mul0r//.
   by rewrite ler_norm.
+- by move=> i t0; rewrite tnth_map/= expR_ge0.
 apply: eq_bigr => /= i _.
 congr expectation.
 rewrite /=.
