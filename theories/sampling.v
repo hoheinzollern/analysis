@@ -824,25 +824,43 @@ rewrite -[RHS](@integral_pushforward _ _ _ _ R _ mpsi _ setT
     by rewrite normr_id// psiK.
 Qed.
 
+Lemma integral_ipro_tnth (F : n.-tuple {mfun T >-> R}) :
+    (forall Fi : {mfun T >-> R}, Fi \in F -> (Fi : T -> R) \in lfun P 1) ->
+  forall i : 'I_n, \int[\X_n P]_x (Tnth F i x)%:E = \int[P]_x (tnth F i x)%:E.
+Proof.
+elim: n F => //=[F FiF|]; first by case=> m i0.
+move=> m ih F FiF/=.
+case; case => [i0|i im].
+  rewrite eq_measure_integral
+  under eq_fun => A. 
+case: i => /=.
+case.
+
 End integral_ipro.
 
 Section properties_of_expectation.
 Context d (T : measurableType d) (R : realType) (P : probability T R).
 Local Open Scope ereal_scope.
 
+
+
+
 Lemma expectation_sum_ipro n (X : n.-tuple {RV P >-> R}) :
     (forall Xi, Xi \in X -> (Xi : T -> R) \in lfun P 1) ->
   'E_(\X_n P)[\sum_(i < n) Tnth X i] = \sum_(i < n) ('E_P[(tnth X i)]).
 Proof.
-move=> bX.
+move=>/= bX.
 rewrite (_ : \sum_(i < n) Tnth X i = \sum_(Xi <- [seq Tnth X i | i in 'I_n]) Xi)%R; last first.
   by rewrite big_map big_enum.
 rewrite expectation_sum/=.
   rewrite big_map big_enum/=.
-  apply: eq_bigr => x xi.
-  admit.
+  apply: eq_bigr => i i_n.
+  
 move=> Xi.
-rewrite /Tnth.
+rewrite /Tnth => h.
+apply: bX.
+move/memP.
+rewrite [X in is_true X -> _]inE. map_seq.
 admit.
 Admitted.
 
