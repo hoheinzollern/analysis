@@ -1069,10 +1069,11 @@ Unshelve. all: by end_near.
 Qed.
 
 Lemma expectation_prod_nondep n (X : n.-tuple {RV P >-> R}) :
+    (forall (Xi : {RV P >-> R}), Xi \in X -> P.-integrable [set: T] (EFin \o Xi)) ->
     (forall i t, (0 <= tnth X i t)%R) ->
   'E_(\X_n P)[ \prod_(i < n) Tnth X i] = \prod_(i < n) 'E_P[ (tnth X i) ].
 Proof.
-elim: n X => [X|n IH X] posX/=.
+elim: n X => [X|n IH X] intX posX/=.
   by rewrite !big_ord0 expectation_cst.
 rewrite unlock /expectation.
 rewrite [X in integral X](_ : _ = \X_n.+1 P)//.
@@ -1093,35 +1094,68 @@ under eq_fun.
     rewrite tnthS.
     over.
   over.
+have /integrableP/=[mXi iXi] : P.-integrable [set: T] (fun x : T => `|tnth X ord0 x|%:E).
+  move: (intX (tnth X ord0) (mem_tnth _ _)) => /integrableP/=[mXi iXi].
+  apply/integrableP; split => /=.
+    by do 2 apply: measurableT_comp => //.
+  by under eq_fun => x do rewrite normr_id.
+have ? : \int[\X_n P]_x0 (\prod_(i < n) tnth X (lift ord0 i) (tnth x0 i))%:E < +oo.
+  admit.
+have ? : measurable_fun [set: n.-tuple T]
+    (fun x : n.-tuple T => \prod_(i < n) tnth X (lift ord0 i) (tnth x i))%R.
+  apply: measurable_prod => //= i i_n.
+  apply: measurableT_comp => //.
+  exact: measurable_tnth.
 rewrite /=.
 rewrite -fubini1' /fubini_F/=; last first.
   apply/integrable21ltyP => //=.
     apply: measurableT_comp => //.
-    admit.
+    apply: measurable_funM => //=.
+      exact: measurableT_comp.
+    apply: measurable_prod => //= i i_n.
+    apply: measurableT_comp => //.
+    exact: (measurableT_comp (measurable_tnth i) measurable_snd).
   under eq_integral => y _.
     under eq_integral => x _ do rewrite normrM EFinM.
-    rewrite integralZr//; last first. admit.
-    rewrite (_ : \int[P]_x `|tnth X ord0 x|%:E = (fine (\int[P]_x `|tnth X ord0 x|%:E))%:E); last first.
-      rewrite fineK//. admit.
+    rewrite integralZr//; last exact/integrableP.
+    rewrite -[X in X * _]fineK ?ge0_fin_numE ?integral_ge0//; last first.
+      by under eq_fun => x do rewrite -normr_id.
     over.
   rewrite integralZl ?fineK ?lte_mul_pinfty ?integral_ge0//=.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
+  - by rewrite ge0_fin_numE ?integral_ge0//; under eq_fun => x do rewrite -normr_id.
+  - by under eq_integral => x _ do rewrite ger0_norm ?prodr_ge0//.
+  - by rewrite ge0_fin_numE ?integral_ge0//; under eq_fun => x do rewrite -normr_id.
+  - apply/integrableP; split; first by do 2 apply: measurableT_comp => //.
+    by under eq_integral => x _ do rewrite /=normr_id ger0_norm ?prodr_ge0//.
 under eq_integral => x _.
   under eq_integral => y _ do rewrite EFinM.
-  rewrite/= integralZl; last 2 first.
+  rewrite integralZl/=; last 2 first.
   - apply: measurableT.
-  - admit.
-  rewrite -[X in _ * X]fineK; last first. admit.
+  - apply/integrableP; split => //; first by apply: measurableT_comp => //.
+    by under eq_integral => y _ do rewrite /=ger0_norm ?prodr_ge0//.
+  rewrite -[X in _ * X]fineK; last first.
+    rewrite ge0_fin_numE ?integral_ge0//=; last first.
+      by move=> t _; rewrite lee_fin prodr_ge0.
   over.
-rewrite /= integralZr//; last first. admit.
-rewrite fineK; last first. admit.
+rewrite /= integralZr//; last first.
+  apply/integrableP; split => //=; first exact: measurableT_comp.
+  by under eq_fun => x do rewrite -normr_id.
+rewrite fineK; last first.
+  by rewrite ge0_fin_numE// integral_ge0 => //=x _; rewrite lee_fin prodr_ge0//.
 rewrite [X in _ * X](_ : _ = 'E_(\X_n P)[\prod_(i < n) Tnth (behead X) i])%R; last first.
-  admit.
+  rewrite [in RHS]unlock /Tnth.
+  apply: eq_integral => x _.
+  rewrite fct_prodE.
+  congr (_%:E).
+  apply: eq_bigr => i _.
+  rewrite tnth_behead.
+  congr (_ _ _).
+  congr (_ _ _).
+  apply: val_inj => /=.
+  by rewrite /bump/= inordK// ltnS.
 rewrite IH; last first.
 - by move=> i t; rewrite tnth_behead.
+- by move=> Xi XiX; rewrite intX// mem_behead.
 rewrite big_ord_recl/=.
 congr (_ * _).
 apply: eq_bigr => /=i _.
