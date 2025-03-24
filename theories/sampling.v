@@ -862,8 +862,9 @@ case; case => [i0|i im].
     apply/integrable12ltyP => /=.
       apply: measurableT_comp => //=.
       exact: measurableT_comp.
-    under eq_integral => x _ do rewrite integral_cst//= probability_setT mule1.    
-    admit.
+    under eq_integral => x _ do rewrite integral_cst//= probability_setT mule1. 
+    have /lfunFi : tnth F (Ordinal i0) \in F by apply/tnthP; exists (Ordinal i0).
+    by move/lfun1_integrable /integrableP => [_].
   apply: eq_integral => x _.
   by rewrite integral_cst//= probability_setT mule1.
 rewrite [LHS](@integral_ipro m (Tnth F (Ordinal im))); last first.
@@ -877,7 +878,9 @@ rewrite -fubini2'/fubini_G/=; last first.
   apply/integrable12ltyP => /=.
     apply: measurableT_comp => //=.
     apply: measurableT_comp => //=.
-    admit.
+    apply: (@measurableT_comp _ _ _ _ _ _ (fun x => tnth x (Ordinal jm)) _ (fun x => x.2)).
+      exact: measurable_tnth.
+    exact: measurable_snd.
   rewrite [ltLHS](_ : _ = \int[\X_m P]_y `|tnth (behead_tuple F) (Ordinal jm) (tnth y (Ordinal jm))|%:E); last first.
     by rewrite integral_cst//= probability_setT mule1.
   have : (tnth F (lift ord0 (Ordinal jm)) : T -> R) \in lfun P 1.
@@ -890,7 +893,7 @@ transitivity (\int[\X_m P]_x (tnth (behead F) (Ordinal jm) (tnth x (Ordinal jm))
 rewrite [LHS]ih; last by move=> Fi FiF; apply: lfunFi; rewrite mem_behead.
 apply: eq_integral => x _.
 by rewrite liftjm tnthS.
-Admitted.
+Qed.
 
 End integral_ipro.
 
