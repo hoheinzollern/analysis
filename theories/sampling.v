@@ -1714,12 +1714,16 @@ Qed.
 (* [Theorem 3.1, Rajani] / [thm 4.7, MU] *)
 Theorem sampling n (X : n.-tuple (bernoulliRV P p)) (theta delta : R) :
   let X' x := (bool_trial_value X x) / n%:R in
-  (0 < p)%R ->
-  (0 < delta <= 1)%R -> (0 < theta < p)%R -> (0 < n)%nat ->
+  (0 < delta <= 1)%R -> (0 < theta < p)%R ->
   (3 / theta ^+ 2 * ln (2 / delta) <= n%:R)%R ->
   (\X_n P) [set i | `| X' i - p | <= theta]%R >= 1 - delta%:E.
 Proof.
-move=> X' p0 /andP[delta0 delta1] /andP[theta0 thetap] n0 tdn.
+move=> X' /andP[delta0 delta1] /andP[theta0 thetap] tdn.
+have p0 : (0 < p)%R by rewrite (lt_trans theta0).
+have n0 : (0 < n)%N.
+  rewrite -(ltr_nat R) (lt_le_trans _ tdn)// mulr_gt0//.
+    by rewrite divr_gt0// exprn_gt0.
+  by rewrite ln_gt0// ltr_pdivlMr ?mul1r// (le_lt_trans delta1)// ltr1n.
 have /andP[_ p1] := p01.
 set epsilon := theta / p.
 have epsilon01 : (0 < epsilon < 1)%R.
@@ -1728,8 +1732,8 @@ have thetaE : theta = (epsilon * p)%R.
   by rewrite /epsilon -mulrA mulVf ?mulr1// gt_eqF.
 have step1 : (\X_n P) [set i | `| X' i - p | >= epsilon * p]%R <=
     ((expR (- (p * n%:R * (epsilon ^+ 2)) / 3)) *+ 2)%:E.
-  rewrite [X in (\X_n P) X <= _](_ : _ =
-      [set i | `| bool_trial_value X i - p * n%:R | >= epsilon * p * n%:R]%R); last first.
+  rewrite [X in (\X_n P) X <= _](_ : _ = [set i |
+      `| bool_trial_value X i - p * n%:R | >= epsilon * p * n%:R]%R); last first.
     apply/seteqP; split => [t|t]/=.
       move/(@ler_wpM2r _ n%:R (ler0n _ _)) => /le_trans; apply.
       rewrite -[X in (_ * X)%R](@ger0_norm _ n%:R)// -normrM mulrBl.
@@ -1748,32 +1752,32 @@ have step2 : (\X_n P) [set i | `| X' i - p | >= theta]%R <=
   rewrite thetaE; move/le_trans : step1; apply.
   rewrite lee_fin ler_wMn2r// ler_expR mulNr lerNl mulNr opprK.
   rewrite -2![in leRHS]mulrA [in leRHS]mulrCA.
-  rewrite /epsilon -mulrA mulVf ?gt_eqF// mulr1 -!mulrA !ler_wpM2l ?(ltW theta0)//.
-  rewrite mulrCA ler_wpM2l ?(ltW theta0)//.
+  rewrite /epsilon -mulrA mulVf ?gt_eqF// mulr1 -!mulrA.
+  rewrite !ler_wpM2l ?(ltW theta0)// mulrCA ler_wpM2l ?(ltW theta0)//.
   rewrite [X in (_ * X)%R]mulrA mulVf ?gt_eqF// -[leLHS]mul1r [in leRHS]mul1r.
   by rewrite ler_wpM2r// invf_ge1.
-suff : delta%:E >= (\X_n P) [set i | (`|X' i - p| >=(*NB: this >= in the pdf *) theta)%R].
-  rewrite [X in (\X_n P) X <= _ -> _](_ : _ = ~` [set i | (`|X' i - p| < theta)%R]); last first.
+suff : delta%:E >= (\X_n P) [set i | (`|X' i - p| >= theta)%R].
+  rewrite [X in (\X_n P) X <= _ -> _](_ : _
+      = ~` [set i | (`|X' i - p| < theta)%R]); last first.
     apply/seteqP; split => [t|t]/=.
       by rewrite leNgt => /negP.
     by rewrite ltNge => /negP/negPn.
-  have ? : measurable [set i | (`|X' i - p| < theta)%R].
+  have ? : measurable [set i | `|X' i - p| < theta]%R.
     under eq_set => x do rewrite -lte_fin.
     rewrite -(@setIidr _ setT [set _ | _]) ?subsetT /X'//.
     by apply: emeasurable_fun_lt => //; apply: measurableT_comp => //;
       apply: measurableT_comp => //; apply: measurable_funD => //;
-      apply: measurable_funM.
+      exact: measurable_funM.
   rewrite probability_setC// lee_subel_addr//.
   rewrite -lee_subel_addl//; last by rewrite fin_num_measure.
   move=> /le_trans; apply.
-  rewrite le_measure ?inE//.
-    under eq_set => x do rewrite -lee_fin.
-    rewrite -(@setIidr _ setT [set _ | _]) ?subsetT /X'//.
-    by apply: emeasurable_fun_le => //; apply: measurableT_comp => //;
-      apply: measurableT_comp => //; apply: measurable_funD => //;
-      apply: measurable_funM.
-  by move=> t/= /ltW.
-(* NB: last step in the pdf *)
+  rewrite le_measure ?inE//; last first.
+    by move=> t/= /ltW.
+  under eq_set => x do rewrite -lee_fin.
+  rewrite -(@setIidr _ setT [set _ | _]) ?subsetT /X'//.
+  by apply: emeasurable_fun_le => //; apply: measurableT_comp => //;
+    apply: measurableT_comp => //; apply: measurable_funD => //;
+    exact: measurable_funM.
 apply: (le_trans step2).
 rewrite lee_fin -(mulr_natr _ 2) -ler_pdivlMr//.
 rewrite -(@lnK _ (delta / 2)); last by rewrite posrE divr_gt0.
