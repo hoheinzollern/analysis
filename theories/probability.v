@@ -287,7 +287,7 @@ Proof. by rewrite unlock. Qed.
 
 Lemma expectation_fin_num (X : T -> R) : X \in lfun P 1 ->
   'E_P[X] \is a fin_num.
-Proof. by move=> ?; rewrite unlock integral_fune_fin_num ?lfun1_integrable. Qed.
+Proof. by move=> ?; rewrite unlock integral_fune_fin_num; last exact/lfun1_integrable. Qed.
 
 Lemma expectation_cst r : 'E_P[cst r] = r%:E.
 Proof. by rewrite unlock/= integral_cst//= probability_setT mule1. Qed.
@@ -306,9 +306,9 @@ Lemma finite_norm_expectation (X : {RV P >-> R}) :
   (X : T -> R) \in lfun P 1 -> `| 'E_P[X] | < +oo. 
 Proof. by move/lfun1_integrable; exact: integrable_expectation. Qed.
 
-Lemma expectationZl (X : {RV P >-> R}) (iX : P.-integrable [set: T] (EFin \o X))
-  (k : R) : 'E_P[k \o* X] = k%:E * 'E_P [X].
-Proof. by rewrite unlock muleC -integralZr. Qed.
+Lemma expectationZl (X : T -> R) (k : R) : X \in lfun P 1 ->
+  'E_P[k \o* X] = k%:E * 'E_P [X].
+Proof. by move=> ?; rewrite unlock muleC -integralZr; last exact/lfun1_integrable. Qed.
 
 Lemma expectation_ge0 (X : T -> R) : (forall x, 0 <= X x)%R ->
   0 <= 'E_P[X].
@@ -332,11 +332,11 @@ Qed.
 
 Lemma expectationD (X Y : T -> R) : X \in lfun P 1 -> Y \in lfun P 1 ->
   'E_P[X \+ Y] = 'E_P[X] + 'E_P[Y].
-Proof. by move=> ? ?; rewrite unlock integralD_EFin ?lfun1_integrable. Qed.
+Proof. by move=> ? ?; rewrite unlock integralD_EFin; [ | |exact/lfun1_integrable..]. Qed.
 
 Lemma expectationB (X Y : T -> R) : X \in lfun P 1 -> Y \in lfun P 1 ->
   'E_P[X \- Y] = 'E_P[X] - 'E_P[Y].
-Proof. by move=> ? ?; rewrite unlock integralB_EFin ?lfun1_integrable. Qed.
+Proof. by move=> ? ?; rewrite unlock integralB_EFin; [ | |exact/lfun1_integrable..]. Qed.
 
 Lemma expectation_sum (X : seq (T -> R)) :
     (forall Xi, Xi \in X -> Xi \in lfun P 1) ->
@@ -834,7 +834,7 @@ have le (u : R) : (0 <= u)%R ->
     - by rewrite lerD2r -lee_fin EFinB finEK.
   apply: (le_trans (le_measure _ _ _ le)).
   - rewrite -[[set _ | _]]setTI inE; apply: emeasurable_fun_c_infty => [//|].
-    by apply: emeasurable_funB=> //; apply/measurable_int/(lfun1_integrable X1).
+    by apply: emeasurable_funB=> //; apply/measurable_int/lfun1_integrable/X1.
   - rewrite -[[set _ | _]]setTI inE; apply: emeasurable_fun_c_infty => [//|].
     rewrite measurable_EFinP [X in measurable_fun _ X](_ : _ =
       (fun x => x ^+ 2) \o (fun x => Y x + u))%R//.

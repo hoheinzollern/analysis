@@ -1645,8 +1645,8 @@ Lemma integrable_expectationM' (X Y : {RV P >-> R}) :
   `|'E_P [X * Y]| < +oo.
 Proof.
 move=> indeXY lfunX lfunY.
-have iX : P.-integrable setT (EFin \o X) by exact: lfun1_integrable.
-have iY : P.-integrable setT (EFin \o Y) by exact: lfun1_integrable.
+have iX : P.-integrable setT (EFin \o X) by exact/lfun1_integrable.
+have iY : P.-integrable setT (EFin \o Y) by exact/lfun1_integrable.
 apply: (@le_lt_trans _ _ 'E_P[(@normr _ _ \o X) * (@normr _ _ \o Y)]).
   rewrite unlock/=.
   rewrite (le_trans (le_abse_integral _ _ _))//.

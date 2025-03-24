@@ -855,7 +855,7 @@ move=> m ih F lfunFi/=.
 rewrite [X in integral X](_ : _ = \X_m.+1 P)//.
 case; case => [i0|i im].
   rewrite [LHS](@integral_ipro m (Tnth F (Ordinal i0))); last first.
-    by rewrite tnth_integrable// lfun1_integrable// lfunFi// mem_tnth.
+    by apply/tnth_integrable/lfun1_integrable/lfunFi/mem_tnth.
   under eq_fun => x do
     rewrite /Tnth (_ : tnth (_ :: _) _ = tnth [tuple of x.1 :: x.2] ord0)// tnth0.
   rewrite -fubini1'/fubini_F/=; last first.
@@ -868,7 +868,7 @@ case; case => [i0|i im].
   apply: eq_integral => x _.
   by rewrite integral_cst//= probability_setT mule1.
 rewrite [LHS](@integral_ipro m (Tnth F (Ordinal im))); last first.
-  by rewrite tnth_integrable// lfun1_integrable// lfunFi// mem_tnth.
+  by apply/tnth_integrable/lfun1_integrable/lfunFi/mem_tnth.
 have jm : (i < m)%nat by rewrite ltnS in im.
 have liftjm : Ordinal im = lift ord0 (Ordinal jm).
   by apply: val_inj; rewrite /= /bump add1n.
@@ -913,10 +913,20 @@ rewrite expectation_sum/=.
   apply: eq_bigr => i i_n.
   rewrite unlock.
   exact: integral_ipro_tnth.  
-move=> Xi.
-rewrite /Tnth => h.
-admit.
-Admitted.
+move=> Xi /tnthP[i] ->.
+pose j := cast_ord (card_ord _) i.
+apply/lfun1_integrable => /=.
+rewrite /image_tuple tnth_map.
+apply: tnth_integrable.
+rewrite (_ : (tnth (enum_tuple 'I_n) i) = j); last first.
+  apply: val_inj => //=.
+  rewrite /tnth nth_enum_ord//.
+  have := ltn_ord i.
+  move/leq_trans.
+  apply.
+  by rewrite card_ord leqnn.
+by have /bX/lfun1_integrable : (tnth X j) \in X by apply/tnthP; exists j.
+Qed.
 
 Lemma expectation_pro2 d1 d2 (T1 : measurableType d1) (T2 : measurableType d2)
   (P1 : probability T1 R) (P2 : probability T2 R)
