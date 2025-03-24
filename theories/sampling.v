@@ -915,8 +915,6 @@ rewrite /Tnth => h.
 admit.
 Admitted.
 
-(* xxx here xxx *)
-
 Lemma expectation_pro2 d1 d2 (T1 : measurableType d1) (T2 : measurableType d2)
   (P1 : probability T1 R) (P2 : probability T2 R)
   (X : {mfun T1 >-> R}) (Y : {mfun T2 >-> R}) :
@@ -1142,7 +1140,7 @@ Lemma lfun_bernoulli (X : bernoulliRV P p) q :
   1 <= q -> (bool_to_real R X : T -> R) \in lfun P q.
 Proof.
 move=> q1.
-apply: (@lfun_bounded _ 1%R _ q1) => // t.
+apply: (@lfun_bounded _ _ _ P _ 1%R) => //t.
 by rewrite /bool_to_real/= ler_norml lern1 (@le_trans _ _ 0%R) ?leq_b1.
 Qed.
 
@@ -1181,8 +1179,8 @@ Proof. by rewrite /bool_to_real/=; case: (X t). Qed.
 Lemma expectation_bernoulli_trial n (X : n.-tuple (bernoulliRV P p)) :
   'E_(\X_n P)[bool_trial_value X] = (n%:R * p)%:E.
 Proof.
-rewrite (@expectation_sum_ipro _ _ _ _ _ _ 1%R); last first.
-  by move=> i t; rewrite tnth_map// btr_ge0 btr_le1.
+rewrite expectation_sum_ipro; last first.
+  by move=> Xi /tnthP [i] ->; rewrite tnth_map lfun_bernoulli.
 transitivity (\sum_(i < n) p%:E).
   by apply: eq_bigr => k _; rewrite !tnth_map bernoulli_expectation.
 by rewrite sumEFin big_const_ord iter_addr addr0 mulrC mulr_natr.
