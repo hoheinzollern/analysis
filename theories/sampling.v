@@ -735,36 +735,35 @@ Notation "\X_ n P" := (ipro P n) (at level 10, n, P at next level,
 Section integral_ipro.
 Context d (T : measurableType d) (R : realType) (P : probability T R).
 Local Open Scope ereal_scope.
-Variable n : nat.
 
-Definition phi := fun w : T * n.-tuple T => [the _.-tuple _ of w.1 :: w.2].
+Definition phi n := fun w : T * n.-tuple T => [the _.-tuple _ of w.1 :: w.2].
 
-Lemma mphi : measurable_fun [set: T * _.-tuple _] phi.
+Lemma mphi n : measurable_fun [set: T * n.-tuple T] (@phi n).
 Proof. exact: measurable_cons. Qed.
 
-Definition psi := fun w : n.+1.-tuple T => (thead w, [the _.-tuple _ of behead w]).
+Definition psi n := fun w : n.+1.-tuple T => (thead w, [the _.-tuple _ of behead w]).
 
-Lemma mpsi : measurable_fun [set: _.-tuple _] psi.
+Lemma mpsi n : measurable_fun [set: _.-tuple _] (@psi n).
 Proof.
 by apply/measurable_fun_prod => /=;
   [exact: measurable_tnth|exact: measurable_behead].
 Qed.
 
-Lemma phiK : cancel phi psi.
+Lemma phiK n : cancel (@phi n) (@psi n).
 Proof.
 by move=> [x1 x2]; rewrite /psi /phi/=; congr pair => /=; exact/val_inj.
 Qed.
 
-Let psiK : cancel psi phi.
+Let psiK n : cancel (@psi n) (@phi n).
 Proof. by move=> x; rewrite /psi /phi/= [RHS]tuple_eta. Qed.
 
-Lemma integral_ipro (f : n.+1.-tuple T -> R) :
+Lemma integral_ipro n (f : n.+1.-tuple T -> R) :
   (\X_n.+1 P).-integrable [set: n.+1.-tuple T] (EFin \o f) ->
   \int[\X_n.+1 P]_w (f w)%:E =
   \int[pro2 P (\X_n P)]_w (f (w.1 :: w.2))%:E.
 Proof.
 move=> /integrableP[mf intf].
-rewrite -(@integral_pushforward _ _ _ _ R _ mphi _ setT
+rewrite -(@integral_pushforward _ _ _ _ R _ (@mphi n) _ setT
     (fun x : n.+1.-tuple T => (f x)%:E)); [|by []| |by []].
   apply: eq_measure_integral => A mA _.
   rewrite /=.
@@ -788,11 +787,11 @@ apply/integrableP; split => /=.
   exact: mphi.
 apply: le_lt_trans (intf).
 rewrite [leRHS](_ : _ = \int[\X_n.+1 P]_x
-    ((((abse \o (@EFin R \o (f \o phi)))) \o psi) x)); last first.
+    ((((abse \o (@EFin R \o (f \o (@phi n))))) \o (@psi n)) x)); last first.
   by apply: eq_integral => x _ /=; rewrite psiK.
 rewrite le_eqVlt; apply/orP; left; apply/eqP.
-rewrite -[RHS](@integral_pushforward _ _ _ _ R _ mpsi _ setT
-    (fun x : T * n.-tuple T => ((abse \o (EFin \o (f \o phi))) x)))//.
+rewrite -[RHS](@integral_pushforward _ _ _ _ R _ (@mpsi n) _ setT
+    (fun x : T * n.-tuple T => ((abse \o (EFin \o (f \o (@phi n)))) x)))//.
 - apply: eq_measure_integral => // A mA _.
   apply: product_measure_unique => // B C mB mC.
   rewrite /= /pushforward/=.
@@ -824,26 +823,80 @@ rewrite -[RHS](@integral_pushforward _ _ _ _ R _ mpsi _ setT
     by rewrite normr_id// psiK.
 Qed.
 
-Lemma integral_ipro_tnth (F : n.-tuple {mfun T >-> R}) :
+Lemma tnth_integrable n (F : n.-tuple {mfun T >-> R}) i :
+  P.-integrable [set: T] (EFin \o tnth F i) ->
+    (\X_n P).-integrable [set: n.-tuple T] (EFin \o Tnth F i).
+Proof.
+(* destruct n. admit. *)
+(* move=> /integrableP[mF iF]. *)
+(* suff : (pro1 P (\X_n P)).-integrable setT (fun w : (T * n.-tuple T) => (EFin \o Tnth F i) [tuple of w.1 :: w.2]). *)
+(*   admit. *)
+(* have /= := @integrable12ltyP _ _ _ _ _ P (\X_n P) (fun w : T * n.-tuple T => (Tnth F i [tuple of w.1 :: w.2])%:E). *)
+(* case. admit. *)
+(* move=> _. apply. *)
+
+
+(* rewrite (_ : \X_n P = pro2 P (\X_n.-1 P)). *)
+
+(* apply: integrable12ltyP. *)
+(* rewrite (_ :  (fun A : set ((n.+1).-tuple T) => (P \x^ \X_n P) [set (thead x, [tuple of behead x]) | x in A]) =  *)
+
+(* apply/integrableP; split; rewrite /Tnth. *)
+(*   apply: measurableT_comp => //. apply: measurableT_comp => //. *)
+(*   exact: measurable_tnth. *)
+Admitted.
+
+Lemma integral_ipro_tnth n (F : n.-tuple {mfun T >-> R}) :
     (forall Fi : {mfun T >-> R}, Fi \in F -> (Fi : T -> R) \in lfun P 1) ->
   forall i : 'I_n, \int[\X_n P]_x (Tnth F i x)%:E = \int[P]_x (tnth F i x)%:E.
 Proof.
 elim: n F => //=[F FiF|]; first by case=> m i0.
-move=> m ih F FiF/=.
+move=> m ih F lfunFi/=.
+rewrite [X in integral X](_ : _ = \X_m.+1 P)//.
 case; case => [i0|i im].
-  rewrite eq_measure_integral
-  under eq_fun => A. 
-case: i => /=.
-case.
+  rewrite [LHS](@integral_ipro m (Tnth F (Ordinal i0))); last first.
+    by rewrite tnth_integrable// lfun1_integrable// lfunFi// mem_tnth.
+  under eq_fun => x do
+    rewrite /Tnth (_ : tnth (_ :: _) _ = tnth [tuple of x.1 :: x.2] ord0)// tnth0.
+  rewrite -fubini1'/fubini_F/=; last first.
+    apply/integrable12ltyP => /=.
+      apply: measurableT_comp => //=.
+      exact: measurableT_comp.
+    under eq_integral => x _ do rewrite integral_cst//= probability_setT mule1.    
+    admit.
+  apply: eq_integral => x _.
+  by rewrite integral_cst//= probability_setT mule1.
+rewrite [LHS](@integral_ipro m (Tnth F (Ordinal im))); last first.
+  by rewrite tnth_integrable// lfun1_integrable// lfunFi// mem_tnth.
+have jm : (i < m)%nat by rewrite ltnS in im.
+have liftjm : Ordinal im = lift ord0 (Ordinal jm).
+  by apply: val_inj; rewrite /= /bump add1n.
+rewrite (tuple_eta F).
+under eq_integral => x _ do rewrite /Tnth !liftjm !tnthS.
+rewrite -fubini2'/fubini_G/=; last first.
+  apply/integrable12ltyP => /=.
+    apply: measurableT_comp => //=.
+    apply: measurableT_comp => //=.
+    admit.
+  rewrite [ltLHS](_ : _ = \int[\X_m P]_y `|tnth (behead_tuple F) (Ordinal jm) (tnth y (Ordinal jm))|%:E); last first.
+    by rewrite integral_cst//= probability_setT mule1.
+  have : (tnth F (lift ord0 (Ordinal jm)) : T -> R) \in lfun P 1.
+    by rewrite lfunFi// mem_tnth.
+  rewrite {1}(tuple_eta F) tnthS.
+  by move/lfun1_integrable/tnth_integrable/integrableP => [_]/=.
+transitivity (\int[\X_m P]_x (tnth (behead F) (Ordinal jm) (tnth x (Ordinal jm)))%:E).
+  apply: eq_integral => /=x _.
+  by rewrite integral_cst//= probability_setT mule1.
+rewrite [LHS]ih; last by move=> Fi FiF; apply: lfunFi; rewrite mem_behead.
+apply: eq_integral => x _.
+by rewrite liftjm tnthS.
+Admitted.
 
 End integral_ipro.
 
 Section properties_of_expectation.
 Context d (T : measurableType d) (R : realType) (P : probability T R).
 Local Open Scope ereal_scope.
-
-
-
 
 Lemma expectation_sum_ipro n (X : n.-tuple {RV P >-> R}) :
     (forall Xi, Xi \in X -> (Xi : T -> R) \in lfun P 1) ->
@@ -855,12 +908,10 @@ rewrite (_ : \sum_(i < n) Tnth X i = \sum_(Xi <- [seq Tnth X i | i in 'I_n]) Xi)
 rewrite expectation_sum/=.
   rewrite big_map big_enum/=.
   apply: eq_bigr => i i_n.
-  
+  rewrite unlock.
+  exact: integral_ipro_tnth.  
 move=> Xi.
 rewrite /Tnth => h.
-apply: bX.
-move/memP.
-rewrite [X in is_true X -> _]inE. map_seq.
 admit.
 Admitted.
 
