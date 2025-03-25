@@ -1417,8 +1417,7 @@ Proof.
 move=> d0 /=.
 rewrite -EFinM lee_fin -powRM ?expR_ge0// ge0_ler_powR ?nnegrE//.
 - by rewrite fine_ge0// expectation_ge0// => x; exact: bernoulli_trial_ge0.
-- by rewrite mulr_ge0// expR_ge0.
-- by rewrite divr_ge0 ?expR_ge0// powR_ge0.
+- by rewrite divr_ge0// powR_ge0.
 - rewrite lnK ?posrE ?addr_gt0// addrAC subrr add0r ler_wpM2l ?expR_ge0//.
   by rewrite -powRN mulNr -mulrN expRM lnK// posrE addr_gt0.
 Qed.
