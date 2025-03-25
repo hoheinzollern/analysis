@@ -1031,7 +1031,7 @@ move=> x1 x2 ? ? <- <-.
 by rewrite abseM.
 Qed.
 
-Lemma expectation_prod_nondep n (X : n.-tuple {RV P >-> R}) :
+Lemma expectation_product n (X : n.-tuple {RV P >-> R}) :
     [set` X] `<=` lfun P 1 ->
   'E_(\X_n P)[ \prod_(i < n) Tnth X i] = \prod_(i < n) 'E_P[ (tnth X i) ].
 Proof.
@@ -1316,7 +1316,7 @@ transitivity ('E_(\X_n P)[ \prod_(i < n) Tnth (mktuple mmtX) i ])%R.
   apply: eq_bigr => i _.
   by rewrite /Tnth !tnth_map /mmtX/= tnth_ord_tuple.
 rewrite /mmtX.
-rewrite expectation_prod_nondep; last first.
+rewrite expectation_product; last first.
 - move=> _ /mapP [/= i _ ->]. 
   apply/lfun1_integrable.
   apply: (bounded_RV_integrable (expR `|t|)) => // t0.
@@ -1730,7 +1730,7 @@ by rewrite opprD addrA subrr add0r mulrC mulrN mulNr mulrA.
 Qed.
 
 (* [Corollary 2.7, Rajani] / [Corollary 4.7, MU] *)
-Corollary samping_ineq4 n (X : n.-tuple (bernoulliRV P p)) (delta : R) :
+Corollary sampling_ineq4 n (X : n.-tuple (bernoulliRV P p)) (delta : R) :
   (0 < delta < 1)%R ->
   (0 < n)%nat ->
   (0 < p)%R ->
@@ -1809,7 +1809,7 @@ have step1 : (\X_n P) [set i | `| X' i - p | >= epsilon * p]%R <=
   rewrite -mulrA.
   have -> : (p * n%:R)%R = fine (p * n%:R)%:E by [].
   rewrite -(mulrC _ p) -(expectation_bernoulli_trial p01 X).
-  exact: (@samling_ineq4 _ X epsilon).
+  exact: (@sampling_ineq4 _ X epsilon).
 have step2 : (\X_n P) [set i | `| X' i - p | >= theta]%R <=
     ((expR (- (n%:R * theta ^+ 2) / 3)) *+ 2)%:E.
   rewrite thetaE; move/le_trans : step1; apply.
