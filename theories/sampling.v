@@ -56,8 +56,6 @@ Unset Printing Implicit Defensive.
 (* - bernoulli_trial_mmt_gen_fun: the moment generating function of a         *)
 (*   Bernoulli trial is the product of each moment generating function.       *)
 (* - exp2_le8: inequality solved by interval.                                 *)
-(* - ln_gt0: ln is positive for arguments greater than 1.                     *)
-(* - lnK: ln and expR are inverses of each other.                             *)
 (* - xlnx_lbound_i01: lower bound for x * ln x in the interval `]0, 1[.       *)
 (* - xlnx_ubound_i1y: upper bound for x * ln x for x greater than 1.          *)
 (* - sampling_ineq1: Concentration inequality on a Bernoulli trial X,         *)
