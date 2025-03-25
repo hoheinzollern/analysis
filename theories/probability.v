@@ -1048,34 +1048,6 @@ Qed.
 
 End discrete_distribution.
 
-Section discrete_distribution.
-Local Open Scope ereal_scope.
-Context d (T : measurableType d) (R : realType) (P : probability T R).
-
-Lemma dRV_expectation (X : {dRV P >-> R}) :
-  P.-integrable [set: T] (EFin \o X) ->
-  'E_P[X] = \sum_(n <oo) enum_prob X n * (dRV_enum X n)%:E.
-Proof.
-move=> iX.
-have := @dRV_expectation_comp _ _ T R R P (@measurable_set1 R) X.
-Admitted.
-
-(* check that expecation_bernoulli is recoverable by bernoulli_pmf *)
-
-Definition pmf (X : {RV P >-> R}) (r : R) : R := fine (P (X @^-1` [set r])).
-
-Lemma expectation_pmf (X : {dRV P >-> R}) :
-    P.-integrable [set: T] (EFin \o X) -> 'E_P[X] =
-  \sum_(n <oo | n \in dRV_dom X) (pmf X (dRV_enum X n))%:E * (dRV_enum X n)%:E.
-Proof.
-move=> iX; rewrite dRV_expectation// [in RHS]eseries_mkcond.
-apply: eq_eseriesr => k _.
-rewrite /enum_prob patchE; case: ifPn => kX; last by rewrite mul0e.
-by rewrite /pmf fineK// fin_num_measure.
-Abort.
-
-End discrete_distribution.
-
 Section bernoulli_pmf.
 Context {R : realType} (p : R).
 Local Open Scope ring_scope.

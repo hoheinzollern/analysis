@@ -86,59 +86,9 @@ Context {d} (T : measurableType d) {R : realType}.
 
 HB.instance Definition _ (f g : {mfun T >-> R}) :=
   @isMeasurableFun.Build d _ _ _ (f \* g)%R
-    (measurable_funM (@measurable_funPT _ _ _ _ f)
-                     ((@measurable_funPT _ _ _ _ g))).
+    (measurable_funM (measurable_funPT f) (measurable_funPT g)).
 
 End mfunM.
-
-(* TODO: move (to exp.v?) *)
-Lemma norm_expR {R : realType} : normr \o expR = (expR : R -> R).
-Proof. by apply/funext => x /=; rewrite ger0_norm ?expR_ge0. Qed.
-
-Section move.
-
-Lemma sumr_map {R : realType} U d (T : measurableType d) (l : seq U) Q
-    (f : U -> {mfun T >-> R}) (x : T) :
-  (\sum_(i <- l | Q i) f i) x = \sum_(i <- l | Q i) f i x.
-Proof. by elim/big_ind2 : _ => //= _ g _ h <- <-. Qed.
-
-Lemma prodr_map {R : realType} U d (T : measurableType d) (l : seq U) Q
-    (f : U -> {mfun T >-> R}) (x : T) :
-  (\prod_(i <- l | Q i) f i) x = \prod_(i <- l | Q i) f i x.
-Proof. by elim/big_ind2 : _ => //= _ h _ g <- <-. Qed.
-
-Definition sumrfct_tuple {R : realType} d {T : measurableType d}
-    n (s : n.-tuple {mfun T >-> R}) : T -> R :=
-  \sum_(f <- s) f.
-
-Lemma measurable_sumrfct_tuple {R : realType} d {T : measurableType d}
-    n (s : n.-tuple {mfun T >-> R}) :
-  measurable_fun setT (sumrfct_tuple s).
-Proof. by apply/measurable_EFinP => /=; exact/measurableT_comp. Qed.
-
-HB.instance Definition _ {R : realType} d {T : measurableType d}
-    n (s : n.-tuple {mfun T >-> R}) :=
-  isMeasurableFun.Build _ _ _ _ (sumrfct_tuple s) (measurable_sumrfct_tuple s).
-
-Definition sumrfct {R : realType} d {T : measurableType d} (s : seq {mfun T >-> R}) : T -> R :=
-  \sum_(f <- s) f.
-
-Lemma measurable_sumrfct {R : realType} d {T : measurableType d} (s : seq {mfun T >-> R}) :
-  measurable_fun setT (sumrfct s).
-Proof.
-by apply/measurable_EFinP => /=; apply/measurableT_comp => //.
-Qed.
-
-HB.instance Definition _ {R : realType} d {T : measurableType d} (s : seq {mfun T >-> R}) :=
-  isMeasurableFun.Build _ _ _ _ (sumrfct s) (measurable_sumrfct s).
-
-End move.
-
-(* TODO: move to functions. *)
-Lemma fct_prodE (I : Type) (T : pointedType) (M : comRingType) r (P : {pred I}) (f : I -> T -> M)
-    (x : T) :
-  (\prod_(i <- r | P i) f i) x = \prod_(i <- r | P i) f i x.
-Proof. by elim/big_rec2: _ => //= i y ? Pi <-. Qed.
 
 HB.instance Definition _ (n : nat) := isPointed.Build 'I_n.+1 ord0.
 
@@ -575,13 +525,6 @@ Proof. by apply: measurableT_comp => //; exact: measurable_tnth. Qed.
 
 HB.instance Definition _ n (X : n.-tuple {mfun T >-> R}) (i : 'I_n) :=
   isMeasurableFun.Build _ _ _ _ (Tnth X i) (measurable_Tnth X i).
-
-Lemma Tnth_tnth n (X : n.+1.-tuple {mfun T >-> R}) x :
-  (Tnth X ord0) (x :: nseq n point) = (tnth X ord0) x.
-Proof.
-rewrite /Tnth/=.
-rewrite tnth0.
-Abort.
 
 Lemma measurable_tuple_sum n (X : n.-tuple {mfun T >-> R}) :
   measurable_fun setT (\sum_(i < n) (Tnth X i))%R.

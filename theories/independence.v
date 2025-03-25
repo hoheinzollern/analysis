@@ -1432,12 +1432,6 @@ apply H => //.
 by move=> /= x /JIi0 /=; rewrite !inE => /andP[].
 Qed.
 
-Lemma independent_product_independent (I : {fset nat}) (X : {RV P >-> R}^nat) :
-  independent_RVs [set` I] X ->
-    forall i, i \in I -> independent_RVs2 (X i) (\prod_(j <- (I `\ i)%fset) (X j))%R.
-Proof.
-Abort.
-
 End product_expectation.
 
 
