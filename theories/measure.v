@@ -4233,72 +4233,6 @@ move=> aP; have -> : P = setT by rewrite predeqE => t; split.
 by apply/negligibleP; [rewrite setCT|rewrite setCT measure0].
 Qed.
 
-Instance ae_eq_equiv d (T : ringOfSetsType d) R mu V D :
-  Equivalence (@ae_eq d T R mu V D).
-Proof.
-split.
-- by move=> f; near=> x.
-- by move=> f g eqfg; near=> x => Dx; rewrite (near eqfg).
-- by move=> f g h eqfg eqgh; near=> x => Dx; rewrite (near eqfg) ?(near eqgh).
-Unshelve. all: by end_near. Qed.
-
-Section ae_eq.
-Local Open Scope ring_scope.
-Context d (T : sigmaRingType d) (R : realType).
-Implicit Types (U V : Type) (W : ringType).
-Variables (mu : {measure set T -> \bar R}) (D : set T).
-Local Notation ae_eq := (ae_eq mu D).
-
-Lemma ae_eq0 U (f g : T -> U) : measurable D -> mu D = 0 -> f = g %[ae mu in D].
-Proof. by move=> mD D0; exists D; split => // t/= /not_implyP[]. Qed.
-
-Instance comp_ae_eq U V (j : T -> U -> V) :
-  Proper (ae_eq ==> ae_eq) (fun f x => j x (f x)).
-Proof. by move=> f g; apply: filterS => x /[apply] /= ->. Qed.
-
-Instance comp_ae_eq2 U U' V (j : T -> U -> U' -> V) :
-  Proper (ae_eq ==> ae_eq ==> ae_eq) (fun f g x => j x (f x) (g x)).
-Proof. by move=> f f' + g g'; apply: filterS2 => x + + Dx => -> // ->. Qed.
-
-Instance comp_ae_eq2' U U' V (j : U -> U' -> V) :
-  Proper (ae_eq ==> ae_eq ==> ae_eq) (fun f g x => j (f x) (g x)).
-Proof. by move=> f f' + g g'; apply: filterS2 => x + + Dx => -> // ->. Qed.
-
-Instance sub_ae_eq2 : Proper (ae_eq ==> ae_eq ==> ae_eq) (@GRing.sub_fun T R).
-Proof. exact: (@comp_ae_eq2' _ _  R (fun x y => x - y)). Qed.
-
-Lemma ae_eq_refl U (f : T -> U) : ae_eq f f. Proof. exact/aeW. Qed.
-Hint Resolve ae_eq_refl : core.
-
-Lemma ae_eq_comp U V (j : U -> V) f g :
-
-Local Open Scope ereal_scope.
-Context d (T : sigmaRingType d) (R : realType) (U V : Type).
-Variables (mu : {measure set T -> \bar R}) (D : set T).
-Local Notation ae_eq f g := (\forall x \ae mu, D x -> f x = g x).
-
-(*Require Import -(notations) Setoid.*)
-
-Declare Scope signature_scope.
-Delimit Scope signature_scope with signature.
-Import -(notations) Morphisms.
-Module ProperNotations.
-
-  Notation " R ++> R' " := (@respectful _ _ (R%signature) (R'%signature))
-    (right associativity, at level 55) : signature_scope.
-
-  Notation " R ==> R' " := (@respectful _ _ (R%signature) (R'%signature))
-    (right associativity, at level 55) : signature_scope.
-
-  Notation " R ~~> R' " := (@respectful _ _ (Program.Basics.flip (R%signature)) (R'%signature))
-    (right associativity, at level 55) : signature_scope.
-
-End ProperNotations.
-Import ProperNotations.
-
-Arguments Proper {A}%_type R%_signature m.
-Arguments respectful {A B}%_type (R R')%_signature _ _.
-
 Instance ae_eq_equiv d (T : ringOfSetsType d) R mu V D: Equivalence (@ae_eq d T R mu V D).
 Proof.
 split.
@@ -4354,9 +4288,6 @@ Unshelve. all: by end_near. Qed.
 Lemma ae_eq_sym U (f g : T -> U) : ae_eq f g -> ae_eq g f.
 Proof. by symmetry. Qed.
 
-Implicit Types (f g : T -> U).
-Lemma ae_eq_refl f : ae_eq f f. Proof. exact/aeW. Qed.
-
 Lemma ae_eq_trans U (f g h : T -> U) : ae_eq f g -> ae_eq g h -> ae_eq f h.
 Proof. by apply transitivity. Qed.
 
@@ -4389,6 +4320,34 @@ exists (\bigcup_n A n); split => //.
 Qed.
 
 End ae_eq.
+
+(* Local Open Scope ereal_scope. *)
+(* Context d (T : sigmaRingType d) (R : realType) (U V : Type). *)
+(* Variables (mu : {measure set T -> \bar R}) (D : set T). *)
+(* Local Notation ae_eq f g := (\forall x \ae mu, D x -> f x = g x). *)
+
+(* Require Import -(notations) Setoid. *)
+
+(* Declare Scope signature_scope. *)
+(* Delimit Scope signature_scope with signature. *)
+(* Import -(notations) Morphisms. *)
+(* Module ProperNotations. *)
+
+(*   Notation " R ++> R' " := (@respectful _ _ (R%signature) (R'%signature)) *)
+(*     (right associativity, at level 55) : signature_scope. *)
+
+(*   Notation " R ==> R' " := (@respectful _ _ (R%signature) (R'%signature)) *)
+(*     (right associativity, at level 55) : signature_scope. *)
+
+(*   Notation " R ~~> R' " := (@respectful _ _ (Program.Basics.flip (R%signature)) (R'%signature)) *)
+(*     (right associativity, at level 55) : signature_scope. *)
+
+(* End ProperNotations. *)
+(* Import ProperNotations. *)
+
+(* Arguments Proper {A}%_type R%_signature m. *)
+(* Arguments respectful {A B}%_type (R R')%_signature _ _. *)
+
 
 Section ae_eq_lemmas.
 Context d (T : sigmaRingType d) (R : realType) (U : Type).

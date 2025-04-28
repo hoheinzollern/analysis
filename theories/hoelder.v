@@ -6,6 +6,7 @@ From mathcomp Require Import cardinality fsbigop reals interval_inference ereal.
 From mathcomp Require Import topology normedtype sequences real_interval esum.
 From mathcomp Require Import measure measurable_realfun lebesgue_measure.
 From mathcomp Require Import lebesgue_integral numfun exp convex ess_sup_inf.
+From mathcomp Require Import unstable.
 
 (**md**************************************************************************)
 (* # Hoelder's Inequality                                                     *)
@@ -788,8 +789,7 @@ rewrite (le_lt_trans _ (lfuny _ f))//.
 rewrite unlock.
 rewrite gt0_ler_poweR//.
 - by rewrite in_itv/= leey integral_ge0// => x _.
-- rewrite in_itv/= leey integral_ge0// => x _.
-  by rewrite lee_fin powR_ge0.
+- by rewrite in_itv/= leey integral_ge0.
 - rewrite ge0_le_integral//.
   + apply: measurableT_comp => //; apply/measurable_EFinP.
     exact/(@measurableT_comp _ _ _ _ _ _ (fun x : R => x ^+ 2)%R _ f).
@@ -864,42 +864,6 @@ Lemma lfuny0 : finite_norm mu p (cst 0).
 Proof. by rewrite /finite_norm Lnorm0// ltry. Qed.
 
 HB.instance Definition _ := @isLfun.Build d T R mu p p1 (cst 0) lfuny0.
-
-Lemma mfunP (f : {mfun T >-> R}) : (f : T -> R) \in mfun.
-Proof. exact: valP. Qed.
-
-Lemma lfunP (f : LfunType mu p1) : (f : T -> R) \in lfun.
-Proof. exact: valP. Qed.
-
-Lemma mfun_scaler_closed : scaler_closed (@mfun _ _ T R).
-Proof. move=> a/= f; rewrite !inE; exact: measurable_funM. Qed.
-
-HB.instance Definition _ := GRing.isScaleClosed.Build _ _ (@mfun _ _ T R)
-  mfun_scaler_closed.
-HB.instance Definition _ := [SubZmodule_isSubLmodule of {mfun T >-> R} by <:].
-
-Lemma LnormZ (f : LfunType mu p1) a :
-  ('N[mu]_p[EFin \o (a \*: f)] = `|a|%:E * 'N[mu]_p[EFin \o f])%E.
-Proof.
-rewrite unlock /Lnorm.
-case: p p1 f => //[r r1 f|? f].
-- under eq_integral do rewrite /= -mulr_algl scaler1 normrM powRM ?EFinM//.
-  rewrite integralZl//; last first.
-    apply/integrableP; split.
-      apply: measurableT_comp => //.
-      apply: (@measurableT_comp _ _ _ _ _ _ (@powR R ^~ r)) => //.
-      exact: measurableT_comp.
-    apply: (@lty_poweRy _ _ r^-1).
-      by rewrite gt_eqF// invr_gt0 ?(lt_le_trans ltr01).
-    rewrite [ltLHS](_ : _ = 'N[mu]_r%:E[EFin \o f]%E); first exact: (lfuny r1 f).
-    rewrite unlock /Lnorm.
-    by under eq_integral do rewrite gee0_abs ?lee_fin ?powR_ge0//.
-  rewrite poweRM ?integral_ge0//.
-  by rewrite poweR_EFin -powRrM mulfV ?gt_eqF ?(lt_le_trans ltr01)// powRr1.
-- case: ifPn => mu0; last by rewrite mule0.
-  rewrite -ess_supZl//; apply/eq_ess_sup/nearW => t /=.
-  by rewrite normrZ EFinM.
-Qed.
 
 Lemma lfun_oppr_closed : oppr_closed lfun.
 Proof.
