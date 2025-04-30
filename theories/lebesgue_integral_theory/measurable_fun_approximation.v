@@ -674,7 +674,7 @@ Qed.
 End emeasurable_fun_comparison.
 
 Lemma measurable_poweR (R : realType) r :
-  measurable_fun [set: \bar R] (poweR ^~ r).
+  measurable_fun [set: \bar R] (poweR ^~ r%:E).
 Proof.
 under eq_fun do rewrite poweRE.
 rewrite -/(measurable_fun _ _).
