@@ -673,25 +673,61 @@ Qed.
 
 End emeasurable_fun_comparison.
 
-Lemma measurable_poweR (R : realType) r :
-  measurable_fun [set: \bar R] (poweR ^~ r%:E).
+(* TODO: duplicate, remove after #1602 *)
+Lemma measurable_ln (R : realType) : measurable_fun [set: R] (@ln R).
 Proof.
-under eq_fun do rewrite poweRE.
-rewrite -/(measurable_fun _ _).
-apply: measurable_fun_ifT => //=.
-  apply/measurable_EFinP => //=.
-  apply: measurable_fun_ifT => //=.
-    apply: (measurable_fun_bool true).
-    rewrite setTI (_ : _ @^-1` _ = EFin @` setT).
-      by apply: measurable_image_EFin; exact: measurableT.
-    apply/seteqP; split => [x finx|x [s sx <-//]]/=.
-    by exists (fine x) => //; rewrite fineK.
-  exact: (@measurableT_comp _ _ _ _ _ _ (@powR R ^~ r)).
-apply: measurable_fun_ifT => //=; first exact: measurable_fun_eqe.
-apply: measurable_fun_ifT => //=; first exact: measurable_fun_eqe.
-apply/measurable_EFinP => //=.
-exact: (@measurableT_comp _ _ _ _ _ _ (@powR R ^~ r)).
+rewrite (_ : [set: R] = `]-oo, 0] `|` `]0, +oo[); last first.
+  by rewrite -itv_bndbnd_setU// set_itvNyy.
+apply/measurable_funU => //; split.
+- apply/measurable_restrictT => //=.
+  rewrite (_ : _ \_ _ = cst 0)//; apply/funext => y; rewrite patchE.
+  by case: ifPn => //; rewrite inE/= in_itv/= => y0; rewrite ln0// ltW.
+- have : {in `]0, +oo[%classic, continuous (@ln R)}.
+    by move=> x; rewrite inE/= in_itv/= andbT => x0; exact: continuous_ln.
+  rewrite -continuous_open_subspace; last exact: interval_open.
+  by move/subspace_continuous_measurable_fun; apply; exact: measurable_itv.
 Qed.
+
+Section measurable_exp.
+Context (R : realType).
+Implicit Types x : \bar R.
+
+Local Open Scope ereal_scope.
+
+Lemma measurable_lne : measurable_fun [set: \bar R] (@lne R).
+Proof.
+rewrite lneE.
+apply: measurable_fun_ifT.
+- apply: (measurable_fun_bool true); rewrite setTI (_ : _ @^-1` _ = EFin @` setT).
+    by apply: measurable_image_EFin; exact: measurableT.
+  apply/seteqP; split => [x finx|x [s sx <-//]].
+  by exists (fine x) => //; rewrite fineK.
+- apply/measurable_fun_ifT => //; first exact/measurable_fun_eqe.
+  by apply/measurable_EFinP/measurableT_comp; first exact: measurable_ln.
+- by apply: measurable_fun_ifT; first exact/measurable_fun_eqe.
+Qed.
+
+Lemma measurable_expeR : measurable_fun [set: \bar R] expeR.
+Proof.
+rewrite [X in measurable_fun _ X]expeRE.
+apply: measurable_fun_ifT.
+- apply: (measurable_fun_bool true); rewrite setTI (_ : _ @^-1` _ = EFin @` setT).
+    by apply: measurable_image_EFin; exact: measurableT.
+  apply/seteqP; split => [x finx|x [s sx <-//]].
+  by exists (fine x) => //; rewrite fineK.
+- exact/measurable_EFinP/measurableT_comp.
+- by apply/measurable_fun_ifT; first exact/measurable_fun_eqe.
+Qed.
+
+Lemma measurable_poweR y :
+  measurable_fun [set: \bar R] (poweR ^~ y).
+Proof.
+apply: measurable_fun_ifT => //; first exact: measurable_fun_eqe.
+apply: measurableT_comp => //; first exact: measurable_expeR.
+by apply: measurable_funeM => //; exact: measurable_lne.
+Qed.
+
+End measurable_exp.
 
 Section measurable_comparison.
 Context d (T : measurableType d) (R : realType).
