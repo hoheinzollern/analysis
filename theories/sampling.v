@@ -358,24 +358,6 @@ Arguments pro {d T R} P n.
 Notation "\X_ n P" := (pro P n) (at level 10, n, P at next level,
   format "\X_ n  P").
 
-Section proS.
-Context d (T : measurableType d) (R : realType) (P : probability T R).
-Local Open Scope ereal_scope.
-
-Lemma integral_mpro n (f : n.+1.-tuple T -> R) :
-  measurable_fun [set: mtuple n.+1 T] f ->
-  (\X_n.+1 P).-integrable [set: mtuple n.+1 T] (EFin \o f) ->
-  \int[\X_n.+1 P]_w (f w)%:E =
-  \int[pro2 P (\X_n P)]_w (f (w.1 :: w.2))%:E.
-Proof.
-move=> mf intf.
-set phi := fun (w : T * mtuple n T) => [the mtuple _ _ of w.1 :: w.2].
-have mphi : measurable_fun setT phi.
-  admit.
-Admitted.
-
-End proS.
-
 Lemma fubini2' :
 forall [d1 d2 : measure_display] [T1 : measurableType d1]
   [T2 : measurableType d2] [R : realType]
@@ -554,14 +536,10 @@ Lemma integral_mpro (f : n.+1.-tuple T -> R) :
   \int[pro2 P (\X_n P)]_w (f (w.1 :: w.2))%:E.
 Proof.
 move=> mf intf.
-rewrite -(@integral_pushforward _ _ _ _ R _ mphi _
-    (fun x : mtuple n.+1 T => (f x)%:E)); [|exact: measurableT_comp|].
-  apply: eq_measure_integral => A mA _.
-  rewrite /=.
-  rewrite /pushforward.
-  rewrite /pro2.
-  rewrite /phi/=.
-  rewrite /preimage/=.
+rewrite -(@integral_pushforward _ _ _ _ R phi mphi (pro2 P (\X_n P)) setT
+    (fun x : mtuple n.+1 T => (f x)%:E)); [ | exact: measurableT_comp | | by []].
+- apply: eq_measure_integral => A mA _.
+  rewrite /pushforward /pro2 /phi /preimage/=.
   congr (_ _).
   apply/seteqP; split => [x/= [t At <-/=]|x/= Ax].
     move: At.
@@ -581,7 +559,7 @@ rewrite [leRHS](_ : _ = \int[\X_n.+1 P]_x
     ((((abse \o (@EFin R \o (f \o phi)))) \o psi) x)); last first.
   by apply: eq_integral => x _ /=; rewrite psiK.
 rewrite le_eqVlt; apply/orP; left; apply/eqP.
-rewrite -[RHS](@integral_pushforward _ _ _ _ R _ mpsi _
+rewrite -[RHS](@integral_pushforward _ _ _ _ R _ mpsi _ setT
     (fun x : T * mtuple n T => ((abse \o (EFin \o (f \o phi))) x)))//.
 - apply: eq_measure_integral => // A mA _.
   apply: product_measure_unique => // B C mB mC.
@@ -602,10 +580,9 @@ rewrite -[RHS](@integral_pushforward _ _ _ _ R _ mpsi _
   exact: measurableT_comp.
 - apply: le_integrable intf => //=.
   + apply: measurableT_comp => //=.
-    * apply/measurable_EFinP => //=.
-      apply: measurableT_comp => //=.
-      by apply: measurableT_comp => //=.
-    * exact: mpsi.
+    apply/measurable_EFinP => //=.
+    apply: measurableT_comp => //=.
+    by apply: measurableT_comp => //=.
   + move=> x _.
     by rewrite normr_id// psiK.
 Qed.
@@ -850,9 +827,6 @@ pose build_mX2 := isMeasurableFun.Build _ _ _ _ _ mX2.
 pose Y2 : {mfun mtuple n.+1 T >-> R} := HB.pack X2 build_mX2.
 rewrite [X in 'E__[X]](_ : _ = Y2 \+ Y1)//.
 rewrite expectationD; last 2 first.
-  apply: integrable_thead.
-  apply: intX.
-  exact: mem_tnth.
   admit. (* TODO (1): reduce the integrability of thead X to intX *)
   (* TODO (2): reduce \sum (behead X) (?) to intX *)
   admit.
