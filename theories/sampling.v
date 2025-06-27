@@ -601,8 +601,9 @@ Qed.
 HB.instance Definition _ := Measure_isProbability.Build _ _ _ pro2 pro2_setT.
 End pro2.
 
-Section iterated_product_of_probability_measures.
-Context d (T : measurableType d) (R : realType) (P : probability T R).
+Section iterated_product_of_sigma_finite_measures.
+Context d (T : measurableType d) (R : realType).
+Context (P : {sigma_finite_measure set T -> \bar R}).
 
 Fixpoint ipro (n : nat) : set (n.-tuple T) -> \bar R :=
   match n with
@@ -659,7 +660,16 @@ Qed.
 HB.instance Definition _ n := isMeasure.Build _ _ _ (@ipro n)
   (@ipro_measure n).1 (@ipro_measure n).2.1 (@ipro_measure n).2.2.
 
-Lemma ipro_setT n : @ipro n setT = 1%E.
+End iterated_product_of_sigma_finite_measures.
+Arguments ipro {d T R} P n.
+
+Notation "\X_ n P" := (ipro P n) (at level 10, n, P at next level,
+  format "\X_ n  P").
+
+Section iterated_product_of_probability_measures.
+Context d (T : measurableType d) (R : realType) (P : probability T R).
+
+Lemma ipro_setT n : \X_n P setT = 1%E.
 Proof.
 elim: n => [|n ih]/=; first by rewrite diracT.
 rewrite /product_measure2 /ysection/=.
@@ -681,13 +691,9 @@ by rewrite integral_cst// mul1e.
 Qed.
 
 HB.instance Definition _ n :=
-  Measure_isProbability.Build _ _ _ (@ipro n) (@ipro_setT n).
+  Measure_isProbability.Build _ _ _ (ipro P n) (@ipro_setT n).
 
 End iterated_product_of_probability_measures.
-Arguments ipro {d T R} P n.
-
-Notation "\X_ n P" := (ipro P n) (at level 10, n, P at next level,
-  format "\X_ n  P").
 
 Section integral_ipro.
 Context d (T : measurableType d) (R : realType) (P : probability T R).
