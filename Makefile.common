@@ -115,7 +115,9 @@ html: build $(DOCDIR)/dependency_graph.dot
 	-Q analysis_stdlib mathcomp.analysis_stdlib \
 	-coqlib https://rocq-prover.org/doc/V9.1.0/stdlib/ \
 	-file-graph $(DOCDIR)/dependency_graph.dot \
+	-file-graph-renderer cytoscape \
 	-structure-graph $(DOCDIR)/hierarchy_graph.dot \
+	-structure-graph-renderer cytoscape \
         -index-blacklist etc/rocqnavi_index-blacklist \
         -show-type-information-using-coqtop-process \
 	-external https://math-comp.github.io/htmldoc_2_5_0/ mathcomp.order \

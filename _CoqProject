@@ -124,6 +124,7 @@ theories/lebesgue_integral_theory/lebesgue_integral_fubini.v
 theories/lebesgue_integral_theory/lebesgue_integral_differentiation.v
 theories/lebesgue_integral_theory/lebesgue_integral.v
 theories/lebesgue_integral_theory/giry.v
+theories/lebesgue_integral_theory/bochner_integral_definition.v
 
 theories/ftc.v
 theories/hoelder.v
