@@ -71,13 +71,29 @@ Local Open Scope ring_scope.
 
 Module HBSimple.
 
-HB.structure Definition SimpleFun d (aT : sigmaRingType d) (rT : realType) :=
+#[short(type="sigmaRingNormedModType")]
+HB.structure Definition SigmaRingNormedModule d K := {T of @SigmaRing d T & @NormedModule K T}.
+
+HB.structure Definition SimpleFun d d' {K} (aT : sigmaRingType d) (rT : sigmaRingNormedModType d' K) :=
   {f of @isMeasurableFun d _ aT rT f & @FiniteImage aT rT f}.
 
 End HBSimple.
 
-Notation "{ 'sfun' aT >-> T }" := (@HBSimple.SimpleFun.type _ aT T) : form_scope.
+Notation "{ 'sfun' aT >-> rT }" := (@HBSimple.SimpleFun.type _ _ _ aT rT) : form_scope.
 Notation "[ 'sfun' 'of' f ]" := [the {sfun _ >-> _} of f] : form_scope.
+
+
+Section mu_measurable_function.
+
+Import HBSimple.
+
+Context {d d'} {T : measurableType d} {R : realType}
+  (mu : {content set T -> \bar R}) {K : numFieldType} (X : sigmaRingNormedModType d' K).
+
+Definition mmeasurable_fun (f : T -> X) : Prop :=
+  exists (f_ : {sfun T >-> X}^nat), \forall x \ae mu, `|f x - f_ i x| @[i --> \oo]--> 0.
+
+End mu_measurable_function.
 
 Module HBNNSimple.
 Import HBSimple.
@@ -445,3 +461,19 @@ by apply: (mulemu_ge0 (fun x => f @^-1` [set x])); exact: preimage_nnfun0.
 Qed.
 
 End mulem_ge0.
+
+Section mu_measurable_function.
+
+Import HBSimple.
+
+Context {d} {T : measurableType d} {R : realType}
+  (mu : {content set T -> \bar R}) {K : numFieldType} (X : completeNormedModType K).
+
+Hypothesis (norm : forall f : T -> R (* X *), R).
+
+Definition mmeasurable_fun (f : T -> X) : Prop :=
+  exists (f_ : (T -> X)^nat), \forall x \ae mu, normr (f x - f_ i x) @[i --> \oo]--> 0.
+
+Definition mmeasurable_fun (f : T -> R (* X *)) : Prop :=
+  exists (f_ : {sfun T >-> R (*X*)}^nat), \forall x \ae mu, normr (f x - f_ i x) @[i --> \oo]--> 0.
+
