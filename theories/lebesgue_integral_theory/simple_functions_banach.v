@@ -50,25 +50,27 @@ Definition measurableTypeTop := g_sigma_algebraType G.
 
 End Topological_measurable.
 
+HB.about topologicalType.
+
 #[short(type = "measurableTopologicalType")] 
 HB.structure Definition MeasurableTopological d := 
-{U of Topological U & Measurable d U}.
+  {U of Topological U & Measurable d U}.
 
-(*
+HB.about MeasurableTopological.
 
 HB.instance Definition topological_isMeasurable (T : topologicalType) :
   isMeasurable default_measure_display T :=
-  @isMeasurable.Build open.-sigma T (@measurableTop T)
-    (@measurable0T T) (@measurableCT T) (@measurable_bigcupT T).*)
+  @isMeasurable.Build _ T (@measurableTop T)
+    (@measurable0T T) (@measurableCT T) (@measurable_bigcupT T).
 
-HB.instance Definition _ (T : topologicalType) := Measurable.on (measurableTypeTop T).
-HB.instance Definition _ (T : topologicalType) := Topological.on (measurableTypeTop T).
-HB.saturate topologicalType.
-HB.saturate measurableTypeTop.
-HB.instance Definition _ (T : topologicalType) := MeasurableTopological.on (measurableTypeTop T).
+HB.instance Definition _ (T : topologicalType) := Measurable.on T.
+HB.instance Definition _ (T : topologicalType) := Topological.on T.
+(*HB.saturate topologicalType.
+   HB.saturate measurableTypeTop.*)
+HB.instance Definition _ (T : topologicalType) := MeasurableTopological.on T.
 
 Axiom T: topologicalType.
-Check (measurableTypeTop T) : measurableType open.-sigma.
+Check T : measurableType default_measure_display.
 
 Module HBSimple.
 
@@ -179,8 +181,16 @@ Proof.
   by rewrite mulrC => asb bsa; have:= lt_trans asb bsa; rewrite lt_irreflexive.
 Qed.
 
+HB.about metricType.
+HB.saturate metricType.
+
+HB.instance Definition _ (R : realType) (D : metricType R) := Measurable.on D.
+
+Axiom (R : realType) (D : metricType R).
+Check D : measurableTopologicalType.
+
 (* TODO : prove it for metric spaces, when it is doable*)
-Lemma measurable1 {R : realType} {D : metricType R} (x:measurableTypeTop D) : measurable [set x].
+Lemma measurable1 {R : realType} {D : metricType R} (x:D) : measurable [set x].
 Proof.
   rewrite singleton_inter. apply: bigcap_measurable=> [//|k _]. 
   rewrite/measurable/=/smallest/bigcap/= => A [sda osa]. apply: osa. have:= (ball_open x).
