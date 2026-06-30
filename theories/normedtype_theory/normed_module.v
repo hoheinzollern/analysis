@@ -8,6 +8,9 @@ From mathcomp Require Import boolp classical_sets filter functions cardinality.
 From mathcomp Require Import set_interval ereal reals topology real_interval.
 From mathcomp Require Import convex prodnormedzmodule tvs num_normedtype.
 From mathcomp Require Import ereal_normedtype pseudometric_normed_Zmodule.
+From mathcomp Require Import measurable_structure.
+
+(* TODO: inherit from measurable, then add a factory *)
 
 (**md**************************************************************************)
 (* # Normed modules                                                           *)
@@ -92,15 +95,33 @@ HB.mixin Record PseudoMetricNormedZmod_ConvexTvs_isNormedModule K V
   normrZ : forall (l : K) (x : V), `| l *: x | = `| l | * `| x |;
 }.
 
-#[short(type="normedModType")]
-HB.structure Definition NormedModule (K : numDomainType) :=
+HB.structure Definition NormedModule0 (K : numDomainType) :=
   {T of PseudoMetricNormedZmod K T & ConvexTvs K T
    & PseudoMetricNormedZmod_ConvexTvs_isNormedModule K T}.
 
+#[short(type="normedModType")]
+HB.structure Definition NormedModule {d : measure_display} (K : numDomainType) :=
+  {T of NormedModule0 K T & Measurable d T}.
+
+HB.factory Record NormedModule0_isMeasurable (K : numDomainType) T & NormedModule0 K T :=
+  { }.
+
+Definition borelType (T : topologicalType) := g_sigma_algebraType (@open T).
+
+HB.builders Context K T & NormedModule0_isMeasurable K T.
+
+HB.instance Definition _ := Choice.on (borelType T).
+HB.instance Definition _ := @isMeasurable.Build (sigma_display (@open T))
+  (@borelType T) <<s (@open T) >>
+  (@sigma_algebra0 _ setT (@open T)) (@sigma_algebraC _ (@open T))
+  (@sigma_algebra_bigcup _ setT (@open T)).
+
+HB.end.
+
 #[short(type="subNormedModType")]
-HB.structure Definition SubNormedModule (R : numDomainType)
-  (V : normedModType R) (S : pred V) :=
-  { U of SubChoice V S U & NormedModule R U & @GRing.SubLmodule R V S U
+HB.structure Definition SubNormedModule d (R : numDomainType)
+  (V : normedModType d R) (S : pred V) :=
+  { U of SubChoice V S U & NormedModule d R U & @GRing.SubLmodule R V S U
        & @Num.SubNormedZmodule(*Zmodule_isSubSemiNormed*) R V S U &
        @SubConvexTvs R V S U}.
 
