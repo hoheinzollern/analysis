@@ -1074,7 +1074,7 @@ have nd_E : {homo E : n0 m / (n0 <= m)%N >-> (n0 <= m)%O}.
 rewrite set_lte_bigcup.
 have /cvg_lim h1 : (mu \o E) x @[x --> \oo]--> 0.
   by apply: cvg_near_cst; exact: nearW.
-have := @nondecreasing_cvg_mu _ _ _ mu E mE (bigcupT_measurable E mE) nd_E.
+have := @nondecreasing_cvg_measure _ _ _ mu E mE (bigcupT_measurable E mE) nd_E.
 by move/cvg_lim => h2; rewrite setI_bigcupr -h2// h1.
 Qed.
 

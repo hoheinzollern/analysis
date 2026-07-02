@@ -1,6 +1,6 @@
 (* mathcomp analysis (c) 2025 Inria and AIST. License: CeCILL-C.              *)
 From HB Require Import structures.
-From mathcomp Require Import all_ssreflect_compat finmap ssralg ssrnum ssrint interval.
+From mathcomp Require Import all_ssreflect_compat finmap ssralg ssrnum ssrint interval vector.
 From mathcomp Require Import archimedean.
 #[warning="-warn-library-file-internal-analysis"]
 From mathcomp Require Import unstable.
@@ -233,20 +233,19 @@ Notation "V .-open.-measurable" := (measurable : set_system (@open_type _ V)) :
   classical_set_scope.
 
 Module OpenMeasurable.
-Section realType_sigma_algebra.
+Section normedModType_sigma_algebra.
 Context {R : numDomainType} {V : normedModType R}.
 
 Local Open Scope measure_display_scope.
 
 (*Definition lebesgue_display : measure_display := (R.-open.-measurable).-sigma.*)
-Definition lebesgue_display : measure_display := (V : normedModType _).-open.
+Definition lebesgue_display : measure_display := V.-open.
 (*Definition measurableR : set_system R :=
   (R.-open.-measurable).-sigma.-measurable.*)
-Definition measurableR : set_system V :=
-  (V.-open.-measurable).
+Definition measurableR : set_system V := (V.-open.-measurable).
 
 Definition measurableTypeR (R : numDomainType) (V : normedModType R) :=
-  g_sigma_algebraType V.-open.-measurable.
+  g_sigma_algebraType (@open V).
 
 HB.instance Definition _ : Measurable (*lebesgue_display*)_ (measurableTypeR V) :=
    Measurable.on (measurableTypeR V).
@@ -254,7 +253,14 @@ HB.instance Definition _ : Measurable (*lebesgue_display*)_ (measurableTypeR V) 
    and nothing else can be used here *)
 #[non_forgetful_inheritance]
 HB.instance Definition _ := Measurable.copy V (measurableTypeR V).
-End realType_sigma_algebra.
+End normedModType_sigma_algebra.
+
+Section measurableType_realType.
+Import numFieldNormedType.Exports.
+Variable R : realType.
+#[non_forgetful_inheritance]
+HB.instance Definition _ := Measurable.copy R (measurableTypeR R).
+End measurableType_realType.
 End OpenMeasurable.
 
 Section moveme.
@@ -456,18 +462,16 @@ Import numFieldNormedType.Exports.
 
 Import OpenMeasurable.
 
-Lemma newmeasurable_set1 (r : R) : R.-open.-measurable.-sigma.-measurable [set r].
+Lemma newmeasurable_set1 (r : R) : R.-open.-measurable [set r].
 Proof.
 rewrite singleton_bigcap; apply: bigcap_measurable => // k _.
-apply: sub_sigma_algebra.
 apply: sub_sigma_algebra.
 exact: ball_open.
 Qed.
 #[local] Hint Resolve newmeasurable_set1 : core.
 
-Lemma newmeasurable_itv (i : interval R) : R.-open.-measurable.-sigma.-measurable [set` i].
+Lemma newmeasurable_itv (i : interval R) : R.-open.-measurable [set` i].
 Proof.
-apply: sub_sigma_algebra.
 have := measurable_itv i.
 rewrite /OcitvMeasurableOld.lebesgue_display.
 rewrite /lebesgue_display.
@@ -493,12 +497,10 @@ Import OcitvMeasurable.
   solve [apply: measurable_funPTI; exact: measurable_set1] : core.
 
 Lemma measurable_funP1 {d} {aT : measurableType d} {rT : realType}
-   (f : {mfun aT >-> (rT : normedModType _)}) D (y : rT) :
+   (f : {mfun aT >-> rT}) D (y : rT) :
   measurable D -> measurable (D `&` f @^-1` [set y]).
 Proof.
-move=> mD.
-have := @measurable_funP _ _ aT (rT : normedModType _) D f mD [set y].
-by apply.
+by move=> mD; apply: measurable_funP.
 Qed.
 
 #[deprecated(since="mathcomp-analysis 1.13.0", note="renamed to `measurable_funP1`")]
@@ -889,16 +891,12 @@ Arguments lebesgue_stieltjes_measure {R}.
 Lemma lebesgue_stieltjes_measure_unique {R : realType}
     (f : cumulative R R) (mu : {measure set (OcitvMeasurableOld.measurableTypeR R) -> \bar R}) :
     (forall X, ocitv X -> lebesgue_stieltjes_measure f X = mu X) ->
-  forall A : set (R : normedModType _), measurable A -> lebesgue_stieltjes_measure f A = mu A.
+  forall A : set R, measurable A -> lebesgue_stieltjes_measure f A = mu A.
 Proof.
 move=> muE A mA.
-apply: measure_extension_unique => //=.
-  exact: wlength_sigma_finite.
+apply: measure_extension_unique => //=; last by rewrite RGenOpenSets.measurableE.
+- exact: wlength_sigma_finite.
 by move=> X mX; rewrite -muE// -measurable_mu_extE.
-move: mA.
-rewrite measurable_g_measurableTypeE//=.
-  exact: sigma_algebra_measurable.
-rewrite RGenOpenSets.measurableE//.
 Qed.
 
 Section completed_lebesgue_stieltjes_measure.
@@ -955,7 +953,7 @@ have : (lsf \o I) n @[n --> \oo] --> 1%E.
       exact: cumulativeNy.
     by apply: (cvg_comp _ _ (@cvgr_idn R)); rewrite ninfty.
 have : (lsf \o I) n @[n --> \oo] --> lsf (\bigcup_n I n).
-  apply: nondecreasing_cvg_mu; rewrite /I//; first exact: bigcup_measurable.
+  apply: nondecreasing_cvg_measure; rewrite /I//; first exact: bigcup_measurable.
   by move=> *; apply/subsetPset/subset_itv; rewrite leBSide/= ?lerN2 ler_nat.
 exact: cvg_unique.
 Unshelve. all: end_near. Qed.

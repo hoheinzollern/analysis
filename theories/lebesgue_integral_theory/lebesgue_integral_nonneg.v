@@ -1315,7 +1315,7 @@ move=> mf; split=> [iDf0|Df0].
       by rewrite (le_trans (ltW (truncnS_gt _))).
     by split => //; apply: contraTN nft => /eqP ->; rewrite abse0 -ltNge.
   transitivity (limn (fun n => mu (D `&` [set x | `|f x| >= n.+1%:R^-1%:E]))).
-    apply/esym/cvg_lim => //; apply: nondecreasing_cvg_mu.
+    apply/esym/cvg_lim => //; apply: nondecreasing_cvg_measure.
     - move=> i; apply: emeasurable_fun_c_infty => //.
       exact: measurableT_comp.
     - apply: bigcupT_measurable => i.

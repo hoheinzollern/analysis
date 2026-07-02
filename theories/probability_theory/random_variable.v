@@ -273,7 +273,7 @@ have cdf_n1 : cdf X n%:R @[n --> \oo] --> 1.
   have <- : \bigcup_n F n = setT.
     rewrite -preimage_bigcup -subTset => t _/=.
     by exists (truncn (X t)).+1; rewrite //= in_itv/= ltW// truncnS_gt.
-  apply: nondecreasing_cvg_mu => //; first exact: bigcup_measurable.
+  apply: nondecreasing_cvg_measure => //; first exact: bigcup_measurable.
   move=> n m nm; apply/subsetPset => x/=; rewrite !in_itv/= => /le_trans.
   by apply; rewrite ler_nat.
 by rewrite -(cvg_unique _ cdf_ns cdf_n1).
@@ -295,7 +295,7 @@ have cdf_opp_n0 : (cdf X \o -%R) n%:R @[n --> \oo] --> 0.
   have <- : \bigcap_n F n = set0.
     rewrite -subset0 => t /(_ (Num.bound (X t)) I).
     by rewrite /F/= in_itv/= leNgt => /negP; apply; rewrite ltrNl ltrNbound.
-  apply: nonincreasing_cvg_mu => //=.
+  apply: nonincreasing_cvg_measure => //=.
   + by rewrite (le_lt_trans (probability_le1 _ _)) ?ltry.
   + exact: bigcap_measurable.
   + move=> m n mn; apply/subsetPset => x/=; rewrite !in_itv => /le_trans; apply.
@@ -324,7 +324,7 @@ have cdf_na : cdf X (a + n.+1%:R^-1) @[n --> \oo] --> cdf X a.
   pose F n := X @^-1` `]-oo, (a + n.+1%:R^-1)%R].
   suff : P (F n) @[n --> \oo] --> P (\bigcap_n F n).
     by rewrite [in X in _ --> X -> _]/F -preimage_bigcap -itvNycEbigcap.
-  apply: nonincreasing_cvg_mu => [| | |m n mn].
+  apply: nonincreasing_cvg_measure => [| | |m n mn].
   - by rewrite -ge0_fin_numE// fin_num_measure//; exact: measurable_funPTI.
   - by move=> ?; exact: measurable_funPTI.
   - by apply: bigcap_measurable => // ? _; exact: measurable_funPTI.
@@ -362,7 +362,7 @@ have : lsf `]-n%:R, r] @[n --> \oo] --> (f r)%:E.
   apply: (cvg_comp _ _ (cvg_comp _ _ _ (cumulativeNy f))) => //.
   by apply: (cvg_comp _ _ cvgr_idn); rewrite ninfty.
 have : lsf `]- n%:R, r] @[n --> \oo] --> lsf (\bigcup_n `]-n%:R, r]%classic).
-  apply: nondecreasing_cvg_mu => //; first exact: bigcup_measurable.
+  apply: nondecreasing_cvg_measure => //; first exact: bigcup_measurable.
   by move=> *; apply/subsetPset/subset_itv; rewrite leBSide//= lerN2 ler_nat.
 exact: cvg_unique.
 Unshelve. all: by end_near. Qed.
