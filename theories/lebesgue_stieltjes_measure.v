@@ -201,60 +201,59 @@ Hint Extern 0 (measurable [set` _] ) => exact: measurable_itv : core.
 (* NB: new *)
 
 Section open.
-Context {R : realType}.
+Context {R : numDomainType} {V : normedModType R}.
 
-Definition open_type : Type := R.
+Definition open_type : Type := V.
 
 HB.instance Definition _ := Pointed.on open_type.
 
-Let measurable : set_system R := @measurable _ (g_sigma_algebraType (@open R)).
+Let measurable : set_system V := @measurable _ (g_sigma_algebraType (@open V)).
 
 Let measurable0 : measurable set0. Proof. exact: measurable0. Qed.
 
 Let measurableC A : measurable A -> measurable (~` A).
 Proof. by move=> /measurableC. Qed.
 
-Let measurable_bigcup (F : (set R)^nat) : (forall i, measurable (F i)) ->
+Let measurable_bigcup (F : (set V)^nat) : (forall i, measurable (F i)) ->
   measurable (\bigcup_i (F i)).
 Proof. move=> mF; exact: bigcupT_measurable. Qed.
 
 HB.instance Definition _ :=
-  @isMeasurable.Build (sigma_display (@open R))
+  @isMeasurable.Build (sigma_display (@open V))
     open_type measurable measurable0 measurableC measurable_bigcup.
 
 End open.
 
-Reserved Notation "R .-open" (at level 1, format "R .-open").
-Reserved Notation "R .-open.-measurable"
- (at level 2, format "R .-open.-measurable").
+Reserved Notation "V .-open" (at level 1, format "V .-open").
+Reserved Notation "V .-open.-measurable"
+ (at level 2, format "V .-open.-measurable").
 
-Notation "R .-open" := (sigma_display (@open R)) : measure_display_scope.
-Notation "R .-open.-measurable" := (measurable : set_system (@open_type R)) :
+Notation "V .-open" := (sigma_display (@open V)) : measure_display_scope.
+Notation "V .-open.-measurable" := (measurable : set_system (@open_type _ V)) :
   classical_set_scope.
 
 Module OpenMeasurable.
 Section realType_sigma_algebra.
-Context {R : realType}.
+Context {R : numDomainType} {V : normedModType R}.
 
 Local Open Scope measure_display_scope.
 
 (*Definition lebesgue_display : measure_display := (R.-open.-measurable).-sigma.*)
-Definition lebesgue_display : measure_display := R.-open.
+Definition lebesgue_display : measure_display := (V : normedModType _).-open.
 (*Definition measurableR : set_system R :=
   (R.-open.-measurable).-sigma.-measurable.*)
-Definition measurableR : set_system R :=
-  (R.-open.-measurable).
+Definition measurableR : set_system V :=
+  (V.-open.-measurable).
 
-Definition measurableTypeR (R : realType) :=
-  g_sigma_algebraType (@open R).
+Definition measurableTypeR (R : numDomainType) (V : normedModType R) :=
+  g_sigma_algebraType V.-open.-measurable.
 
-HB.instance Definition _ : Measurable (*lebesgue_display*)_ (measurableTypeR R) :=
-   Measurable.on (measurableTypeR R).
+HB.instance Definition _ : Measurable (*lebesgue_display*)_ (measurableTypeR V) :=
+   Measurable.on (measurableTypeR V).
 (* Presumably it is safe to use NFI here because morally R is unique
    and nothing else can be used here *)
 #[non_forgetful_inheritance]
-HB.instance Definition _ := Measurable.copy R (measurableTypeR R).
-
+HB.instance Definition _ := Measurable.copy V (measurableTypeR V).
 End realType_sigma_algebra.
 End OpenMeasurable.
 
@@ -453,22 +452,22 @@ End RGenOpenSets.
 
 Section salgebra_R_ssets.
 Variable R : realType.
+Import numFieldNormedType.Exports.
 
 Import OpenMeasurable.
 
-Lemma newmeasurable_set1 (r : R) : measurable [set r].
+Lemma newmeasurable_set1 (r : R) : R.-open.-measurable.-sigma.-measurable [set r].
 Proof.
 rewrite singleton_bigcap; apply: bigcap_measurable => // k _.
-rewrite /lebesgue_display.
-red.
-simpl.
 apply: sub_sigma_algebra.
-by apply: ball_open.
+apply: sub_sigma_algebra.
+exact: ball_open.
 Qed.
 #[local] Hint Resolve newmeasurable_set1 : core.
 
-Lemma newmeasurable_itv (i : interval R) : measurable [set` i].
+Lemma newmeasurable_itv (i : interval R) : R.-open.-measurable.-sigma.-measurable [set` i].
 Proof.
+apply: sub_sigma_algebra.
 have := measurable_itv i.
 rewrite /OcitvMeasurableOld.lebesgue_display.
 rewrite /lebesgue_display.
@@ -486,6 +485,7 @@ Module OcitvMeasurable.
 (*Export OcitvMeasurableOld.*)
 Export OpenMeasurable.
 End OcitvMeasurable.
+Import numFieldNormedType.Exports.
 
 Import OcitvMeasurable.
 
@@ -493,11 +493,11 @@ Import OcitvMeasurable.
   solve [apply: measurable_funPTI; exact: measurable_set1] : core.
 
 Lemma measurable_funP1 {d} {aT : measurableType d} {rT : realType}
-   (f : {mfun aT >-> rT}) D (y : rT) :
+   (f : {mfun aT >-> (rT : normedModType _)}) D (y : rT) :
   measurable D -> measurable (D `&` f @^-1` [set y]).
 Proof.
 move=> mD.
-have := @measurable_funP _ _ aT rT D f mD [set y].
+have := @measurable_funP _ _ aT (rT : normedModType _) D f mD [set y].
 by apply.
 Qed.
 
@@ -889,13 +889,16 @@ Arguments lebesgue_stieltjes_measure {R}.
 Lemma lebesgue_stieltjes_measure_unique {R : realType}
     (f : cumulative R R) (mu : {measure set (OcitvMeasurableOld.measurableTypeR R) -> \bar R}) :
     (forall X, ocitv X -> lebesgue_stieltjes_measure f X = mu X) ->
-  forall A : set R, measurable A -> lebesgue_stieltjes_measure f A = mu A.
+  forall A : set (R : normedModType _), measurable A -> lebesgue_stieltjes_measure f A = mu A.
 Proof.
 move=> muE A mA.
 apply: measure_extension_unique => //=.
   exact: wlength_sigma_finite.
 by move=> X mX; rewrite -muE// -measurable_mu_extE.
-by rewrite RGenOpenSets.measurableE.
+move: mA.
+rewrite measurable_g_measurableTypeE//=.
+  exact: sigma_algebra_measurable.
+rewrite RGenOpenSets.measurableE//.
 Qed.
 
 Section completed_lebesgue_stieltjes_measure.
